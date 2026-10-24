@@ -70,7 +70,7 @@ export interface LayoutSpec {
  */
 export type VisualSpec =
   | { kind: 'mg'; recipe: string; params: Record<string, unknown>; layout: LayoutSpec }
-  | { kind: 'mg-code'; code: string; box: { width: number; height: number }; layout: LayoutSpec }
+  | { kind: 'mg-code'; code: string; box: { width: number; height: number }; props?: Record<string, unknown>; layout: LayoutSpec }
   | { kind: 'text'; text: string; fontSize?: number; color?: string; fontWeight?: number; align?: 'left' | 'center' | 'right'; layout: LayoutSpec }
   | { kind: 'solid'; color: string; layout: LayoutSpec }
   | { kind: 'asset'; assetId: string; layout: LayoutSpec };
@@ -98,6 +98,13 @@ export interface Storyboard {
   version: 1;
   meta: StoryboardMeta;
   rhythm: RhythmProfile;
+  /** Voiceover track. `src` is resolved from the project's asset pool by the caller. */
+  audio?: {
+    assetId: string;
+    src: string;
+    durationFrames: number;
+    volume?: number;
+  };
   beats: Beat[];
   shots: Shot[];
 }

@@ -121,7 +121,7 @@ function buildItem(
       ...base,
       kind: 'motion-graphic',
       code: visual.code,
-      props: {},
+      props: visual.props ?? {},
       width: visual.box.width,
       height: visual.box.height,
       transform: transformFromRect(rect, width, height, visual.box.width),
@@ -183,6 +183,22 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
   for (const shot of [...storyboard.shots].sort((a, b) => a.startFrame - b.startFrame)) {
     const item = buildItem(shot, storyboard, recipes, warnings);
     if (item) items.push(item);
+  }
+
+  // The voiceover is the timing authority, so it goes on the anchor track that
+  // music later ducks under.
+  if (storyboard.audio) {
+    items.push({
+      id: 'it-voice',
+      kind: 'audio',
+      track: 'A1',
+      startFrame: 0,
+      durationInFrames: storyboard.audio.durationFrames,
+      name: 'voiceover',
+      src: storyboard.audio.src,
+      sourceAssetId: storyboard.audio.assetId,
+      volume: storyboard.audio.volume ?? 1,
+    });
   }
 
   if (items.length === 0) {

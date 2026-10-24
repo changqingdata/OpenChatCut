@@ -13,9 +13,14 @@ Refactor the change into new files instead of widening the patch surface.
 
 | # | File | Change | Why |
 |---|---|---|---|
-| — | — | *none* | The production layer is currently additive only. |
+| 1 | `cli/router.ts` | import + two `case` arms (`still`, `compile`) | register the production CLI commands |
+| 2 | `cli/main.ts` | two lines in the usage text | keep `occ --help` truthful |
 
-`git log --oneline main..dev` is empty: no local commits exist yet.
+Everything else lives in new files: `production/**`, `cli/commands/still.ts`,
+`cli/commands/compile.ts`.
+
+`git log --oneline main..dev` shows the production commits; the two files above
+are the only upstream files they touch.
 
 ## How to record a patch
 

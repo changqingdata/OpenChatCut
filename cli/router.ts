@@ -4,12 +4,14 @@
 // and a static import chain from main.ts would freeze it too early.
 import { flagBoolean, type CommandLine } from './args.ts';
 import { UsageError } from './errors.ts';
+import { runCompileCommand } from './commands/compile.ts';
 import { runEditCommand } from './commands/edit.ts';
 import { runExportCommand } from './commands/export.ts';
 import { runItemCommand } from './commands/item.ts';
 import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
 import { runRenderCommand } from './commands/render.ts';
+import { runStillCommand } from './commands/still.ts';
 import { runTimelineCommand } from './commands/timeline.ts';
 import { runToolsCommand } from './commands/tools.ts';
 import { runWhereCommand } from './commands/where.ts';
@@ -33,6 +35,10 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runMediaCommand(positionals, commandLine, json);
     case 'render':
       return runRenderCommand(subLine(commandLine, positionals), json);
+    case 'still':
+      return runStillCommand(subLine(commandLine, positionals), json);
+    case 'compile':
+      return runCompileCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':
