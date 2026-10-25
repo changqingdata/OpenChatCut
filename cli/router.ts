@@ -12,6 +12,7 @@ import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
 import { runRenderCommand } from './commands/render.ts';
 import { runStillCommand } from './commands/still.ts';
+import { runStoryboardCommand } from './commands/storyboard.ts';
 import { runTimelineCommand } from './commands/timeline.ts';
 import { runToolsCommand } from './commands/tools.ts';
 import { runWhereCommand } from './commands/where.ts';
@@ -39,6 +40,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runStillCommand(subLine(commandLine, positionals), json);
     case 'compile':
       return runCompileCommand(subLine(commandLine, positionals), json);
+    case 'storyboard':
+      return runStoryboardCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':

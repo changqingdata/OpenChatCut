@@ -18,6 +18,7 @@ Usage
   occ render [<project>] --out <file> [--resolution 1080p] [--fps 30] [--codec h264] [--from <frame|4s>] [--to <frame|4s>] [--dry-run] [--quiet]
   occ still [<project>] --out <dir> --frames <n,n,…> [--timeline <id>] [--json]
   occ compile [<project>] --storyboard <file.json> [--timeline <id>] [--replace] [--apply] [--json]
+  occ storyboard --srt <file.srt> --brief "<one line>" (--prompt | --from <reply> | --generate) [--out <file.json>]
   occ export jianying [<project>] [--draft-name <name>] [--out-dir <dir>] [--json]
   occ item move <clip> [--track <track>] [--start <frame|4s>] [--apply]
   occ item trim <clip> [--start <frame>] [--duration <frames|4s>] [--fade-in <s>] [--fade-out <s>] [--ripple] [--apply]
