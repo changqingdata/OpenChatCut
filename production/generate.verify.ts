@@ -5,8 +5,9 @@
 
 import assert from 'node:assert/strict';
 import { parseSrtCues } from './srt.ts';
-import { buildStoryboardPrompt, checkStoryboard, extractJson, repairPrompt } from './generate.ts';
+import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from './generate.ts';
 import type { RecipeSchema } from './recipes/load.ts';
+import type { Storyboard } from './types.ts';
 
 // --- SRT --------------------------------------------------------------
 
@@ -146,4 +147,84 @@ const repair = repairPrompt(['S01: "label" is 11 chars, over the 10 limit']);
 assert.ok(repair.includes('S01'), 'repair prompt names the shot');
 assert.ok(repair.includes('over the 10 limit'), 'repair prompt carries the constraint');
 
-console.log('generate.verify: srt, prompt, json extraction, validation and repair OK');
+// --- long form ------------------------------------------------------------
+
+// Cues spanning 8 minutes in 2-minute chunks.
+const longCues = Array.from({ length: 40 }, (_, index) => ({
+  index: index + 1,
+  startMs: index * 12000,
+  endMs: index * 12000 + 10000,
+  text: `第${index + 1}句`,
+}));
+
+const chunks = planChunks(longCues, 120);
+assert.ok(chunks.length >= 4, 'an eight-minute script splits into several chapters');
+assert.equal(
+  chunks.reduce((total, chunk) => total + chunk.length, 0),
+  longCues.length,
+  'every cue lands in exactly one chapter',
+);
+// A cut must fall on a cue boundary, never inside one.
+for (const chunk of chunks.slice(0, -1)) {
+  const last = chunk[chunk.length - 1]!;
+  assert.ok(last.endMs - chunk[0]!.startMs <= 130000, 'a chapter stays near the requested length');
+}
+
+// Rebase is what stops the merge from doubling the timeline: chapter 3 opens at
+// 00:04:00, and the model would otherwise derive frame 7200 for its first shot.
+const third = chunks[2]!;
+assert.ok(third[0]!.startMs > 0, 'a later chapter starts at an absolute time');
+const rebased = rebaseCues(third);
+assert.equal(rebased[0]!.startMs, 0, 'rebase moves the first cue to zero');
+assert.equal(
+  rebased[0]!.endMs - rebased[0]!.startMs,
+  third[0]!.endMs - third[0]!.startMs,
+  'rebase preserves cue duration',
+);
+
+// Merge: frames accumulate, ids restart at S01, music comes from the first part.
+const part = (offsetBase: number, count: number): Storyboard => ({
+  version: 1,
+  meta: { title: 't', runId: 'r', aspect: '9:16', width: 1080, height: 1920, fps: 30, language: 'zh' },
+  rhythm: { avgShotSec: 3, maxShotSec: 8, grammarChangeEverySec: 6, maxRepeatRecipe: 2, hookMaxSec: 3 },
+  shots: Array.from({ length: count }, (_, index) => ({
+    id: `S${String(index + 1).padStart(2, '0')}`,
+    startFrame: index * 90,
+    endFrame: (index + 1) * 90,
+    narration: { text: '', startMs: 0, endMs: 3000 },
+    intent: 'x',
+    visual: { kind: 'solid' as const, color: '#000', layout: { anchor: 'full' as const, widthRatio: 1 } },
+  })),
+  ...(offsetBase === 0 ? { music: { category: '安静舒缓' } } : {}),
+});
+
+const merged = mergeChunkStoryboards([part(0, 2), part(180, 2), part(360, 2)]);
+assert.equal(merged.shots.length, 6, 'every chapter contributes its shots');
+assert.deepEqual(
+  merged.shots.map((shot) => shot.id),
+  ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'],
+  'shot ids are renumbered across chapters',
+);
+assert.deepEqual(
+  merged.shots.map((shot) => shot.startFrame),
+  [0, 90, 180, 270, 360, 450],
+  'frames accumulate chapter by chapter',
+);
+assert.equal(merged.music?.category, '安静舒缓', 'music is carried over from the first chapter that chose one');
+
+// The guard: a chapter generated against absolute timestamps shows up as a
+// timeline far longer than its parts, and must fail loudly instead of rendering.
+const doubled = [part(0, 2), { ...part(0, 2), shots: part(0, 2).shots.map((shot) => ({
+  ...shot,
+  startFrame: shot.startFrame + 9000,
+  endFrame: shot.endFrame + 9000,
+})) }];
+// The second chapter opens at frame 9000 rather than 0 — exactly the shape the
+// merge guard exists to catch.
+assert.throws(
+  () => mergeChunkStoryboards(doubled),
+  /absolute timestamps/,
+  'a doubled timeline is rejected',
+);
+
+console.log('generate.verify: srt, prompt, json extraction, validation, repair and chunking OK');

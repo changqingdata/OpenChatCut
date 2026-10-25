@@ -10,7 +10,7 @@
 // the CLI wires the two together and retries once with the validation errors.
 import type { RecipeSchema } from './recipes/load.ts';
 import { checkParams } from './recipes/load.ts';
-import type { Storyboard } from './types.ts';
+import type { Shot, Storyboard } from './types.ts';
 import { validateStoryboard } from './validate.ts';
 import type { SrtCue } from './srt.ts';
 
@@ -203,4 +203,103 @@ export function repairPrompt(errors: readonly string[]): string {
 ${errors.map((error) => `- ${error}`).join('\n')}
 
 请修正这些问题并重新输出完整 JSON。不要只输出改动的部分。`;
+}
+
+// --- long form -----------------------------------------------------------
+
+/**
+ * Split cues into chapters of at most `maxSeconds`.
+ *
+ * A 15-minute talk is 417 cues and roughly 230 shots. The prompt still fits in
+ * context, but the reply does not fit in any model's output budget — and even if
+ * it did, quality degrades badly at the tail. Chapters keep every reply inside
+ * the budget, and a failed chapter only costs that chapter.
+ *
+ * Cuts land on cue boundaries, so a sentence is never split across chapters.
+ */
+export function planChunks(cues: readonly SrtCue[], maxSeconds = 180): SrtCue[][] {
+  if (!cues.length) return [];
+  const chunks: SrtCue[][] = [];
+  let current: SrtCue[] = [];
+  let startedAt = cues[0]!.startMs;
+
+  for (const cue of cues) {
+    if (current.length && cue.endMs - startedAt > maxSeconds * 1000) {
+      chunks.push(current);
+      current = [];
+      startedAt = cue.startMs;
+    }
+    current.push(cue);
+  }
+  if (current.length) chunks.push(current);
+  return chunks;
+}
+
+/**
+ * Re-base a chapter's cues to start at zero.
+ *
+ * Subtitle timestamps are absolute — chapter 7 opens at 00:12:30. Without this
+ * the model derives frames from that absolute time, and the merge adds the
+ * chapter offset on top, doubling the timeline. Rebasing keeps every chapter in
+ * local time so accumulation is the only offset in play.
+ */
+export function rebaseCues(cues: readonly SrtCue[]): SrtCue[] {
+  const start = cues[0]?.startMs ?? 0;
+  if (!start) return [...cues];
+  return cues.map((cue) => ({
+    ...cue,
+    startMs: Math.max(0, cue.startMs - start),
+    endMs: Math.max(0, cue.endMs - start),
+  }));
+}
+
+/**
+ * Stitch chapter storyboards into one.
+ *
+ * Each chapter was generated as if it were the whole video: frames start at 0
+ * and shot ids restart at S01. Both are rebased here, and the music choice is
+ * taken from the first chapter that made one.
+ */
+export function mergeChunkStoryboards(parts: readonly Storyboard[]): Storyboard {
+  const first = parts[0];
+  if (!first) throw new Error('cannot merge an empty set of chapters');
+
+  const shots: Shot[] = [];
+  let offset = 0;
+  let index = 0;
+
+  for (const part of parts) {
+    const lastEnd = part.shots.reduce((end, shot) => Math.max(end, shot.endFrame), 0);
+    for (const shot of part.shots) {
+      index += 1;
+      shots.push({
+        ...shot,
+        id: `S${String(index).padStart(2, '0')}`,
+        startFrame: shot.startFrame + offset,
+        endFrame: shot.endFrame + offset,
+      });
+    }
+    offset += lastEnd;
+  }
+
+  // A chapter generated against absolute timestamps opens at frame 9000 instead
+  // of 0, and accumulating the offset on top would double the timeline. Ten
+  // seconds of lead-in is already generous; anything beyond that is absolute time.
+  parts.forEach((part, index) => {
+    const first = part.shots[0];
+    if (first && first.startFrame > 300) {
+      throw new Error(
+        `chapter ${index + 1} starts at frame ${first.startFrame} — it was generated against `
+        + 'absolute timestamps instead of rebased ones',
+      );
+    }
+  });
+
+  const music = parts.map((part) => part.music).find(Boolean);
+
+  return {
+    ...first,
+    ...(music ? { music } : {}),
+    shots,
+  };
 }

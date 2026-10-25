@@ -14,7 +14,7 @@ import { CliError, UsageError } from '../errors.ts';
 import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
-import { buildStoryboardPrompt, checkStoryboard, extractJson, repairPrompt } from '../../production/generate.ts';
+import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from '../../production/generate.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
@@ -22,7 +22,12 @@ import { createProviders } from '../../production/assets/registry.ts';
 import { musicCategories } from '../../production/assets/music.ts';
 import { GLOBAL_FLAGS } from './common.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'srt', 'brief', 'out', 'prompt', 'from', 'generate', 'size', 'fps', 'json'] as const;
+const MAX_ATTEMPTS = 3;
+
+const FLAGS = [...GLOBAL_FLAGS, 'srt', 'brief', 'out', 'prompt', 'from', 'generate', 'size', 'fps', 'json', 'chunk-seconds'] as const;
+
+/** Chapter length. 3 minutes keeps a reply near 45 shots, comfortably inside budget. */
+const CHUNK_SECONDS = 180;
 
 async function readText(path: string, label: string): Promise<string> {
   try {
@@ -118,49 +123,77 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     );
   }
 
-  // A reasoning model answers this prompt in 60-110s and occasionally truncates
-  // or wraps the JSON in prose. Two attempts was not enough; three with the real
-  // parse error fed back is. The error text matters — "must be a JSON object"
-  // told the model nothing about what to fix.
-  const MAX_ATTEMPTS = 3;
-  let errors: string[] = [];
-  let storyboard: Storyboard | undefined;
+  // One reply per chapter. A 15-minute talk needs ~230 shots, which no model
+  // will emit in a single answer — and a truncated reply fails validation with
+  // no way to resume. Chapters keep each reply inside the budget and isolate a
+  // failure to the chapter that caused it.
+  const chunkSeconds = Number(flagText(commandLine, 'chunk-seconds') ?? CHUNK_SECONDS);
+  if (!(chunkSeconds > 0)) throw new UsageError('--chunk-seconds must be positive');
+  const chunks = planChunks(cues, chunkSeconds);
+  const multi = chunks.length > 1;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    const user = attempt === 1 ? prompt.user : `${prompt.user}\n\n${repairPrompt(errors)}`;
-    const reply = await completeText(config, { system: prompt.system, user, maxTokens: 32000 });
+  const generateChapter = async (chapterCues: typeof cues, label: string): Promise<Storyboard> => {
+    const chapterPrompt = multi
+      ? buildStoryboardPrompt({
+        cues: rebaseCues(chapterCues),
+        brief: `${briefFlag}\n\n（这是整条视频的第 ${label} 段，只处理本段字幕，不要重复其他段的内容。）`,
+        width, height, fps,
+        aspect: width === height ? '1:1' : width > height ? '16:9' : '9:16',
+        language: /[\u4e00-\u9fa5]/.test(chapterCues.map((cue) => cue.text).join('')) ? 'zh' : 'en',
+        catalog: schemas,
+        musicCategories: musicCats,
+      })
+      : prompt;
 
-    if (!reply.trim()) {
-      errors = ['your reply was empty — output the JSON object as the entire response'];
-      continue;
+    let errors: string[] = [];
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      const user = attempt === 1 ? chapterPrompt.user : `${chapterPrompt.user}\n\n${repairPrompt(errors)}`;
+      // deepseek-flash is a reasoning model: its thinking tokens count against
+      // max_tokens. At 81 cues the 16k budget went entirely to reasoning and the
+      // reply came back empty with finish_reason=length. 32k leaves room for both.
+      const reply = await completeText(config, {
+        system: chapterPrompt.system,
+        user,
+        maxTokens: 32000,
+      });
+
+      if (!reply.trim()) {
+        errors = [
+          'your reply was empty. This usually means the reasoning budget ran out '
+          + 'before any answer was written — be more concise in the JSON, or split the cues.',
+        ];
+        continue;
+      }
+
+      let candidate: unknown;
+      try {
+        candidate = extractJson(reply);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        errors = [
+          `your reply could not be parsed as JSON (${reason}). `
+          + 'Output only the JSON object: no prose, no code fence, no trailing text. '
+          + `The reply began with: ${JSON.stringify(reply.slice(0, 120))}`,
+        ];
+        continue;
+      }
+
+      const checked = checkStoryboard(candidate, schemas);
+      if (checked.ok) return checked.storyboard!;
+      errors = checked.errors;
     }
 
-    let candidate: unknown;
-    try {
-      candidate = extractJson(reply);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      errors = [
-        `your reply could not be parsed as JSON (${reason}). `
-        + 'Output only the JSON object: no prose, no code fence, no trailing text. '
-        + `The reply began with: ${JSON.stringify(reply.slice(0, 120))}`,
-      ];
-      continue;
-    }
+    throw new CliError(`${label}: model output failed validation after ${MAX_ATTEMPTS} attempts:\n  - ${errors.join('\n  - ')}`);
+  };
 
-    const checked = checkStoryboard(candidate, schemas);
-    if (checked.ok) {
-      storyboard = checked.storyboard;
-      break;
-    }
-    errors = checked.errors;
+  const parts: Storyboard[] = [];
+  for (const [index, chapter] of chunks.entries()) {
+    const label = `${index + 1}/${chunks.length}`;
+    if (multi) writeStdout(`chapter ${label} (${chapter.length} cues)…`);
+    parts.push(await generateChapter(chapter, label));
   }
 
-  if (!storyboard) {
-    throw new CliError(
-      `model output failed validation after ${MAX_ATTEMPTS} attempts:\n  - ${errors.join('\n  - ')}`,
-    );
-  }
+  const storyboard = multi ? mergeChunkStoryboards(parts) : parts[0]!;
   const checked = { ok: true as const, storyboard, warnings: [] as string[] };
 
   await mkdir(dirname(outPath), { recursive: true });
