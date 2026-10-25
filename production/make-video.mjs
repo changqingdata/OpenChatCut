@@ -20,7 +20,7 @@
 // Everything after the storyboard is deterministic.
 
 import { execFile } from 'node:child_process';
-import { mkdir, access } from 'node:fs/promises';
+import { mkdir, access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
@@ -204,7 +204,24 @@ await occ('tools', 'call', 'edit_item', '--project', projectName, '--args', JSON
   adds: [{ type: 'audio', assetId, track: 'A1', fromFrame: 0, durationInFrames: durationFrames }],
 }), '--apply');
 
-// --- 7. render ------------------------------------------------------------
+// --- 7. background music --------------------------------------------------
+
+const finalStoryboard = JSON.parse(await readFile(effectiveStoryboard, 'utf8'));
+const musicCategory = finalStoryboard.music?.category;
+if (musicCategory && !args['no-music']) {
+  step(`music: ${musicCategory}`);
+  await occ('assets', 'place', projectName,
+    '--role', 'music',
+    '--category', String(musicCategory),
+    '--min-duration', String(Math.ceil(seconds)),
+    // Cap to the video so the fade-out lands inside the cut rather than 90s later.
+    '--duration-frames', String(durationFrames),
+    '--volume', String(args['music-volume'] ?? 0.14));
+} else if (!args['no-music']) {
+  step('music: none chosen');
+}
+
+// --- 8. render ------------------------------------------------------------
 
 step('render');
 await mkdir(dirname(outPath), { recursive: true });

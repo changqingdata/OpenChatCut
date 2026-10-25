@@ -18,6 +18,8 @@ import { buildStoryboardPrompt, checkStoryboard, extractJson, repairPrompt } fro
 import { completeText, readLlmConfig } from '../../production/llm.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
+import { createProviders } from '../../production/assets/registry.ts';
+import { musicCategories } from '../../production/assets/music.ts';
 import { GLOBAL_FLAGS } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'srt', 'brief', 'out', 'prompt', 'from', 'generate', 'size', 'fps', 'json'] as const;
@@ -53,8 +55,13 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
   const { schemas } = await loadRecipeRegistry(resolve('production/recipes'));
   if (!schemas.size) throw new CliError('no recipes found under production/recipes');
 
+  // The mood list comes from the library, so the model can only pick a category
+  // that actually has tracks. Missing configuration simply drops the field.
+  const musicCats = await musicCategories(await createProviders());
+
   const prompt = buildStoryboardPrompt({
     cues,
+    musicCategories: musicCats,
     brief: briefFlag,
     width,
     height,

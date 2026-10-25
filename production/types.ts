@@ -115,6 +115,17 @@ export interface Storyboard {
     volume?: number;
   };
   /**
+   * Background music. Only the mood category is decided here — the track itself
+   * is picked from the library by length, so the storyboard stays free of
+   * provider ids and stays reproducible when the library grows.
+   */
+  music?: {
+    category: string;
+    volume?: number;
+    fadeInFrames?: number;
+    fadeOutFrames?: number;
+  };
+  /**
    * Optional narrative grouping. Derivable from the shots' beatIds, so a model
    * does not have to emit it — dropping it cuts a third of the reply and the
    * truncation risk that comes with a long answer.

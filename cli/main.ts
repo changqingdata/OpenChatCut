@@ -19,6 +19,8 @@ Usage
   occ still [<project>] --out <dir> --frames <n,n,…> [--timeline <id>] [--json]
   occ compile [<project>] --storyboard <file.json> [--timeline <id>] [--replace] [--apply] [--json]
   occ storyboard --srt <file.srt> --brief "<one line>" (--prompt | --from <reply> | --generate) [--out <file.json>]
+  occ assets search --role <role> [--query q] [--category c] [--limit n] [--json]
+  occ assets place <project> --role music --category c --min-duration s [--track A2] [--volume 0.14]
   occ export jianying [<project>] [--draft-name <name>] [--out-dir <dir>] [--json]
   occ item move <clip> [--track <track>] [--start <frame|4s>] [--apply]
   occ item trim <clip> [--start <frame>] [--duration <frames|4s>] [--fade-in <s>] [--fade-out <s>] [--ripple] [--apply]

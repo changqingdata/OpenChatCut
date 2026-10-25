@@ -52,6 +52,11 @@ export interface MaterialProvider {
   /** False when the key or the index is missing — callers skip it silently. */
   available(): Promise<boolean>;
   search(query: MaterialQuery): Promise<MaterialItem[]>;
+  /**
+   * Catalog providers only: the categories present for a role. A search provider
+   * has no fixed vocabulary, so it leaves this undefined.
+   */
+  categories?(role: MaterialRole): Promise<string[]>;
 }
 
 export class MaterialError extends Error {

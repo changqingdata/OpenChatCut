@@ -15,10 +15,11 @@ Refactor the change into new files instead of widening the patch surface.
 |---|---|---|---|
 | 1 | `cli/router.ts` | import + two `case` arms (`still`, `compile`) | register the production CLI commands |
 | 2 | `cli/main.ts` | three lines in the usage text | keep `occ --help` truthful |
-| 3 | `cli/router.ts` | import + `storyboard` case arm | register `occ storyboard` |
+| 3 | `cli/router.ts` | import + `storyboard` / `assets` case arms | register the production commands |
+| 4 | `cli/main.ts` | usage lines for `storyboard` and `assets` | keep `occ --help` truthful |
 
-Everything else lives in new files: `production/**`, `cli/commands/still.ts`,
-`cli/commands/compile.ts`, `cli/commands/storyboard.ts`.
+Everything else lives in new files: `production/**`, and one file per command
+under `cli/commands/`.
 
 `git log --oneline main..dev` shows the production commits; the two files above
 are the only upstream files they touch.

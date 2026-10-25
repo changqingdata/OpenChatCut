@@ -16,6 +16,8 @@ import type { SrtCue } from './srt.ts';
 
 export interface PromptInput {
   cues: readonly SrtCue[];
+  /** Mood categories the music library has; empty disables the music field. */
+  musicCategories?: readonly string[];
   brief: string;
   width: number;
   height: number;
@@ -68,6 +70,7 @@ const OUTPUT_SHAPE = `{
     "language": "zh"
   },
   "rhythm": { "avgShotSec": 3.5, "maxShotSec": 6, "grammarChangeEverySec": 6, "maxRepeatRecipe": 2, "hookMaxSec": 3.5 },
+  "music": { "category": "分类名，必须来自下方清单" },
   "shots": [
     {
       "id": "S01",
@@ -96,6 +99,10 @@ export function buildStoryboardPrompt(input: PromptInput): { system: string; use
   const durationMs = input.cues.length ? input.cues[input.cues.length - 1]!.endMs : 0;
   const cueLines = input.cues.map((cue) => `${formatMs(cue.startMs)} → ${formatMs(cue.endMs)}  ${cue.text}`).join('\n');
 
+  const musicLine = input.musicCategories?.length
+    ? `\n# 配乐情绪分类\n${input.musicCategories.join(' / ')}\n`
+    : '';
+
   const user = `# 任务
 ${input.brief}
 
@@ -104,6 +111,7 @@ ${input.width}x${input.height}（${input.aspect}），${input.fps}fps，语言 $
 
 # 可用配方
 ${recipeCatalog(input.catalog)}
+${musicLine}
 
 # 字幕（时间 → 文本）
 ${cueLines}
@@ -127,7 +135,8 @@ ${OUTPUT_SHAPE}
 7. 布局：单行短句用 "bc" 或 "mc"，配 widthRatio 0.85–0.95；需要留白时用 "bl" 或 "ml"。
 8. 参数必须遵守字数限制。超限会导致整份分镜会被拒绝，所以宁可缩短文字。
 9. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
-10. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
+10. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
+11. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
 
 现在输出 JSON。`;
 

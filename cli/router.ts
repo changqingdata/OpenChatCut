@@ -4,6 +4,7 @@
 // and a static import chain from main.ts would freeze it too early.
 import { flagBoolean, type CommandLine } from './args.ts';
 import { UsageError } from './errors.ts';
+import { runAssetsCommand } from './commands/assets.ts';
 import { runCompileCommand } from './commands/compile.ts';
 import { runEditCommand } from './commands/edit.ts';
 import { runExportCommand } from './commands/export.ts';
@@ -42,6 +43,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runCompileCommand(subLine(commandLine, positionals), json);
     case 'storyboard':
       return runStoryboardCommand(subLine(commandLine, positionals), json);
+    case 'assets':
+      return runAssetsCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':
