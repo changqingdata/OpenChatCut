@@ -68,13 +68,9 @@ const OUTPUT_SHAPE = `{
     "language": "zh"
   },
   "rhythm": { "avgShotSec": 3.5, "maxShotSec": 6, "grammarChangeEverySec": 6, "maxRepeatRecipe": 2, "hookMaxSec": 3.5 },
-  "beats": [
-    { "id": "b1", "role": "hook|context|point|proof|turn|cta", "text": "string", "startMs": 0, "endMs": 3000, "shotIds": ["S01"] }
-  ],
   "shots": [
     {
       "id": "S01",
-      "beatId": "b1",
       "startFrame": 0,
       "endFrame": 105,
       "narration": { "text": "string", "startMs": 0, "endMs": 3500 },
@@ -129,7 +125,9 @@ ${OUTPUT_SHAPE}
    - 前后 / 对错 / 表里的对照 → compare-stack
 6. 同一配方不要连续使用超过 2 次；相邻镜头尽量换配方，保持节奏。
 7. 布局：单行短句用 "bc" 或 "mc"，配 widthRatio 0.85–0.95；需要留白时用 "bl" 或 "ml"。
-8. 参数必须遵守字数限制。超限会导致整份分镜被拒绝，所以宁可缩短文字。
+8. 参数必须遵守字数限制。超限会导致整份分镜会被拒绝，所以宁可缩短文字。
+9. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
+10. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
 
 现在输出 JSON。`;
 

@@ -14,10 +14,13 @@ import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-sto
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
 import { compile, CompileError } from '../../production/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
+import { buildCaptions } from '../../production/captions.ts';
+import { parseSrtCues } from '../../production/srt.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { GLOBAL_FLAGS, projectReference } from './common.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json'] as const;
+const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json',
+  'srt', 'captions-template', 'captions-motion', 'no-captions'] as const;
 
 async function readStoryboard(path: string): Promise<Storyboard> {
   let raw: string;
@@ -51,6 +54,23 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
 
   const { registry, schemas } = await loadRecipeRegistry(resolve('production/recipes'));
 
+  // Captions come from the subtitle file, not the storyboard: the storyboard
+  // decides picture, the subtitle file knows what was actually said.
+  let captions;
+  const srtFlag = flagText(commandLine, 'srt');
+  if (srtFlag && !flagBoolean(commandLine, 'no-captions')) {
+    const cues = parseSrtCues(await readFile(resolve(srtFlag), 'utf8'));
+    if (!cues.length) throw new CliError(`no cues parsed from ${srtFlag}`);
+    captions = buildCaptions(cues, {
+      ...(flagText(commandLine, 'captions-template')
+        ? { template: flagText(commandLine, 'captions-template') as never }
+        : {}),
+      ...(flagText(commandLine, 'captions-motion')
+        ? { motion: flagText(commandLine, 'captions-motion') as never }
+        : {}),
+    });
+  }
+
   // Validate every `mg` shot's params before compiling: a typo should fail here
   // with the field name, not render as a silent default.
   const paramErrors: string[] = [];
@@ -77,6 +97,7 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   try {
     compiled = compile(storyboard, {
       recipes: registry,
+      ...(captions ? { captions } : {}),
       ...(flagText(commandLine, 'timeline') ? { timelineId: flagText(commandLine, 'timeline')! } : {}),
     });
   } catch (error) {

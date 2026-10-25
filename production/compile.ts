@@ -10,6 +10,7 @@
 import type { ProjectDoc } from '../src/editor/projectTypes.ts';
 import type { Timeline } from '../src/editor/timelineTypes.ts';
 import type { TimelineItem } from '../src/editor/clipTypes.ts';
+import type { CaptionsData } from '../src/captions/types.ts';
 import { CURRENT_PROJECT_VERSION } from '../shared/project-version.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
 import { validateStoryboard } from './validate.ts';
@@ -30,6 +31,8 @@ export interface CompileOptions {
   recipes?: RecipeRegistry;
   /** Timeline id to emit. Defaults to `tl-main`. */
   timelineId?: string;
+  /** Caption overlay. Built from the subtitle file by the caller. */
+  captions?: CaptionsData;
 }
 
 export interface CompileResult {
@@ -231,6 +234,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
     height: meta.height,
     items,
     trackOrder: [...TRACK_ORDER],
+    ...(options.captions ? { captions: options.captions } : {}),
     tracks: {
       V2: { kind: 'video', name: 'Overlay' },
       V1: { kind: 'video', name: 'Base' },

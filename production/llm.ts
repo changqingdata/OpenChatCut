@@ -16,7 +16,9 @@ export interface LlmConfig {
 
 function parseEnv(source: string): Record<string, string> {
   const env: Record<string, string> = {};
-  for (const line of source.split('\n')) {
+  // Split on either ending: a file edited on Windows can mix LF and CRLF, and
+  // a trailing \r makes `(.*)$` fail to match the line at all.
+  for (const line of source.split(/\r?\n/)) {
     const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
     if (!match) continue;
     env[match[1]!] = match[2]!.trim().replace(/^["']|["']$/g, '');
@@ -36,6 +38,20 @@ export async function readLlmConfig(envPath = '.env.local'): Promise<LlmConfig |
     return null;
   }
   const env = parseEnv(source);
+
+  // A dedicated override keeps the storyboard generator from disturbing the
+  // app's own LLM_PROVIDER — the app may be configured for a provider the
+  // production pipeline has no key for, and vice versa.
+  if (env.PRODUCTION_LLM_API_KEY && env.PRODUCTION_LLM_MODEL) {
+    return {
+      provider: env.PRODUCTION_LLM_PROVIDER || 'custom',
+      protocol: 'openai-chat',
+      baseUrl: env.PRODUCTION_LLM_BASE_URL || 'https://openrouter.ai/api/v1',
+      model: env.PRODUCTION_LLM_MODEL,
+      apiKey: env.PRODUCTION_LLM_API_KEY,
+    };
+  }
+
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
   const upper = provider.toUpperCase();
 
@@ -59,7 +75,10 @@ export interface CompletionRequest {
 }
 
 export async function completeText(config: LlmConfig, request: CompletionRequest): Promise<string> {
-  const maxTokens = request.maxTokens ?? 8000;
+  // Reasoning models spend a large share of the budget before emitting any
+  // answer, so a storyboard-sized reply needs far more headroom than the
+  // visible JSON suggests. 8000 produced an empty content field.
+  const maxTokens = request.maxTokens ?? 16000;
 
   if (config.protocol === 'anthropic') {
     const res = await fetch(`${config.baseUrl.replace(/\/$/, '')}/messages`, {

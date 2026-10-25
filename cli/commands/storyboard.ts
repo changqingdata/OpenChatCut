@@ -16,6 +16,7 @@ import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildStoryboardPrompt, checkStoryboard, extractJson, repairPrompt } from '../../production/generate.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
+import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
 import { GLOBAL_FLAGS } from './common.ts';
 
@@ -110,18 +111,50 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     );
   }
 
-  let reply = await completeText(config, { system: prompt.system, user: prompt.user });
-  let checked = checkStoryboard(safeExtract(reply), schemas);
-  if (!checked.ok) {
-    reply = await completeText(config, {
-      system: prompt.system,
-      user: `${prompt.user}\n\n${repairPrompt(checked.errors)}`,
-    });
-    checked = checkStoryboard(safeExtract(reply), schemas);
+  // A reasoning model answers this prompt in 60-110s and occasionally truncates
+  // or wraps the JSON in prose. Two attempts was not enough; three with the real
+  // parse error fed back is. The error text matters — "must be a JSON object"
+  // told the model nothing about what to fix.
+  const MAX_ATTEMPTS = 3;
+  let errors: string[] = [];
+  let storyboard: Storyboard | undefined;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const user = attempt === 1 ? prompt.user : `${prompt.user}\n\n${repairPrompt(errors)}`;
+    const reply = await completeText(config, { system: prompt.system, user, maxTokens: 32000 });
+
+    if (!reply.trim()) {
+      errors = ['your reply was empty — output the JSON object as the entire response'];
+      continue;
+    }
+
+    let candidate: unknown;
+    try {
+      candidate = extractJson(reply);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      errors = [
+        `your reply could not be parsed as JSON (${reason}). `
+        + 'Output only the JSON object: no prose, no code fence, no trailing text. '
+        + `The reply began with: ${JSON.stringify(reply.slice(0, 120))}`,
+      ];
+      continue;
+    }
+
+    const checked = checkStoryboard(candidate, schemas);
+    if (checked.ok) {
+      storyboard = checked.storyboard;
+      break;
+    }
+    errors = checked.errors;
   }
-  if (!checked.ok) {
-    throw new CliError(`model output failed validation after one retry:\n  - ${checked.errors.join('\n  - ')}`);
+
+  if (!storyboard) {
+    throw new CliError(
+      `model output failed validation after ${MAX_ATTEMPTS} attempts:\n  - ${errors.join('\n  - ')}`,
+    );
   }
+  const checked = { ok: true as const, storyboard, warnings: [] as string[] };
 
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(checked.storyboard, null, 2)}\n`, 'utf8');
@@ -135,14 +168,5 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
   else {
     writeStdout(`storyboard → ${outPath} (${summary.shots} shots, ${config.model})`);
     for (const warning of summary.warnings) writeStdout(`  warning: ${warning}`);
-  }
-}
-
-/** JSON that fails to parse is a validation failure, not a crash. */
-function safeExtract(text: string): unknown {
-  try {
-    return extractJson(text);
-  } catch {
-    return null;
   }
 }

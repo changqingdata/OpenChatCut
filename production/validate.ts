@@ -61,9 +61,12 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
     }
     previousEnd = Math.max(previousEnd, shot.endFrame);
 
-    if (!shot.beatId?.trim()) errors.push(`${label}: beatId is required`);
-    else if (beatIds.size > 0 && !beatIds.has(shot.beatId)) {
-      errors.push(`${label}: beatId "${shot.beatId}" does not match any beat`);
+    // beatId only has to resolve when the storyboard actually declares beats.
+    if (beatIds.size > 0) {
+      if (!shot.beatId?.trim()) errors.push(`${label}: beatId is required when beats are declared`);
+      else if (!beatIds.has(shot.beatId)) {
+        errors.push(`${label}: beatId "${shot.beatId}" does not match any beat`);
+      }
     }
 
     if (!shot.intent?.trim()) errors.push(`${label}: intent is required — it drives QC`);

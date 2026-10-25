@@ -14,6 +14,9 @@
 //   --from <reply.json>   validate a storyboard written or produced elsewhere
 //   --storyboard <sb.json> reuse one that already passed validation
 //
+// Captions are always built from --srt and burned into the render; pass
+// --no-captions to skip them, or --captions-template <id> to change the look.
+//
 // Everything after the storyboard is deterministic.
 
 import { execFile } from 'node:child_process';
@@ -185,6 +188,11 @@ step('compile onto the timeline');
 const compiled = jsonOf(await occ(
   'compile', projectName, '--storyboard', effectiveStoryboard,
   '--timeline', 'tl-main', '--replace', '--apply', '--json',
+  // Captions come from the subtitle file so the burned-in text matches what is
+  // actually said, not what the storyboard asked for.
+  '--srt', srtPath,
+  ...(args['captions-template'] ? ['--captions-template', String(args['captions-template'])] : []),
+  ...(args['no-captions'] ? ['--no-captions'] : []),
 ));
 console.log(`  ${compiled.items} items on ${compiled.timelineId}`);
 for (const warning of compiled.warnings ?? []) console.log(`  warning: ${warning.message}`);

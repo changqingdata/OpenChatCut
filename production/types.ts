@@ -78,7 +78,8 @@ export type VisualSpec =
 export interface Shot {
   /** Stable across recompiles: "S01", "S02", … Never renumber. */
   id: string;
-  beatId: string;
+  /** Only meaningful when `beats` is declared; the compiler does not read it. */
+  beatId?: string;
   startFrame: number;
   endFrame: number;
   narration: {
@@ -113,7 +114,12 @@ export interface Storyboard {
     durationFrames: number;
     volume?: number;
   };
-  beats: Beat[];
+  /**
+   * Optional narrative grouping. Derivable from the shots' beatIds, so a model
+   * does not have to emit it — dropping it cuts a third of the reply and the
+   * truncation risk that comes with a long answer.
+   */
+  beats?: Beat[];
   shots: Shot[];
 }
 
