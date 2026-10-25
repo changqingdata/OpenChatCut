@@ -1,0 +1,24 @@
+{
+  "id": "quote-card",
+  "name": "金句卡",
+  "nameEn": "Quote Card",
+  "intent": "慢下来的一句话：引用、格言、或视频里最值得被截图的那句。动作小、停留久，用来给长视频留呼吸。",
+  "box": { "width": 900, "height": 700 },
+  "params": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "maxChars": 32,
+      "description": "引文本身，可以两行"
+    },
+    "author": { "type": "string", "maxChars": 12, "default": "" },
+    "source": { "type": "string", "maxChars": 16, "default": "" },
+    "fontSize": { "type": "number", "default": 58, "min": 34, "max": 82 },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "muted": { "type": "color", "default": "#8A857C" },
+    "bg": { "type": "color", "default": "" },
+    "displayFont": { "type": "font", "default": "'Smiley Sans', 'Noto Sans SC', sans-serif" },
+    "bodyFont": { "type": "font", "default": "'Noto Sans SC', sans-serif" }
+  }
+}

@@ -86,6 +86,15 @@ silent default.
 | `number-count` | 900×520 | 数字从起点滚到终点 | 比例、倍数、金额 |
 | `list-reveal` | 900×760 | 2–4 条要点逐条推出 | 步骤、理由、并列 |
 | `compare-stack` | 960×820 | 上下一组对照 | 前后、对错、表里 |
+| `quote-card` | 900×700 | 慢下来的一句话，动作小、停留久 | 引用、格言、金句 |
+| `progress-bar` | 900×420 | 用长度表示比例，数字与条形同步 | 完成度、占比、达成率 |
+| `timeline-dots` | 960×420 | 把过程摊成阶段并指出当前在哪 | 步骤、演进、阶段 |
+| `big-word-fill` | 1080×1920 | 一个字占满画面，全片最强的一次冲击 | 单点强调（一条视频最多一次） |
+
+Eight is the working minimum for a long video: a 15-minute talk produced 259
+shots, and with four recipes the most common one took 49% of them. The four
+added here cover the shapes the first four could not: a pause, a length, a
+sequence, and a single hit.
 
 ## Overlays, not cards
 

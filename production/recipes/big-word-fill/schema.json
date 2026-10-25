@@ -1,0 +1,25 @@
+{
+  "id": "big-word-fill",
+  "name": "单字铺满",
+  "nameEn": "Big Word Fill",
+  "intent": "一个字占满整个画面，是全片最强的一次冲击。一条视频最多用一次，用多了就不冲击了。",
+  "box": { "width": 1080, "height": 1920 },
+  "params": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "maxChars": 2,
+      "description": "一到两个字。超过两个就不是铺满了"
+    },
+    "caption": { "type": "string", "maxChars": 12, "default": "" },
+    "fontSize": { "type": "number", "default": 760, "min": 320, "max": 900 },
+    "tracking": { "type": "number", "default": -20, "min": -40, "max": 20 },
+    "captionOffset": { "type": "number", "default": 300, "min": 80, "max": 700 },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "muted": { "type": "color", "default": "#8A857C" },
+    "bg": { "type": "color", "default": "" },
+    "displayFont": { "type": "font", "default": "'Smiley Sans', 'Noto Sans SC', sans-serif" },
+    "bodyFont": { "type": "font", "default": "'Noto Sans SC', sans-serif" }
+  }
+}
