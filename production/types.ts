@@ -91,6 +91,14 @@ export interface Shot {
   /** What the viewer should take away from this shot. Required; drives QC. */
   intent: string;
   visual: VisualSpec;
+  /**
+   * Fill the frame behind this shot with a solid colour.
+   *
+   * A recipe is an overlay — its box is usually smaller than the canvas, so a
+   * shot that should read as a full-frame card needs this. The compiler emits a
+   * `solid` item underneath and moves the visual to the overlay track.
+   */
+  background?: string;
   transitionIn?: { type: string; durationInFrames: number };
 }
 

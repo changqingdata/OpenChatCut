@@ -1,0 +1,80 @@
+{
+  "id": "compare-stack",
+  "name": "上下对比",
+  "intent": "上下一组对照，用来表现「之前/之后」「错/对」「表面/本质」。竖屏里上下排比左右排更易读。",
+  "nameEn": "Compare Stack",
+  "box": {
+    "width": 960,
+    "height": 820
+  },
+  "params": {
+    "topLabel": {
+      "type": "string",
+      "maxChars": 8,
+      "default": "之前"
+    },
+    "topText": {
+      "type": "string",
+      "required": true,
+      "maxChars": 14
+    },
+    "bottomLabel": {
+      "type": "string",
+      "maxChars": 8,
+      "default": "之后"
+    },
+    "bottomText": {
+      "type": "string",
+      "required": true,
+      "maxChars": 14
+    },
+    "topColor": {
+      "type": "color",
+      "default": "#8A857C",
+      "description": "上半段文字色，默认压暗表示「弱」"
+    },
+    "bottomColor": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 62,
+      "min": 38,
+      "max": 88
+    },
+    "gap": {
+      "type": "number",
+      "default": 34,
+      "min": 16,
+      "max": 72
+    },
+    "dividerWidth": {
+      "type": "number",
+      "default": 120,
+      "min": 40,
+      "max": 480
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "'Noto Sans SC', sans-serif"
+    },
+    "bg": {
+      "type": "color",
+      "default": "",
+      "description": "背景色，留空则透明（叠在画面上用）"
+    }
+  }
+}

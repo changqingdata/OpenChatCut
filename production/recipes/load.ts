@@ -9,12 +9,16 @@ import { validateTemplate } from '../../src/template-host.ts';
 import type { Recipe, RecipeRegistry } from '../compile.ts';
 
 export interface RecipeParam {
-  type: 'string' | 'number' | 'color' | 'font' | 'enum';
+  type: 'string' | 'number' | 'color' | 'font' | 'enum' | 'array';
   required?: boolean;
   default?: unknown;
   min?: number;
   max?: number;
   maxChars?: number;
+  /** `array` only: how many entries are allowed. */
+  maxItems?: number;
+  /** `array` only: per-entry character limit. */
+  itemMaxChars?: number;
   values?: string[];
   description?: string;
 }
@@ -67,6 +71,19 @@ export function checkParams(
     } else if (param.type === 'enum') {
       if (param.values && !param.values.includes(String(value))) {
         errors.push(`"${key}" must be one of ${param.values.join(', ')}`);
+      }
+    } else if (param.type === 'array') {
+      if (!Array.isArray(value)) {
+        errors.push(`"${key}" must be an array of strings`);
+      } else if (param.maxItems !== undefined && value.length > param.maxItems) {
+        errors.push(`"${key}" has ${value.length} entries, over the ${param.maxItems} limit`);
+      } else {
+        value.forEach((entry, index) => {
+          if (typeof entry !== 'string') errors.push(`"${key}[${index}]" must be a string`);
+          else if (param.itemMaxChars !== undefined && entry.length > param.itemMaxChars) {
+            errors.push(`"${key}[${index}]" is ${entry.length} chars, over the ${param.itemMaxChars} limit`);
+          }
+        });
       }
     } else if (typeof value !== 'string') {
       errors.push(`"${key}" must be a string`);

@@ -1,0 +1,89 @@
+{
+  "id": "number-count",
+  "name": "数字滚动",
+  "nameEn": "Number Count",
+  "intent": "让一个数字从起点滚到终点，用于比例、倍数、金额这类需要「落地感」的数据。",
+  "box": {
+    "width": 900,
+    "height": 520
+  },
+  "params": {
+    "value": {
+      "type": "number",
+      "required": true,
+      "description": "滚动到终点值"
+    },
+    "from": {
+      "type": "number",
+      "default": 0,
+      "description": "起始值，通常用 0 制造从无到有"
+    },
+    "decimals": {
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 3
+    },
+    "unit": {
+      "type": "string",
+      "maxChars": 3,
+      "default": "",
+      "description": "单位，如 %、×、万"
+    },
+    "prefix": {
+      "type": "string",
+      "maxChars": 2,
+      "default": "",
+      "description": "数字前缀，如 ¥"
+    },
+    "label": {
+      "type": "string",
+      "maxChars": 10,
+      "default": ""
+    },
+    "note": {
+      "type": "string",
+      "maxChars": 18,
+      "default": ""
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 260,
+      "min": 120,
+      "max": 340
+    },
+    "align": {
+      "type": "enum",
+      "values": [
+        "center",
+        "left"
+      ],
+      "default": "center"
+    },
+    "bg": {
+      "type": "color",
+      "default": "",
+      "description": "背景色，留空则透明（叠在画面上用）"
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "'Noto Sans SC', sans-serif"
+    }
+  }
+}

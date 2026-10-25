@@ -57,7 +57,9 @@ function isFullFrame(visual: VisualSpec): boolean {
   return 'layout' in visual && visual.layout.anchor === 'full';
 }
 
-function trackFor(visual: VisualSpec): string {
+function trackFor(visual: VisualSpec, hasBackground = false): string {
+  // A shot with its own background puts the visual on top of it.
+  if (hasBackground) return OVERLAY_TRACK;
   // Authored text is a full-frame layer in the editor; keep it on the overlay
   // track so it never displaces footage placed underneath.
   if (visual.kind === 'text') return OVERLAY_TRACK;
@@ -85,7 +87,7 @@ function buildItem(
   const durationInFrames = shot.endFrame - shot.startFrame;
   const base = {
     id: `it-${shot.id}`,
-    track: trackFor(shot.visual),
+    track: trackFor(shot.visual, Boolean(shot.background)),
     startFrame: shot.startFrame,
     durationInFrames,
     name: shot.id,
@@ -181,6 +183,21 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
 
   const items: TimelineItem[] = [];
   for (const shot of [...storyboard.shots].sort((a, b) => a.startFrame - b.startFrame)) {
+    // Backgrounds are separate items so a recipe stays a pure overlay and the
+    // same recipe can sit on footage or on a flat card.
+    if (shot.background) {
+      items.push({
+        id: `it-bg-${shot.id}`,
+        kind: 'solid',
+        track: BASE_TRACK,
+        startFrame: shot.startFrame,
+        durationInFrames: shot.endFrame - shot.startFrame,
+        name: `${shot.id} bg`,
+        width: meta.width,
+        height: meta.height,
+        props: { color: shot.background },
+      });
+    }
     const item = buildItem(shot, storyboard, recipes, warnings);
     if (item) items.push(item);
   }

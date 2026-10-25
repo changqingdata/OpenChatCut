@@ -80,6 +80,18 @@ silent default.
 
 ## Current
 
-| Recipe | Box | Use |
-|---|---|---|
-| `keyword-punch` | 900×520 | 把关键词单独砸在画面上，用于观点转折或结论落点 |
+| Recipe | Box | Use | Covers |
+|---|---|---|---|
+| `keyword-punch` | 900×520 | 关键词砸在画面上，用于转折或结论 | 单句断言 |
+| `number-count` | 900×520 | 数字从起点滚到终点 | 比例、倍数、金额 |
+| `list-reveal` | 900×760 | 2–4 条要点逐条推出 | 步骤、理由、并列 |
+| `compare-stack` | 960×820 | 上下一组对照 | 前后、对错、表里 |
+
+## Overlays, not cards
+
+A recipe paints only its own box, so on a bare timeline it floats over
+transparency. A shot that should read as a full-frame card sets
+`shot.background`; the compiler then emits a `solid` item underneath and moves
+the visual to the overlay track. Keep the background at the shot level rather
+than inside the recipe — the same recipe should be able to sit on footage as
+easily as on a flat colour.

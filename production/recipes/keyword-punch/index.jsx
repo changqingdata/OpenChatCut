@@ -13,6 +13,7 @@ const Component = ({ item }) => {
   const rootStyle = {
     position: 'absolute',
     inset: 0,
+    backgroundColor: p.bg || 'transparent',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
