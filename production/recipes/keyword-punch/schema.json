@@ -1,0 +1,40 @@
+{
+  "id": "keyword-punch",
+  "name": "关键词冲击",
+  "nameEn": "Keyword Punch",
+  "intent": "把一句话里的关键词单独拎出来砸在画面上，用于观点转折或结论落点。",
+  "box": { "width": 900, "height": 520 },
+  "params": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "maxChars": 6,
+      "description": "主关键词，一到两个词，超过 6 字就失去冲击力"
+    },
+    "accentText": {
+      "type": "string",
+      "maxChars": 4,
+      "default": "",
+      "description": "跟在主词后面、用强调色显示的部分"
+    },
+    "label": {
+      "type": "string",
+      "maxChars": 10,
+      "default": "",
+      "description": "上方小标签，用于归类，如「关键点」"
+    },
+    "tail": {
+      "type": "string",
+      "maxChars": 18,
+      "default": "",
+      "description": "下方补充一行，解释关键词"
+    },
+    "fontSize": { "type": "number", "default": 132, "min": 72, "max": 180 },
+    "align": { "type": "enum", "values": ["center", "left"], "default": "center" },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "muted": { "type": "color", "default": "#8A857C" },
+    "displayFont": { "type": "font", "default": "'Smiley Sans', 'Noto Sans SC', sans-serif" },
+    "bodyFont": { "type": "font", "default": "'Noto Sans SC', sans-serif" }
+  }
+}

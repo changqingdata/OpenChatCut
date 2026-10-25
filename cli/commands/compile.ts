@@ -9,10 +9,11 @@ import { resolve } from 'node:path';
 import { CliError, UsageError } from '../errors.ts';
 import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
-import { readProjectDoc, resolveProject } from '../store.ts';
+import { resolveProject } from '../store.ts';
 import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-store.ts';
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
 import { compile, CompileError } from '../../production/compile.ts';
+import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { GLOBAL_FLAGS, projectReference } from './common.ts';
 
@@ -48,9 +49,34 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   const project = await resolveProject(projectReference(commandLine));
   const storyboard = await readStoryboard(resolve(storyboardFlag));
 
+  const { registry, schemas } = await loadRecipeRegistry(resolve('production/recipes'));
+
+  // Validate every `mg` shot's params before compiling: a typo should fail here
+  // with the field name, not render as a silent default.
+  const paramErrors: string[] = [];
+  for (const shot of storyboard.shots ?? []) {
+    const visual = shot.visual;
+    if (visual?.kind !== 'mg') continue;
+    const schema = schemas.get(visual.recipe);
+    if (!schema) {
+      paramErrors.push(`${shot.id}: unknown recipe "${visual.recipe}" (have: ${[...schemas.keys()].join(', ') || 'none'})`);
+      continue;
+    }
+    const checked = checkParams(schema, visual.params ?? {});
+    if (!checked.ok) {
+      for (const error of checked.errors) paramErrors.push(`${shot.id}: ${error}`);
+    } else {
+      visual.params = checked.value;
+    }
+  }
+  if (paramErrors.length) {
+    throw new CliError(`storyboard rejected:\n  - ${paramErrors.join('\n  - ')}`);
+  }
+
   let compiled;
   try {
     compiled = compile(storyboard, {
+      recipes: registry,
       ...(flagText(commandLine, 'timeline') ? { timelineId: flagText(commandLine, 'timeline')! } : {}),
     });
   } catch (error) {

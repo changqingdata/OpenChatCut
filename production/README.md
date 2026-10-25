@@ -43,14 +43,20 @@ npx tsc -p production                     # type-check this directory only
 |---|---|
 | IR types | done — `solid`, `text`, `mg`, `mg-code`, `asset` declared |
 | Validation | done — frame ranges, beats, intents, layout bounds |
-| Layout | done — anchored placement, pinned by tests, **visual result unverified** |
+| Layout | done — anchored placement, **verified against rendered frames**, pinned by a nine-anchor table |
 | Compiler | `solid` / `text` / `mg-code` / `mg` (with a registry) |
 | Compiler | `asset` not implemented — needs pool resolution |
-| Recipes | directory exists, no recipes yet |
+| Recipes | 1 — `keyword-punch`, with schema validation and param checking |
+| CLI | `occ compile`, `occ still` |
 | Storyboard generation | not started |
 | QC | not started |
 
-The layout maths is pinned by unit tests but has not been checked against a real
-rendered frame. Confirm it with a still from `occ render` before building the
-recipe library on top of it — if the convention is wrong, every recipe inherits
-the error.
+The layout maths was confirmed by rendering `bl` and `tr` placements and checking
+the box edges land at the expected pixel positions. Two corrections came out of
+that pass:
+
+- A motion-graphic's natural box is auto-fitted to the canvas width before the
+  item transform applies, so `scale` is measured against the **fitted** width.
+  Measuring against the raw box scaled full-width boxes twice.
+- Edge anchors clamp to the safe inset on the anchored side, so a box wider than
+  the canvas minus two insets falls back to the left inset instead of overflowing.

@@ -78,13 +78,41 @@ assert.equal(rect.height, 567, 'height keeps the natural aspect');
 assert.equal(rect.x, 54, 'centred horizontally');
 assert.equal(rect.y, 1305, 'bottom anchor clamped inside the safe inset');
 
-const transform = transformFromRect(rect, 1080, 1920, 720);
-assert.equal(transform.scale, 1.35, 'scale maps natural width onto the rect');
+const transform = transformFromRect(rect, 1080, 1920, { width: 720, height: 420 });
+assert.equal(transform.scale, 0.9, 'scale is measured against the auto-fitted width, not the raw box');
 assert.equal(transform.x, 0, 'horizontally centred means no x offset');
 assert.equal(transform.y, 32.734, 'vertical offset is a percentage of canvas height');
 
 const fullRect = resolveRect({ anchor: 'full', widthRatio: 1 }, 1080, 1920, 720, 420);
 assert.deepEqual(fullRect, { x: 0, y: 0, width: 1080, height: 1920 }, 'full anchor fills the frame');
+
+// Every anchor, pinned against the same canvas. Confirmed visually against
+// rendered frames: the box lands where these numbers say, with the safe inset
+// applied on the edge it is anchored to.
+const ANCHOR_CASES: Array<[Parameters<typeof resolveRect>[0]['anchor'], number, number, number]> = [
+  // anchor, expected x, expected y, expected width
+  ['tl', 48, 48, 864],
+  ['tc', 108, 48, 864],
+  ['tr', 168, 48, 864],
+  ['ml', 48, 708, 864],
+  ['mc', 108, 708, 864],
+  ['mr', 168, 708, 864],
+  ['bl', 48, 1368, 864],
+  ['bc', 108, 1368, 864],
+  ['br', 168, 1368, 864],
+];
+for (const [anchor, expectedX, expectedY, expectedWidth] of ANCHOR_CASES) {
+  const placed = resolveRect({ anchor, widthRatio: 0.8 }, 1080, 1920, 720, 420);
+  assert.equal(placed.width, expectedWidth, `${anchor}: width follows widthRatio`);
+  assert.ok(Math.abs(placed.x - expectedX) < 0.01, `${anchor}: x ${placed.x} != ${expectedX}`);
+  assert.ok(Math.abs(placed.y - expectedY) < 0.01, `${anchor}: y ${placed.y} != ${expectedY}`);
+}
+
+// The edge cases that make the clamp meaningful: a wide box cannot honour both
+// insets, so it must stay inside the left one rather than overflow.
+const tight = resolveRect({ anchor: 'br', widthRatio: 1, safeInset: 48 }, 1080, 1920, 900, 520);
+assert.equal(tight.x, 48, 'a full-width box falls back to the left inset');
+assert.equal(tight.width, 1080, 'a full-width box keeps the canvas width');
 
 // --- compile --------------------------------------------------------------
 
@@ -135,7 +163,7 @@ assert.equal(mg.props?.unit, '%', 'recipe defaults survive');
 assert.equal(mg.props?.value, 37, 'shot params override defaults');
 assert.equal(mg.track, 'V2', 'anchored visual lands on the overlay track');
 assert.equal(mg.width, 720, 'natural box width kept on the item');
-assert.equal(mg.transform?.scale, 1.35, 'placement scale derived from the rect');
+assert.equal(mg.transform?.scale, 0.9, 'placement scale derived from the rect and the fitted box');
 
 const missingRecipe = compile(withRecipe);
 assert.equal(missingRecipe.timeline.items.length, 0, 'unknown recipe produces no item');

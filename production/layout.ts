@@ -81,19 +81,27 @@ export function resolveRect(
 /**
  * Convert a resolved rect into the item transform the editor understands.
  *
- * The layer is centred before transforms apply, so the translation is the
- * distance between the rect centre and the canvas centre, expressed as a
- * percentage of canvas size. `scale` maps the natural box onto the rect width.
+ * Two things the renderer does that this has to account for:
+ *
+ * 1. The layer is **centred** in the canvas before transforms apply, so the
+ *    translation is the distance between the rect centre and the canvas centre.
+ * 2. A motion-graphic's natural box is **auto-fitted** to the canvas first —
+ *    `ItemLayer` scales it by `min(canvasW/boxW, canvasH/boxH)` and centres the
+ *    result. So `scale` must be measured against that fitted width, not against
+ *    the raw box width, or a box that is already full-width would be scaled
+ *    twice.
  */
 export function transformFromRect(
   rect: Rect,
   canvasWidth: number,
   canvasHeight: number,
-  naturalWidth: number,
+  box: { width: number; height: number },
 ): Transform {
   const centerX = rect.x + rect.width / 2;
   const centerY = rect.y + rect.height / 2;
-  const scale = naturalWidth > 0 ? rect.width / naturalWidth : 1;
+  const fitted = Math.min(canvasWidth / box.width, canvasHeight / box.height);
+  const naturalOnCanvas = box.width * fitted;
+  const scale = naturalOnCanvas > 0 ? rect.width / naturalOnCanvas : 1;
   return {
     scale: Number(scale.toFixed(4)),
     x: Number((((centerX - canvasWidth / 2) / canvasWidth) * 100).toFixed(3)),

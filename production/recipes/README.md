@@ -67,3 +67,19 @@ pack without being split.
 Build one recipe, render a still, and confirm the placement maths before
 authoring a set. A wrong layout convention would have to be fixed in every
 recipe at once.
+
+---
+
+## Registry
+
+Recipes are loaded by `production/recipes/load.ts`, which reads every
+subdirectory holding `schema.json` + `index.jsx`. `occ compile` calls
+`checkParams` for each `mg` shot before compiling, so a wrong param name or an
+over-long string fails with the shot id and field name instead of rendering as a
+silent default.
+
+## Current
+
+| Recipe | Box | Use |
+|---|---|---|
+| `keyword-punch` | 900×520 | 把关键词单独砸在画面上，用于观点转折或结论落点 |

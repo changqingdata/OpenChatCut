@@ -111,7 +111,7 @@ function buildItem(
       props: { ...recipe.defaultProps, ...visual.params },
       width: recipe.box.width,
       height: recipe.box.height,
-      transform: transformFromRect(rect, width, height, recipe.box.width),
+      transform: transformFromRect(rect, width, height, recipe.box),
     };
   }
 
@@ -124,7 +124,7 @@ function buildItem(
       props: visual.props ?? {},
       width: visual.box.width,
       height: visual.box.height,
-      transform: transformFromRect(rect, width, height, visual.box.width),
+      transform: transformFromRect(rect, width, height, visual.box),
     };
   }
 

@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { CliError, UsageError } from '../errors.ts';
-import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
+import { flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { readProjectDoc, resolveProject } from '../store.ts';
 import { setUploadsDirProvider, renderTimelineStills } from '../../server/plugins/export-rendering.ts';
