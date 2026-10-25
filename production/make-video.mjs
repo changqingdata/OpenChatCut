@@ -221,7 +221,50 @@ if (musicCategory && !args['no-music']) {
   step('music: none chosen');
 }
 
-// --- 8. render ------------------------------------------------------------
+// --- 8. sound effects -----------------------------------------------------
+
+// A recipe can declare the effect it earns, but placement is a pipeline
+// decision: one per recipe, at its first appearance, three at most. A 259-shot
+// video would otherwise fire an effect every four seconds and read as noise.
+const sfxPlan = [];
+const seenRecipes = new Set();
+for (const shot of finalStoryboard.shots ?? []) {
+  const recipeId = shot.visual?.recipe;
+  if (!recipeId || seenRecipes.has(recipeId)) continue;
+  seenRecipes.add(recipeId);
+
+  let schema;
+  try {
+    schema = JSON.parse(await readFile(`production/recipes/${recipeId}/schema.json`, 'utf8'));
+  } catch {
+    continue;
+  }
+  if (!schema.sfx) continue;
+  sfxPlan.push({ recipeId, shot, sfx: schema.sfx });
+  if (sfxPlan.length >= 3) break;
+}
+
+if (sfxPlan.length && !args['no-sfx']) {
+  for (const { recipeId, shot, sfx } of sfxPlan) {
+    step(`sfx: ${recipeId} @ ${shot.startFrame}`);
+    // A missing effect is a polish problem, not a reason to lose the render.
+    try {
+      await occ('assets', 'place', projectName,
+        '--role', 'sound_effect',
+        '--category', String(sfx.category),
+        ...(sfx.query ? ['--query', String(sfx.query)] : []),
+        '--track', 'A3',
+        '--from-frame', String(shot.startFrame),
+        '--volume', String(sfx.volume ?? 0.35));
+    } catch (error) {
+      console.log(`  skipped: ${String(error.message).split('\n').pop()}`);
+    }
+  }
+} else if (!args['no-sfx']) {
+  step('sfx: none declared');
+}
+
+// --- 9. render ------------------------------------------------------------
 
 step('render');
 await mkdir(dirname(outPath), { recursive: true });

@@ -7,6 +7,11 @@
     "width": 900,
     "height": 520
   },
+  "sfx": {
+    "category": "转场",
+    "query": "上升",
+    "volume": 0.32
+  },
   "params": {
     "value": {
       "type": "number",

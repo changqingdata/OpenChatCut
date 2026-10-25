@@ -13,6 +13,7 @@ import { flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { basename } from 'node:path';
 import { readProjectDoc, resolveProject } from '../store.ts';
+import { resolveTrackId } from '../../src/editor/timelineTypes.ts';
 import { runToolSession } from '../session.ts';
 import { createProviders, searchAll } from '../../production/assets/registry.ts';
 import { acquireToFile } from '../../production/assets/acquire.ts';
@@ -120,7 +121,31 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
   }
   if (!assetId) throw new CliError(`import did not return an asset id: ${JSON.stringify(importResult).slice(0, 300)}`);
 
-  const track = flagText(commandLine, 'track') ?? (role === 'music' ? 'A2' : 'A1');
+  let track = flagText(commandLine, 'track') ?? (role === 'music' ? 'A2' : 'A1');
+
+  // `edit_item` resolves an alias only against tracks that already exist, and
+  // silently falls back to the default audio track when it does not — a third
+  // audio track for sound effects therefore has to be created before use, or
+  // every effect lands on the voiceover and gets pushed past the end.
+  {
+    const doc = await readProjectDoc(project.id);
+    const timeline = doc.timelines.find((candidate) => candidate.id === doc.activeTimelineId);
+    const kind = /^V/i.test(track) ? 'video' as const : 'audio' as const;
+    if (timeline && !resolveTrackId(timeline, track, kind)) {
+      const created = await runToolSession(project.id, [{
+        tool: 'edit_track',
+        args: { action: 'create', json: JSON.stringify({ trackType: kind, name: track }) },
+      }], { apply: true, summary: `create ${track}` });
+      const made = (created.executions[0]?.result ?? {}) as {
+        created?: Array<{ id: string; alias: string }>;
+      };
+      const newTrack = made.created?.[0];
+      if (newTrack?.id) {
+        console.log(`created track ${newTrack.alias} (${newTrack.id})`);
+        track = newTrack.id;
+      }
+    }
+  }
   const volume = Number(flagText(commandLine, 'volume') ?? (role === 'music' ? 0.14 : 0.8));
 
   // `adds` takes no volume — level and fades are update fields, so the clip has

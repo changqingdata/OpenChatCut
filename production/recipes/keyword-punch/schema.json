@@ -7,6 +7,11 @@
     "width": 900,
     "height": 520
   },
+  "sfx": {
+    "category": "转场",
+    "query": "刷子",
+    "volume": 0.3
+  },
   "params": {
     "text": {
       "type": "string",

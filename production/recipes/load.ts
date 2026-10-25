@@ -29,6 +29,11 @@ export interface RecipeSchema {
   nameEn?: string;
   intent?: string;
   box: { width: number; height: number };
+  /**
+   * Optional sound effect this recipe earns. Placement is decided by the
+   * pipeline, not here — a recipe only says what would suit it.
+   */
+  sfx?: { category: string; query?: string; volume?: number };
   params: Record<string, RecipeParam>;
 }
 
