@@ -28,7 +28,7 @@ export interface ScrimStops {
  * footage. 0.24 is the point where a white number still holds on a white-ish
  * frame without the picture going grey.
  */
-export const SCRIM_STOPS: ScrimStops = { top: 0.55, mid: 0.24, bottom: 0.68 };
+export const SCRIM_STOPS: ScrimStops = { top: 0.55, mid: 0.34, bottom: 0.68 };
 
 /**
  * The same wash for a wide frame.
@@ -87,3 +87,28 @@ export function buildScrimItem(
     height: canvas.height,
   };
 }
+
+/**
+ * A soft pool of shade behind one graphic.
+ *
+ * The full-frame wash has to pick one opacity for the whole picture, so it is
+ * always a compromise: strong enough for a busy clip and the quiet ones go grey.
+ * Detailed footage — bare branches, foliage, a trading screen — cuts straight
+ * through a large number even at 0.34.
+ *
+ * This sits between the wash and the graphic and covers only the graphic's own
+ * area, fading to nothing at the edge so it reads as a vignette rather than a
+ * panel. Sized to the canvas with the centre passed as props: the renderer
+ * auto-fits a motion graphic's box, so anything smaller would be scaled twice.
+ */
+export const PLATE_CODE = [
+  'const Component = ({ item }) => {',
+  '  const p = item.props;',
+  '  const ink = (a) => "rgba(11,11,12," + a + ")";',
+  '  const background = "radial-gradient(" + p.rx + "px " + p.ry + "px at " + p.cx + "px " + p.cy + "px, "',
+  '    + ink(p.strength) + " 0%, "',
+  '    + ink(p.strength * 0.6) + " 52%, "',
+  '    + ink(0) + " 100%)";',
+  '  return <div style={{ position: "absolute", inset: 0, background }} />;',
+  '};',
+].join('\n');

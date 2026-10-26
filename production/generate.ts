@@ -79,7 +79,8 @@ const OUTPUT_SHAPE = `{
       "narration": { "text": "string", "startMs": 0, "endMs": 3500 },
       "intent": "一句话：观众这一镜该记住什么",
       "background": "#0B0B0C",
-      "underlay": { "query": "english search words", "note": "为什么这一镜需要实拍" },
+      "transitionIn": { "type": "fade", "durationInFrames": 12 },
+      "underlay": { "query": "english search words", "confidence": "high|medium|low", "essential": false },
       "visual": {
         "kind": "mg",
         "recipe": "recipe-id",

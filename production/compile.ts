@@ -14,7 +14,7 @@ import type { CaptionsData } from '../src/captions/types.ts';
 import { CURRENT_PROJECT_VERSION } from '../shared/project-version.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
 import type { ResolveOptions } from './layout.ts';
-import { buildScrimItem, scrimStopsFor } from './scrim.ts';
+import { PLATE_CODE, buildScrimItem, scrimStopsFor } from './scrim.ts';
 import { validateStoryboard } from './validate.ts';
 import type { Anchor, CompileWarning, LayoutSpec, Shot, Storyboard, VisualSpec } from './types.ts';
 
@@ -383,6 +383,52 @@ function applyTransitions(items: TimelineItem[], storyboard: Storyboard): void {
   }
 }
 
+/**
+ * A pool of shade under one graphic, sized to that graphic.
+ *
+ * Emitted on the graphics lane *before* the visual, so it draws underneath it.
+ * Only when the shot has footage: a card already has a flat background and a
+ * second darkening there would just muddy it.
+ */
+function buildPlate(
+  shot: Shot,
+  visual: VisualSpec,
+  storyboard: Storyboard,
+  recipes: RecipeRegistry,
+  layoutOptions: ResolveOptions,
+): TimelineItem | null {
+  if (!shot.underlay || shot.underlay.selected === false) return null;
+  const box = visual.kind === 'mg'
+    ? recipes.get(visual.recipe)?.box
+    : visual.kind === 'mg-code'
+      ? visual.box
+      : null;
+  if (!box || !('layout' in visual)) return null;
+
+  const { width, height } = storyboard.meta;
+  const rect = resolveRect(cardLayout(visual.layout, true), width, height, box.width, box.height, layoutOptions);
+  const pad = 90;
+  return {
+    id: `it-plate-${shot.id}`,
+    kind: 'motion-graphic',
+    track: OVERLAY_TRACK,
+    startFrame: shot.startFrame,
+    durationInFrames: shot.endFrame - shot.startFrame,
+    name: `${shot.id} plate`,
+    code: PLATE_CODE,
+    props: {
+      cx: Math.round(rect.x + rect.width / 2),
+      cy: Math.round(rect.y + rect.height / 2),
+      rx: Math.round(rect.width / 2 + pad),
+      ry: Math.round(rect.height / 2 + pad),
+      strength: 0.62,
+    },
+    // Canvas-sized so the auto-fit leaves it at 1:1 and the props place the pool.
+    width,
+    height,
+  };
+}
+
 export function compile(storyboard: Storyboard, options: CompileOptions = {}): CompileResult {
   const validation = validateStoryboard(storyboard);
   if (!validation.ok) throw new CompileError(validation.errors);
@@ -432,6 +478,10 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
         message: `${shot.id}: nothing behind the graphics — the canvas would render on transparency`,
       });
     }
+
+    const visual = shot.visual;
+    const plate = visual ? buildPlate(shot, visual, storyboard, recipes, layoutOptions) : null;
+    if (plate) items.push(plate);
 
     const item = buildItem(shot, storyboard, recipes, warnings, layoutOptions);
     if (item) items.push(item);
