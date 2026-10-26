@@ -67,6 +67,20 @@ export async function runQcCommand(commandLine: CommandLine, json: boolean): Pro
   // better than a thrown error with the report buried in its message.
   if (flagBoolean(commandLine, 'report-only')) return;
 
-  if (!report.ok) throw new CliError('qc found blocking problems');
-  if (strict && warnings) throw new CliError(`qc found ${warnings} warning(s) and --strict was passed`);
+  if (!report.ok) {
+    const errors = report.findings.filter((finding) => finding.severity === 'error');
+    throw new CliError('qc found blocking problems', {
+      code: 'qc-blocking',
+      step: 'qc',
+      cause: errors.map((finding) => finding.message).join('; '),
+      hint: 'fix the storyboard, or run without --strict to see warnings only',
+    });
+  }
+  if (strict && warnings) {
+    throw new CliError(`qc found ${warnings} warning(s) and --strict was passed`, {
+      code: 'qc-warnings',
+      step: 'qc',
+      hint: 'drop --strict, or fix the warnings',
+    });
+  }
 }

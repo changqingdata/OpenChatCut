@@ -20,6 +20,8 @@ Refactor the change into new files instead of widening the patch surface.
 | 5 | `cli/router.ts` | `footage` case arm | register `occ footage` |
 | 6 | `cli/commands/compile.ts` | seed the over-footage colour | legibility rule, applied before compile |
 | 7 | `cli/router.ts` | `qc` case arm | register `occ qc` |
+| 8 | `cli/errors.ts` | error detail (code/step/cause/hint) | a supervisor needs structure, not prose |
+| 9 | `cli/main.ts` | structured failure printing | same |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.

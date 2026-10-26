@@ -2,7 +2,7 @@
 // no app, no browser and no MCP session in the loop; writes still go through the
 // same offline edit-session contract the app and external agents use.
 import { flagText, parseCommandLine } from './args.ts';
-import { CliError, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, UsageError } from './errors.ts';
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, UsageError, failureEnvelope, failureLines } from './errors.ts';
 import { writeStderr, writeStdout } from './output.ts';
 import { applyGlobalOptions } from './profile.ts';
 
@@ -49,23 +49,24 @@ Writes
 Projects
   <project> accepts a full id, a unique id prefix, or a unique name.`;
 
-function reportError(error: unknown): number {
-  if (error instanceof UsageError) {
-    writeStderr(error.message);
-    writeStderr('Run `occ --help` for usage.');
-    return EXIT_USAGE;
+/**
+ * Print a failure and pick the exit code.
+ *
+ * `--json` gets the envelope rather than prose: a caller that asked for machine
+ * output should not have to parse a sentence to learn which stage failed. The
+ * exit code is unchanged, so scripts that branch on it keep working.
+ */
+function reportError(error: unknown, json: boolean, step?: string): number {
+  const usage = error instanceof UsageError;
+
+  if (json) {
+    writeStderr(JSON.stringify(failureEnvelope(error, step), null, 2));
+  } else {
+    for (const line of failureLines(error)) writeStderr(line);
+    if (usage) writeStderr('Run `occ --help` for usage.');
   }
-  if (error instanceof CliError) {
-    writeStderr(error.message);
-    return EXIT_FAILURE;
-  }
-  if (error instanceof Error && error.name === 'ExternalEditorCallError') {
-    writeStderr(error.message);
-    return EXIT_FAILURE;
-  }
-  const message = error instanceof Error ? `${error.message}\n${error.stack ?? ''}` : String(error);
-  writeStderr(`unexpected failure: ${message}`);
-  return EXIT_FAILURE;
+
+  return usage ? EXIT_USAGE : EXIT_FAILURE;
 }
 
 export async function run(argv: readonly string[]): Promise<number> {
@@ -73,7 +74,9 @@ export async function run(argv: readonly string[]): Promise<number> {
   try {
     commandLine = parseCommandLine(argv);
   } catch (error) {
-    return reportError(error);
+    // Parsing failed, so there is no --json to honour: a caller that cannot even
+    // form a command line gets the human form.
+    return reportError(error, false, 'parse');
   }
 
   if (commandLine.flags.has('help')) {
@@ -85,10 +88,15 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
+  // The failing stage is inferred from the command the caller asked for, so a
+  // supervisor reading the envelope does not have to map subcommands to stages.
+  const step = commandLine.positionals[0] ? String(commandLine.positionals[0]) : undefined;
+  const json = commandLine.flags.has('json');
+
   try {
     applyGlobalOptions({ dataDir: flagText(commandLine, 'data-dir') });
   } catch (error) {
-    return reportError(error);
+    return reportError(error, json, 'setup');
   }
 
   try {
@@ -98,7 +106,7 @@ export async function run(argv: readonly string[]): Promise<number> {
     await runCommand(commandLine);
     return EXIT_OK;
   } catch (error) {
-    return reportError(error);
+    return reportError(error, json, step);
   }
 }
 

@@ -192,6 +192,17 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
     );
   }
 
+  // Losing every clip is a different failure from losing one: the video still
+  // compiles, and comes out as a deck of cards with no warning anywhere.
+  if (!dryRun && resolved.length === 0 && misses.length > 0) {
+    throw new CliError(`no footage resolved for ${misses.length} shot(s)`, {
+      code: 'footage-none-resolved',
+      step: 'footage',
+      cause: misses.join('; '),
+      hint: 'broaden the queries, or set underlay.selected=false on those shots and use cards',
+    });
+  }
+
   const summary = {
     out: outPath,
     resolved: resolved.length,

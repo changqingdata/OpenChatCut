@@ -138,7 +138,13 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
     const existing = pool.assets.find(
       (asset) => asset.sourceFilename === wanted || asset.name === wanted,
     );
-    if (!existing) throw new CliError(`import did not return an asset id: ${JSON.stringify(result).slice(0, 300)}`);
+    if (!existing) {
+      throw new CliError(`import did not return an asset id: ${JSON.stringify(result).slice(0, 300)}`, {
+        code: 'asset-import-failed',
+        step: 'assets',
+        hint: 'check the downloaded file exists and is a media file the pool accepts',
+      });
+    }
     return existing.id;
   }
 
@@ -170,7 +176,13 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
     cursor += Math.min(natural, remaining);
   }
 
-  if (!placements.length) throw new CliError('nothing to place');
+  if (!placements.length) {
+    throw new CliError('nothing to place', {
+      code: 'nothing-to-place',
+      step: 'assets',
+      hint: 'check --duration-frames is positive and the tracks cover some of it',
+    });
+  }
 
   let track = flagText(commandLine, 'track') ?? (role === 'music' ? 'A2' : 'A1');
 
@@ -218,7 +230,6 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
     results?: Array<{ placed?: { itemId: string; durationInFrames: number } }>;
   };
   const clips = (placedResult.results ?? []).map((entry) => entry.placed).filter(Boolean) as Array<{ itemId: string; durationInFrames: number }>;
-  const clip = clips[0];
 
   if (clips.length && (volume !== 1 || role === 'music')) {
     await runToolSession(project.id, [{

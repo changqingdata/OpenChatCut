@@ -125,7 +125,11 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
     }
   }
   if (paramErrors.length) {
-    throw new CliError(`storyboard rejected:\n  - ${paramErrors.join('\n  - ')}`);
+    throw new CliError(`storyboard rejected:\n  - ${paramErrors.join('\n  - ')}`, {
+      code: 'params-invalid',
+      step: 'compile',
+      hint: 'fix the named fields — each recipe schema lists every limit',
+    });
   }
 
   // Read the project before compiling: the compiler is pure, so it needs the
@@ -185,6 +189,11 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   if (existing && !replace) {
     throw new CliError(
       `timeline ${timeline.id} already exists — pass --replace to overwrite it, or --timeline <id> to write elsewhere`,
+      {
+        code: 'timeline-exists',
+        step: 'compile',
+        hint: 'add --replace; it rewrites the whole timeline, so audio and music have to be re-added after it',
+      },
     );
   }
 

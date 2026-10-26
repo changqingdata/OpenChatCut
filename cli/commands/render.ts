@@ -7,6 +7,7 @@ import { rename, stat, unlink } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { CliError, UsageError } from '../errors.ts';
+import { isAbsolute } from 'node:path';
 import { printJson, writeStderr, writeStdout } from '../output.ts';
 import { readProjectDoc, resolveProject } from '../store.ts';
 import { resolveH264TargetBitrate } from '../../server/media-acceleration.ts';
@@ -46,6 +47,17 @@ export async function runRenderCommand(commandLine: CommandLine, json: boolean):
   const outPath = flagText(commandLine, 'out');
   if (outPath === undefined || !outPath.trim()) {
     throw new UsageError('render needs --out <file> (for example: occ render --out cut.mp4)');
+  }
+  // A relative path makes the encoder-delay probe fail on a file it cannot
+  // resolve, and the failure surfaces as an audio error several layers away. It
+  // cost three rounds of debugging once; it is cheaper to refuse it here.
+  if (!isAbsolute(outPath)) {
+    throw new CliError(`--out must be an absolute path, got "${outPath}"`, {
+      code: 'out-not-absolute',
+      step: 'render',
+      cause: 'a relative path breaks the AAC encoder-delay probe, which then reports an audio error',
+      hint: 'pass an absolute path, e.g. --out E:/videos/cut.mp4',
+    });
   }
   const quiet = flagBoolean(commandLine, 'quiet');
   const project = await resolveProject(projectReference(commandLine));

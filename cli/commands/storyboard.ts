@@ -151,6 +151,11 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     throw new CliError(
       'no LLM key configured. Set LLM_<PROVIDER>_API_KEY and LLM_<PROVIDER>_MODEL in .env.local,\n'
       + 'or run with --prompt and answer it yourself, then --from <file>.',
+      {
+        code: 'llm-not-configured',
+        step: 'storyboard',
+        hint: 'either add a key, or use --prompt / --from to supply the storyboard from outside',
+      },
     );
   }
 
@@ -258,5 +263,12 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     if (!qcLines.length) writeStdout('  qc: clean');
   }
 
-  if (!qc.ok) throw new CliError('generated storyboard has blocking QC problems');
+  if (!qc.ok) {
+    throw new CliError('generated storyboard has blocking QC problems', {
+      code: 'qc-blocking',
+      step: 'storyboard',
+      cause: qcLines.filter((line) => line.startsWith('ERROR')).join('; '),
+      hint: 'the file was written anyway — edit it and re-run compile, or generate again',
+    });
+  }
 }

@@ -125,6 +125,38 @@ assumed.
 `make-video.mjs` runs it before the compile so a broken storyboard fails in a
 second rather than after a two-minute render.
 
+## Failures
+
+A message is written for a human reading a terminal. That is not enough for
+anything that has to *act* on a failure, so every `CliError` also carries:
+
+| Field | Purpose |
+|---|---|
+| `code` | stable kebab-case identifier — branch on this, never on the message |
+| `step` | which stage failed, filled from the subcommand when the error omits it |
+| `cause` | what actually went wrong, which is often not where it surfaced |
+| `hint` | the next thing to try |
+
+`cause` exists because the expensive failures surface somewhere else. A relative
+`--out` made the AAC encoder-delay probe fail, and the error said "audio" — three
+rounds of debugging for a path problem. `occ render` now refuses a relative path
+up front with `out-not-absolute`.
+
+With `--json`, failures print the envelope on **stderr** (stdout stays clean for
+the success payload):
+
+```json
+{ "ok": false, "error": {
+    "code": "timeline-exists", "step": "compile",
+    "message": "timeline tl-main already exists …",
+    "hint": "add --replace; it rewrites the whole timeline, so audio and music have to be re-added after it" } }
+```
+
+Exit codes are unchanged: 1 for a failure, 2 for a usage error. Codes currently
+in use: `out-not-absolute`, `timeline-exists`, `params-invalid`, `qc-blocking`,
+`qc-warnings`, `footage-none-resolved`, `llm-not-configured`,
+`asset-import-failed`, `nothing-to-place`, `frames-required`.
+
 ## Canvas shapes
 
 Portrait and landscape both work, with three rules that differ:
