@@ -32,6 +32,18 @@ const ANCHOR_FRACTION: Record<Anchor, readonly [number, number]> = {
 
 const DEFAULT_INSET = 48;
 
+export interface ResolveOptions {
+  /**
+   * Pixels reserved at the bottom of the canvas.
+   *
+   * Burned-in captions sit in a band across the bottom of the frame. Without
+   * knowing that, a bottom-anchored recipe lands exactly on top of them — which
+   * is what `bc` did on the first automated run: the graphic and the subtitle
+   * printed over each other. The compiler passes this whenever captions are on.
+   */
+  bottomInset?: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -48,8 +60,10 @@ export function resolveRect(
   canvasHeight: number,
   naturalWidth: number,
   naturalHeight: number,
+  options: ResolveOptions = {},
 ): Rect {
   const inset = layout.safeInset ?? DEFAULT_INSET;
+  const bottomInset = Math.max(0, options.bottomInset ?? 0);
   const ratio = clamp(layout.widthRatio, 0.05, 1);
 
   const width = layout.anchor === 'full' ? canvasWidth : canvasWidth * ratio;
@@ -67,7 +81,10 @@ export function resolveRect(
 
   if (layout.anchor !== 'full') {
     x = clamp(x, inset, Math.max(inset, canvasWidth - width - inset));
-    y = clamp(y, inset, Math.max(inset, canvasHeight - height - inset));
+    // The vertical limit accounts for the caption band, so a bottom anchor stops
+    // above it and a tall middle box is pushed up rather than clipped by it.
+    const maxY = Math.max(inset, canvasHeight - bottomInset - height - inset);
+    y = clamp(y, inset, maxY);
   }
 
   return {

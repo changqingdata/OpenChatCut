@@ -13,6 +13,8 @@ import type { TimelineItem } from '../src/editor/clipTypes.ts';
 import type { CaptionsData } from '../src/captions/types.ts';
 import { CURRENT_PROJECT_VERSION } from '../shared/project-version.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
+import type { ResolveOptions } from './layout.ts';
+import { buildScrimItem } from './scrim.ts';
 import { validateStoryboard } from './validate.ts';
 import type { CompileWarning, Shot, Storyboard, VisualSpec } from './types.ts';
 
@@ -79,14 +81,14 @@ const OVERLAY_TRACK = 'V3';
 const TRACK_ORDER = ['V3', 'V2', 'V1', 'A1', 'A2'] as const;
 
 /**
- * How dark the wash over footage is.
+ * Share of the canvas the burned-in captions occupy.
  *
- * Footage arrives with its own exposure: a sunrise clip is nearly white where a
- * recipe expects a dark card, and white type on it disappears. 0.42 is enough to
- * carry type without making the clip look muddy — and the footage is the reason
- * the shot exists, so it must stay visible.
+ * Measured against the caption renderer, which places text at 8% from the bottom
+ * with a 4.2% font — the band plus breathing room comes to about 16%. Bottom
+ * anchors are held above it, or the graphic and the subtitle print over each
+ * other.
  */
-const SCRIM_COLOR = 'rgba(11,11,12,0.46)';
+const CAPTION_BAND_RATIO = 0.16;
 
 /**
  * Secondary text colour when the shot sits on footage.
@@ -224,6 +226,7 @@ function buildItem(
   storyboard: Storyboard,
   recipes: RecipeRegistry,
   warnings: CompileWarning[],
+  layoutOptions: ResolveOptions,
 ): TimelineItem | null {
   const visual = shot.visual;
   if (!visual) return null;
@@ -248,7 +251,7 @@ function buildItem(
       });
       return null;
     }
-    const rect = resolveRect(visual.layout, width, height, recipe.box.width, recipe.box.height);
+    const rect = resolveRect(visual.layout, width, height, recipe.box.width, recipe.box.height, layoutOptions);
     const onFootage = Boolean(shot.underlay) && shot.underlay?.selected !== false;
     return {
       ...base,
@@ -269,7 +272,7 @@ function buildItem(
   }
 
   if (visual.kind === 'mg-code') {
-    const rect = resolveRect(visual.layout, width, height, visual.box.width, visual.box.height);
+    const rect = resolveRect(visual.layout, width, height, visual.box.width, visual.box.height, layoutOptions);
     return {
       ...base,
       kind: 'motion-graphic',
@@ -333,6 +336,10 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
 
   const items: TimelineItem[] = [];
   const assets = options.assets ?? new Map<string, CompileAsset>();
+  // Bottom anchors and tall middle boxes must clear the caption band.
+  const layoutOptions = options.captions?.enabled
+    ? { bottomInset: Math.round(meta.height * CAPTION_BAND_RATIO) }
+    : {};
   for (const shot of [...storyboard.shots].sort((a, b) => a.startFrame - b.startFrame)) {
     const footage = buildUnderlay(shot, assets, meta, warnings);
 
@@ -354,19 +361,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
       items.push(footage);
       // Only worth washing when something will be drawn over the footage.
       const needsScrim = Boolean(shot.visual) || Boolean(options.captions?.enabled);
-      if (needsScrim) {
-        items.push({
-          id: `it-scrim-${shot.id}`,
-          kind: 'solid',
-          track: SCRIM_TRACK,
-          startFrame: shot.startFrame,
-          durationInFrames: shot.endFrame - shot.startFrame,
-          name: `${shot.id} scrim`,
-          width: meta.width,
-          height: meta.height,
-          props: { color: SCRIM_COLOR },
-        });
-      }
+      if (needsScrim) items.push(buildScrimItem(shot, meta, SCRIM_TRACK));
     }
     // Nothing behind the graphics means the canvas shows through — the render
     // comes out on a transparency checkerboard. A shot needs a card colour or
@@ -380,7 +375,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
       });
     }
 
-    const item = buildItem(shot, storyboard, recipes, warnings);
+    const item = buildItem(shot, storyboard, recipes, warnings, layoutOptions);
     if (item) items.push(item);
   }
 

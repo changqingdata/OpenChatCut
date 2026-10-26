@@ -59,9 +59,18 @@ A shot is not one picture. It is a stack:
 
 ```
 V3  graphics   recipes and text — always
-V2  scrim      a dark wash, only over footage, so white type stays readable
+V2  scrim      a vertical gradient, only over footage
 V1  base       footage or a solid card
 ```
+
+The wash is a gradient rather than a flat block because text does not sit
+everywhere: it clusters at the top (overlays) and the bottom (captions), while
+the middle is where the picture is actually looked at. Heavy at both edges, light
+through the centre — `production/scrim.ts`.
+
+Bottom-anchored recipes are held above the caption band (16% of canvas height) by
+`layout.ts`, which the compiler enables whenever captions are on. Without it a
+`bc` recipe prints straight over the subtitle.
 
 Graphics always go to V3 rather than V2. If the scrim shared V2 with them the
 two would fight for one lane, and a shot that gained footage later would silently

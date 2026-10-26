@@ -272,4 +272,60 @@ trimmed.shots = [{
 const trimmedItem = compile(trimmed, { assets }).timeline.items.find((item) => item.id === 'it-f-S01')!;
 assert.equal(trimmedItem.srcInFrame, 180, 'srcInFrame is clamped to what the clip can spare');
 
-console.log('compile.verify: determinism, layout, tracks, recipes, footage and rejection OK');
+// --- captions reserve the bottom band -------------------------------------
+
+// A `bc` recipe used to land on top of the burned-in subtitle: the layout had no
+// idea the band existed. With captions on, the rect has to stop above it.
+const bcBoard = board();
+bcBoard.shots = [{
+  ...bcBoard.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'bc', widthRatio: 0.9 } },
+}];
+
+const bare = compile(bcBoard, { recipes }).timeline.items.find((item) => item.id === 'it-S01')!;
+const withCaptions = compile(bcBoard, { recipes, captions: { enabled: true } as never })
+  .timeline.items.find((item) => item.id === 'it-S01')!;
+assert.ok(
+  (withCaptions.transform?.y ?? 0) < (bare.transform?.y ?? 0),
+  'captions push a bottom-anchored visual upward',
+);
+
+// The reserved band is 16% of the canvas: a 1920-tall frame keeps 307px clear.
+const band = 1920 * 0.16;
+const rectWithCaptions = resolveRect(
+  { anchor: 'bc', widthRatio: 0.9 }, 1080, 1920, 720, 420, { bottomInset: band },
+);
+assert.ok(
+  rectWithCaptions.y + rectWithCaptions.height <= 1920 - band - 48 + 0.001,
+  'the box bottom clears the caption band and the inset',
+);
+
+// A tall middle box is pushed up rather than clipped by the band.
+const tallMiddle = resolveRect({ anchor: 'mc', widthRatio: 0.9 }, 1080, 1920, 720, 1200, { bottomInset: band });
+assert.ok(tallMiddle.y >= 48, 'a tall box still respects the top inset');
+
+// --- the wash is a gradient, not a flat block -----------------------------
+
+// `solid` can paint only one colour, so the wash is a motion graphic sized to
+// the canvas: no transform needed, and it scales with the frame.
+const washBoard = board();
+washBoard.shots = [{
+  ...washBoard.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  visual: undefined,
+  underlay: { assetId: 'asset-portrait' },
+}];
+const wash = compile(washBoard, { assets, captions: { enabled: true } as never })
+  .timeline.items.find((item) => item.id === 'it-scrim-S01')!;
+assert.ok(wash, 'footage with captions gets a wash');
+assert.equal(wash.kind, 'motion-graphic', 'the wash is a motion graphic so it can hold a gradient');
+assert.equal(wash.track, 'V2', 'the wash sits above the footage');
+assert.equal(wash.width, 1080, 'the wash is sized to the canvas');
+assert.equal(wash.height, 1920, 'the wash is sized to the canvas');
+assert.ok(wash.code?.includes('linear-gradient'), 'the wash is a gradient');
+assert.ok((wash.props?.bottom ?? 0) > (wash.props?.mid ?? 1), 'the caption band is the darkest stop');
+
+console.log('compile.verify: determinism, layout, tracks, recipes, footage, captions and rejection OK');
