@@ -119,6 +119,25 @@ assert.ok(codes(burst).includes('cut-burst'), 'five cuts in 6.5s is a burst');
 assert.ok(codes(board([{ recipe: 'keyword-punch' }, { recipe: 'keyword-punch' }, { recipe: 'keyword-punch' }]))
   .includes('recipe-repeat'), 'three in a row of one recipe is flagged');
 
+// The same recipe at three different anchors is three different pictures; only
+// the recipe id would call this a repeat and push the model to invent a new
+// recipe instead of moving the one it has.
+const sameRecipeDifferentPlace = board([
+  { recipe: 'keyword-punch', anchor: 'tc' },
+  { recipe: 'keyword-punch', anchor: 'ml' },
+  { recipe: 'keyword-punch', anchor: 'bc' },
+]);
+assert.ok(!codes(sameRecipeDifferentPlace).includes('recipe-repeat'),
+  'the same recipe at different anchors is not a repeat');
+
+const sameRecipeSamePlace = board([
+  { recipe: 'keyword-punch', anchor: 'mc' },
+  { recipe: 'keyword-punch', anchor: 'mc' },
+  { recipe: 'keyword-punch', anchor: 'mc' },
+]);
+assert.ok(codes(sameRecipeSamePlace).includes('recipe-repeat'),
+  'the same recipe in the same place still is');
+
 const dominant = board(Array.from({ length: 8 }, (_, i) => ({ recipe: i < 5 ? 'keyword-punch' : `r${i}` })));
 assert.ok(codes(dominant).includes('recipe-dominance'), 'one recipe over 45% is flagged');
 

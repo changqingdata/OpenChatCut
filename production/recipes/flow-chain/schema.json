@@ -1,0 +1,59 @@
+{
+  "id": "flow-chain",
+  "name": "因果链",
+  "nameEn": "Flow chain",
+  "intent": "把原因、机制、结果串成一条带箭头的链，用来讲「为什么会这样」",
+  "box": {
+    "width": 960,
+    "height": 460
+  },
+  "params": {
+    "steps": {
+      "type": "array",
+      "required": true,
+      "maxItems": 4,
+      "itemMaxChars": 10,
+      "description": "2–4 个环节，按因果顺序"
+    },
+    "labels": {
+      "type": "array",
+      "maxItems": 4,
+      "itemMaxChars": 6,
+      "description": "每个环节上方的小标签，可选（如「原因」「机制」「结果」）"
+    },
+    "title": {
+      "type": "string",
+      "maxChars": 14
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 52,
+      "min": 26,
+      "max": 60
+    },
+    "bg": {
+      "type": "color",
+      "default": ""
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "Smiley Sans"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "Noto Sans SC"
+    }
+  }
+}

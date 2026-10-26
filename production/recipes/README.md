@@ -94,10 +94,17 @@ silent default.
 | `bar-compare` | 900×520 | 两条并排比长度，比例即结论 | 倍数、落差、A 是 B 的几倍 |
 | `icon-row` | 960×520 | 2–4 项并列，每项一个图标 | 要素、特征、条件 |
 | `chapter-card` | 1080×1920 | 章节分隔卡，序号 + 标题 | 长视频的导航 |
+| `annotation` | 900×900 | 圈出画面某处 + 说明，透明底可叠素材 | 指向、强调细节 |
+| `flow-chain` | 960×460 | 原因 → 机制 → 结果，箭头逐个画出 | 因果、传导、原理 |
+| `stack-share` | 900×380 | 一条横向构成条 + 图例 | 构成、占比、花在哪 |
 
-Twelve recipes cover the shapes a spoken-word video needs: a claim, a number, a
-list, a contrast, a pause, a proportion, a sequence, a single hit, a trend, a
-ratio, a set of parts, and a chapter break.
+Fifteen recipes. The first twelve arrange text; the last three point at things,
+which is what an explainer actually does: `annotation` rings a spot on the frame,
+`flow-chain` runs cause to effect, `stack-share` splits a total into parts.
+
+`annotation` is the one that wants a human eye: the model cannot see the footage,
+so it places the ring by guesswork. It earns its keep in hand-authored storyboards
+and in the fix-up pass after a render.
 
 `chapter-card` and `big-word-fill` are full-frame (box = canvas), so the footage
 policy never puts a clip under them — it would be invisible.

@@ -1,0 +1,20 @@
+{
+  "id": "annotation",
+  "name": "圈注",
+  "nameEn": "Annotation",
+  "intent": "在画面上圈出某处并加一句说明，用来把观众的注意力指到一个具体位置",
+  "box": { "width": 900, "height": 900 },
+  "params": {
+    "x": { "type": "number", "default": 0.5, "min": 0, "max": 1, "description": "圈心在盒子里的横向位置，0 最左、1 最右" },
+    "y": { "type": "number", "default": 0.5, "min": 0, "max": 1, "description": "圈心在盒子里的纵向位置，0 最上、1 最下" },
+    "size": { "type": "number", "default": 0.4, "min": 0.12, "max": 1, "description": "圈的直径，占盒子宽度的比例" },
+    "shape": { "type": "enum", "values": ["circle", "box"], "default": "circle" },
+    "label": { "type": "string", "maxChars": 12, "description": "圈下方的说明，带深色底衬" },
+    "fontSize": { "type": "number", "default": 34, "min": 22, "max": 52 },
+    "strokeWidth": { "type": "number", "default": 6, "min": 2, "max": 14 },
+    "bg": { "type": "color", "default": "" },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "bodyFont": { "type": "font", "default": "Noto Sans SC" }
+  }
+}

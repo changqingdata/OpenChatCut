@@ -46,7 +46,7 @@ npx tsc -p production                     # type-check this directory only
 | Layout | done — anchored placement, **verified against rendered frames**, pinned by a nine-anchor table |
 | Compiler | `solid` / `text` / `mg-code` / `mg` (with a registry) |
 | Compiler | footage + scrim + graphics on three lanes (V1 / V2 / V3) |
-| Recipes | 12, with schema validation and param checking |
+| Recipes | 15, with schema validation and param checking |
 | Material | private audio (music, SFX), Pexels, Pixabay |
 | Footage density | policy module — ratio, spacing, essentials; retunable without a model call |
 | CLI | `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
@@ -91,7 +91,7 @@ cannot be reproduced cannot be trusted.
 | `no-transition` | note | 10+ shots and every cut is hard |
 | `shot-too-short` | warn | a shot is under 1.2s |
 | `cut-burst` | warn | more than 4 cuts inside 6s |
-| `recipe-repeat` | warn | 3 consecutive shots use one recipe |
+| `recipe-repeat` | warn | 3 consecutive shots share a recipe **and** an anchor |
 | `recipe-dominance` | warn | one recipe is over 45% of a 6+ shot video |
 | `recipe-variety` | note | fewer than 4 recipes across 8+ shots |
 | `footage-adjacent` | warn | two footage shots in a row |

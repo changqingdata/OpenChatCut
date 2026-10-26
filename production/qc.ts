@@ -118,6 +118,18 @@ function hasFootage(shot: Shot): boolean {
   return Boolean(shot.underlay?.query) && shot.underlay?.selected !== false;
 }
 
+/**
+ * What the viewer actually sees as "a layout".
+ *
+ * A recipe is only half of it: `keyword-punch` at the top, hanging left, and
+ * centred are three different pictures built from one recipe. Counting repeats by
+ * recipe alone declared those a repeat and pushed the model to invent new recipes
+ * instead of varying the one it had — which is the cheaper way to look different.
+ */
+function lookOf(shot: Shot): string {
+  return `${recipeOf(shot)}@${anchorOf(shot)}`;
+}
+
 function anchorOf(shot: Shot): string {
   const visual = shot.visual;
   if (!visual) return 'none';
@@ -218,13 +230,13 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
   }
   const distinctRecipes = Object.keys(histogram).length;
 
-  const repeatRuns = runs(shots, recipeOf).filter((run) => run.items.length >= 3 && run.key !== 'footage-only');
+  const repeatRuns = runs(shots, lookOf).filter((run) => run.items.length >= 3 && !run.key.startsWith('footage-only'));
   for (const run of repeatRuns) {
     findings.push({
       code: 'recipe-repeat',
       severity: 'warn',
       shotIds: run.items.map((shot) => shot.id),
-      message: `${run.items.length} consecutive shots use "${run.key}" — the picture stops changing`,
+      message: `${run.items.length} consecutive shots look the same (${run.key}) — change the anchor, not just the recipe`,
     });
   }
 
