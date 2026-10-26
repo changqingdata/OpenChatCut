@@ -59,6 +59,14 @@ const essentialResult = applyFootagePolicy(withEssential);
 assert.ok(essentialResult.kept.includes('S07'), 'an essential shot is always kept');
 assert.ok(essentialResult.kept.length >= 3, 'essentials do not shrink the total below the ratio');
 
+// --- eligibility: no concrete subject -------------------------------------
+
+// `subject: "-"` is the same judgement as `low` reached another way: there is
+// nothing to photograph. Selecting it anyway would put a clip on an abstraction.
+const abstract = board(6, (index) => `clip ${index}`);
+abstract.shots[0]!.underlay = { ...abstract.shots[0]!.underlay!, subject: '-' };
+assert.ok(!applyFootagePolicy(abstract).kept.includes('S01'), 'a shot with no concrete subject never carries footage');
+
 // --- eligibility ----------------------------------------------------------
 
 // A shot too short to read stays a card, and is not counted as unproposed.

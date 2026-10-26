@@ -89,6 +89,9 @@ export function applyFootagePolicy(
     // The model said there is no honest clip for this line. A wrong clip is worse
     // than a card: the viewer notices immediately, and stops trusting the picture.
     if (shot.underlay?.confidence === 'low') return false;
+    // The model named no concrete subject, which is the same judgement as `low`
+    // reached a different way. Honouring both keeps the two from disagreeing.
+    if (shot.underlay?.subject?.trim() === '-') return false;
     // A full-frame visual paints its own card across the whole canvas, so a clip
     // underneath it is never seen. Downloading one would be waste, and the scrim
     // would only dim a picture nobody can look at.

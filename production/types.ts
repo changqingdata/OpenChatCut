@@ -111,6 +111,15 @@ export interface UnderlaySpec {
   /** The model's own claim that this shot is weak without footage. Always kept. */
   essential?: boolean;
   /**
+   * The concrete thing this sentence names, in Chinese, six characters or fewer.
+   *
+   * `-` when the sentence names nothing you could photograph — an abstraction, a
+   * relation, a quantity. This exists because a self-rated confidence defaults to
+   * "medium" for everything: asking the model to name the subject first forces a
+   * decision, and the rating follows from it rather than standing alone.
+   */
+  subject?: string;
+  /**
    * How well the footage illustrates *this sentence*.
    *
    * The failure this exists for: a shot about "decline" got an hourglass, because

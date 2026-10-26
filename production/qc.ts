@@ -55,6 +55,8 @@ export interface QcStats {
   footageRelevance: number | null;
   /** Shots that carry a fade. */
   transitions: number;
+  /** Shots whose sentence named no concrete thing (`subject: "-"`). */
+  abstractShots: number;
 }
 
 export interface QcReport {
@@ -276,6 +278,20 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
     }
   }
 
+  // The model named no subject but still rated the clip above `low`. One of the
+  // two answers is wrong, and the pair is only useful if it agrees.
+  for (const shot of shots) {
+    const underlay = shot.underlay;
+    if (underlay?.subject?.trim() === '-' && underlay.confidence && underlay.confidence !== 'low') {
+      findings.push({
+        code: 'footage-subject-mismatch',
+        severity: 'warn',
+        shotIds: [shot.id],
+        message: `${shot.id} names no concrete subject but rates its clip "${underlay.confidence}"`,
+      });
+    }
+  }
+
   for (const shot of shots) {
     if (hasFootage(shot) && shot.underlay?.confidence === 'low') {
       findings.push({
@@ -387,6 +403,7 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
     footageConfidence: confidence,
     footageRelevance: ratedTotal ? Number(((confidence.high + confidence.medium) / ratedTotal).toFixed(2)) : null,
     transitions,
+    abstractShots: shots.filter((shot) => shot.underlay?.subject?.trim() === '-').length,
   };
 
   return {

@@ -80,7 +80,7 @@ const OUTPUT_SHAPE = `{
       "intent": "一句话：观众这一镜该记住什么",
       "background": "#0B0B0C",
       "transitionIn": { "type": "fade", "durationInFrames": 12 },
-      "underlay": { "query": "english search words", "confidence": "high|medium|low", "essential": false },
+      "underlay": { "subject": "这句话里的具体名词", "query": "english search words", "confidence": "high|medium|low", "essential": false },
       "visual": {
         "kind": "mg",
         "recipe": "recipe-id",
@@ -134,14 +134,18 @@ ${OUTPUT_SHAPE}
 4. 画面有两种来源，可以同时使用：
    - underlay：真实素材（实拍视频或照片），画满整屏
    - visual：图形配方，叠在素材之上或独占画面
-5. **每个镜头都要写 underlay.query**（英文 2–5 个词，写画面里有什么，不要写情绪）
-   和 **underlay.confidence**。confidence 说的是「这个检索词有多贴合**这一句话**」，
-   不是有多贴合整条视频的主题：
-   - "high"：画面里能直接看到这句话说的东西
-   - "medium"：相关，但不是字面意思
-   - "low"：这句话其实没有对应的实拍画面（程序不会用这条素材，宁可留空）
-   自检：把这句话单独拿出来，观众看到这个画面会觉得对得上吗？
-   反面例子：句子在讲「退步」，检索词却是 hourglass（沙漏讲的是时间，不是退步）→ 应该是 low。
+5. **每个镜头先找主语，再写检索词**。三步：
+   ① 写 underlay.subject：这句话里那个**能被拍到的具体东西**，中文，不超过 6 个字。
+      如果这句话只有抽象概念（利率、时间、复利、重要性），写 "-"。
+   ② 写 underlay.query：英文 2–5 个词，画的就是这个主语。
+   ③ 写 underlay.confidence，按主语定，不要凭感觉：
+      - 主语是一个**具体的东西**（硬币、沙漏、枯树、时钟、跑步的人）→ "high"
+      - 主语是**一类场景**、不是一个东西（上班、学习、早起）→ "medium"
+      - 主语写了 "-"，这句话是抽象观点 → 必须是 "low"，程序不会用这条素材
+   自检：把 subject 单独念出来，再念 query。如果 query 画的东西和 subject 不是同一个，
+   说明这一步就错了。
+   反面例子：句子在讲「退步」，subject 应该是「枯萎的植物」，query 写 hourglass（沙漏）
+   就错了——沙漏是时间，不是退步。
 6. 把"没有画面就废了"的镜头标 "essential": true（大约每 4–5 个镜头一个）。
    essential 和 confidence 是两件事：essential 说"必须有素材"，confidence 说"这条贴不贴"。
 7. **每个镜头都要设 background**（如 "#0B0B0C"），即使你给了 underlay。

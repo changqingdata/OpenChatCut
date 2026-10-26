@@ -226,6 +226,19 @@ const ratedReport = runQc(rated);
 assert.deepEqual(ratedReport.stats.footageConfidence, { high: 1, medium: 0, low: 1 }, 'confidence is counted');
 assert.equal(ratedReport.stats.footageRelevance, 0.5, 'relevance is high+medium over all rated');
 
+// A subject of "-" means the sentence names nothing photographable. Rating the
+// clip above `low` contradicts that, and the pair is only useful if it agrees.
+const contradictory = board([{ footage: 'hourglass sand' }]);
+contradictory.shots[0]!.underlay = { ...contradictory.shots[0]!.underlay!, confidence: 'medium', subject: '-' };
+const contradictionReport = runQc(contradictory);
+assert.ok(contradictionReport.findings.some((f) => f.code === 'footage-subject-mismatch'),
+  'no subject but a confident rating is flagged');
+assert.equal(contradictionReport.stats.abstractShots, 1, 'abstract shots are counted');
+
+const honest = board([{ footage: 'hourglass sand' }]);
+honest.shots[0]!.underlay = { ...honest.shots[0]!.underlay!, confidence: 'low', subject: '-' };
+assert.ok(!codes(honest).includes('footage-subject-mismatch'), 'a consistent pair passes');
+
 // --- rhythm ---------------------------------------------------------------
 
 // Five shots of the same length read as a metronome, even when each one is fine.
