@@ -36,9 +36,19 @@ const Component = ({ item }) => {
     color: color,
     marginBottom: 16,
   });
+  // A fixed size has to fit the longest line it might ever get, so short lines
+  // come out timid. Fit to the actual text instead, capped so a three-character
+  // line does not turn into a poster.
+  const fitSize = (text) => {
+    const chars = Array.from(String(text ?? '')).length || 1;
+    const inner = item.width - 120;
+    return Math.min(Math.round(p.fontSize * 1.7), Math.floor((inner / chars) * 0.92));
+  };
+  const bodySize = Math.min(fitSize(p.topText), fitSize(p.bottomText));
+
   const textStyle = (color) => ({
     fontFamily: p.displayFont,
-    fontSize: p.fontSize,
+    fontSize: bodySize,
     lineHeight: 1.28,
     fontWeight: 400,
     letterSpacing: '-0.01em',
