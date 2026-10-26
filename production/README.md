@@ -108,6 +108,19 @@ consecutive repeats, and ten cards anchored under the captions.
 occ qc --storyboard sb.json [--strict] [--json]
 ```
 
+## Long cuts
+
+The music library is a set of songs, not loops: the longest track in a mood is
+around 145s, so a fifteen-minute video cannot be scored by one of them, and
+repeating a single track would put an audible seam every two minutes.
+`assets place --loop` walks the same mood, takes each track once, and chains them
+end to end — same mood, different songs. Only the first fades in and only the
+last fades out; fading every join would pump the bed once per track.
+
+Render throughput measured at ~36 fps on this machine (60s of 1080x1920 in 50s),
+so a 15-minute cut is roughly 13 minutes rather than the hour an early estimate
+assumed.
+
 `occ storyboard --generate` runs it automatically and fails on errors;
 `make-video.mjs` runs it before the compile so a broken storyboard fails in a
 second rather than after a two-minute render.

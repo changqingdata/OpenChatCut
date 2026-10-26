@@ -247,6 +247,10 @@ if (musicCategory && !args['no-music']) {
     '--min-duration', String(Math.ceil(seconds)),
     // Cap to the video so the fade-out lands inside the cut rather than 90s later.
     '--duration-frames', String(durationFrames),
+    // The library is songs, not loops — the longest is around 145s, so anything
+    // past two minutes needs several chained. Harmless on a short cut: one track
+    // already covers it and the loop is a no-op.
+    '--loop',
     '--volume', String(args['music-volume'] ?? 0.14));
 } else if (!args['no-music']) {
   step('music: none chosen');

@@ -57,6 +57,58 @@ export async function pickMusic(
   return { item: longest, short: true };
 }
 
+export interface MusicBed {
+  items: MaterialItem[];
+  /** Seconds the picked tracks actually cover. */
+  coveredSec: number;
+  /** True when even every track in the category together falls short. */
+  short: boolean;
+}
+
+/**
+ * Enough music to cover a long cut.
+ *
+ * The library is a set of songs, not loops: the longest track in a mood is
+ * around 145 seconds, so a fifteen-minute video cannot be scored by one of them.
+ * Repeating a single track would put an audible seam every two minutes, so this
+ * walks the same mood and takes each track once, in order, until the duration is
+ * covered. Same mood, different songs — the bed stays coherent and no loop point
+ * repeats.
+ */
+export async function pickMusicBed(
+  providers: readonly MaterialProvider[],
+  options: { category: string; durationSec: number; query?: string },
+): Promise<MusicBed | null> {
+  const catalog = providers.find((provider) => provider.id === 'private-audio');
+  if (!catalog || !(await catalog.available())) return null;
+
+  const items = await catalog.search({
+    role: 'music',
+    category: options.category,
+    ...(options.query ? { query: options.query } : {}),
+    limit: 400,
+  });
+  if (!items.length) return null;
+
+  // Longest first: fewer joins, and the tail is less likely to need a very short
+  // filler that ends mid-phrase.
+  const ordered = [...items].sort((a, b) => (b.durationSec ?? 0) - (a.durationSec ?? 0));
+
+  const picked: MaterialItem[] = [];
+  let covered = 0;
+  for (const item of ordered) {
+    if (covered >= options.durationSec) break;
+    picked.push(item);
+    covered += item.durationSec ?? 0;
+  }
+
+  return {
+    items: picked,
+    coveredSec: Number(covered.toFixed(2)),
+    short: covered < options.durationSec,
+  };
+}
+
 /** Mood categories the library actually has, for the generation prompt. */
 export async function musicCategories(providers: readonly MaterialProvider[]): Promise<string[]> {
   const catalog = providers.find((provider) => provider.categories);

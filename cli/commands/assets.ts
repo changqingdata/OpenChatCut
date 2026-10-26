@@ -9,7 +9,7 @@
 // chain. It picks a track by length, downloads it, imports it, then adds the
 // clip — four steps that must agree on the same file.
 import { CliError, UsageError } from '../errors.ts';
-import { flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
+import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { basename } from 'node:path';
 import { readProjectDoc, resolveProject } from '../store.ts';
@@ -17,14 +17,14 @@ import { resolveTrackId } from '../../src/editor/timelineTypes.ts';
 import { runToolSession } from '../session.ts';
 import { createProviders, searchAll } from '../../production/assets/registry.ts';
 import { acquireToFile } from '../../production/assets/acquire.ts';
-import { pickMusic } from '../../production/assets/music.ts';
+import { pickMusic, pickMusicBed } from '../../production/assets/music.ts';
 import type { MaterialItem, MaterialRole } from '../../production/assets/types.ts';
 import { GLOBAL_FLAGS, projectReference, subLine } from './common.ts';
 
 const ROLES: readonly MaterialRole[] = ['music', 'sound_effect', 'image', 'video', 'gif', 'icon'];
 
 const FLAGS = [...GLOBAL_FLAGS, 'role', 'query', 'category', 'limit', 'json',
-  'min-duration', 'volume', 'track', 'from-frame', 'duration-frames'] as const;
+  'min-duration', 'volume', 'track', 'from-frame', 'duration-frames', 'loop'] as const;
 
 function readRole(commandLine: CommandLine): MaterialRole {
   const value = flagText(commandLine, 'role');
@@ -72,20 +72,42 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
   const durationFlag = flagText(commandLine, 'duration-frames');
   const minDurationSec = Number(flagText(commandLine, 'min-duration') ?? 0);
 
-  let item: MaterialItem | null = null;
+  const loop = flagBoolean(commandLine, 'loop');
+  const doc = await readProjectDoc(project.id);
+  const fps = doc.timelines.find((t) => t.id === doc.activeTimelineId)?.fps ?? 30;
+
+  let picks: MaterialItem[] = [];
   let note = '';
 
   if (role === 'music') {
     const category = flagText(commandLine, 'category');
     if (!category) throw new UsageError('music needs --category');
-    const pick = await pickMusic(providers, {
-      category,
-      minDurationSec,
-      ...(flagText(commandLine, 'query') ? { query: flagText(commandLine, 'query')! } : {}),
-    });
-    if (!pick) throw new CliError(`no track found in category "${category}"`);
-    item = pick.item;
-    if (pick.short) note = `the longest track in "${category}" is shorter than the video`;
+    const query = flagText(commandLine, 'query');
+
+    // A long cut cannot be scored by one song: the library is a set of tracks,
+    // not loops, and the longest is around 145s. `--loop` walks the same mood and
+    // chains tracks end to end, so no single loop point repeats.
+    if (loop && durationFlag) {
+      const bed = await pickMusicBed(providers, {
+        category,
+        durationSec: Number(durationFlag) / fps,
+        ...(query ? { query } : {}),
+      });
+      if (!bed) throw new CliError(`no track found in category "${category}"`);
+      picks = bed.items;
+      note = bed.short
+        ? `every track in "${category}" together covers ${Math.round(bed.coveredSec)}s of ${Math.round(Number(durationFlag) / fps)}s`
+        : `${picks.length} track(s) from "${category}" cover the cut`;
+    } else {
+      const pick = await pickMusic(providers, {
+        category,
+        minDurationSec,
+        ...(query ? { query } : {}),
+      });
+      if (!pick) throw new CliError(`no track found in category "${category}"`);
+      picks = [pick.item];
+      if (pick.short) note = `the longest track in "${category}" is shorter than the video`;
+    }
   } else {
     const outcome = await searchAll(providers, {
       role,
@@ -93,33 +115,62 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
       ...(flagText(commandLine, 'category') ? { category: flagText(commandLine, 'category')! } : {}),
       limit: 1,
     });
-    item = outcome.items[0] ?? null;
+    const item = outcome.items[0];
     if (!item) throw new CliError(`no ${role} result for "${flagText(commandLine, 'query') ?? ''}"`);
+    picks = [item];
   }
 
-  const file = await acquireToFile(item);
+  /** Import one downloaded file and return its pool id. */
+  async function importFile(item: MaterialItem, path: string): Promise<string> {
+    const imported = await runToolSession(project.id, [{
+      tool: 'import_asset',
+      args: { path },
+    }], { apply: true, summary: `import ${item.provider} ${role}` });
 
-  const imported = await runToolSession(project.id, [{
-    tool: 'import_asset',
-    args: { path: file.path },
-  }], { apply: true, summary: `import ${item.provider} ${role}` });
+    const result = (imported.executions[0]?.result ?? {}) as { imported?: Array<{ id: string }> };
+    const id = result.imported?.[0]?.id;
+    if (id) return id;
 
-  const importResult = (imported.executions[0]?.result ?? {}) as {
-    imported?: Array<{ id: string; name: string }>;
-  };
-  let assetId = importResult.imported?.[0]?.id;
-
-  // Re-placing the same file imports nothing and reports a duplicate instead of
-  // returning an id, so fall back to the pool entry with that filename.
-  if (!assetId) {
-    const doc = await readProjectDoc(project.id);
-    const wanted = basename(file.path);
-    const existing = doc.assets.find(
+    // Re-placing the same file imports nothing and reports a duplicate instead of
+    // returning an id, so fall back to the pool entry with that filename.
+    const pool = await readProjectDoc(project.id);
+    const wanted = basename(path);
+    const existing = pool.assets.find(
       (asset) => asset.sourceFilename === wanted || asset.name === wanted,
     );
-    assetId = existing?.id;
+    if (!existing) throw new CliError(`import did not return an asset id: ${JSON.stringify(result).slice(0, 300)}`);
+    return existing.id;
   }
-  if (!assetId) throw new CliError(`import did not return an asset id: ${JSON.stringify(importResult).slice(0, 300)}`);
+
+  // Chain the tracks end to end. A single track keeps the old behaviour exactly:
+  // one placement, at `--from-frame`, optionally cut to `--duration-frames`.
+  const limit = durationFlag ? Number(durationFlag) : undefined;
+  const placements: Array<{ assetId: string; fromFrame: number; durationInFrames?: number }> = [];
+  let cursor = fromFrame;
+  let downloadedBytes = 0;
+
+  for (const item of picks) {
+    const file = await acquireToFile(item);
+    downloadedBytes += file.bytes;
+    const assetId = await importFile(item, file.path);
+
+    const pool = await readProjectDoc(project.id);
+    const natural = pool.assets.find((asset) => asset.id === assetId)?.durationInFrames
+      ?? Math.round((item.durationSec ?? 0) * fps);
+
+    if (limit === undefined) {
+      placements.push({ assetId, fromFrame: cursor });
+      cursor += natural;
+      continue;
+    }
+
+    const remaining = limit - (cursor - fromFrame);
+    if (remaining <= 0) break;
+    placements.push({ assetId, fromFrame: cursor, durationInFrames: Math.min(natural, remaining) });
+    cursor += Math.min(natural, remaining);
+  }
+
+  if (!placements.length) throw new CliError('nothing to place');
 
   let track = flagText(commandLine, 'track') ?? (role === 'music' ? 'A2' : 'A1');
 
@@ -153,33 +204,36 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
   const placed = await runToolSession(project.id, [{
     tool: 'edit_item',
     args: {
-      adds: [{
-        type: 'audio',
-        assetId,
+      adds: placements.map((placement) => ({
+        type: 'audio' as const,
+        assetId: placement.assetId,
         track,
-        fromFrame,
-        ...(durationFlag ? { durationInFrames: Number(durationFlag) } : {}),
-      }],
+        fromFrame: placement.fromFrame,
+        ...(placement.durationInFrames !== undefined ? { durationInFrames: placement.durationInFrames } : {}),
+      })),
     },
   }], { apply: true, summary: `place ${role} on ${track}` });
 
   const placedResult = (placed.executions[0]?.result ?? {}) as {
     results?: Array<{ placed?: { itemId: string; durationInFrames: number } }>;
   };
-  const clip = placedResult.results?.[0]?.placed;
+  const clips = (placedResult.results ?? []).map((entry) => entry.placed).filter(Boolean) as Array<{ itemId: string; durationInFrames: number }>;
+  const clip = clips[0];
 
-  if (clip?.itemId && (volume !== 1 || role === 'music')) {
+  if (clips.length && (volume !== 1 || role === 'music')) {
     await runToolSession(project.id, [{
       tool: 'edit_item',
       args: {
-        updates: [{
-          type: 'audio',
-          itemId: clip.itemId,
+        updates: clips.map((entry, index) => ({
+          type: 'audio' as const,
+          itemId: entry.itemId,
           volume,
-          // A hard start under a voice is jarring; a short ramp fixes it.
-          fadeInSeconds: role === 'music' ? 0.8 : 0,
-          fadeOutSeconds: role === 'music' ? 1.2 : 0,
-        }],
+          // A hard start under a voice is jarring; a short ramp fixes it. Only the
+          // first track fades in and only the last fades out — fading every join
+          // would pump the bed once per track.
+          fadeInSeconds: role === 'music' && index === 0 ? 0.8 : 0,
+          fadeOutSeconds: role === 'music' && index === clips.length - 1 ? 1.2 : 0,
+        })),
       },
     }], { apply: true, summary: `set ${role} level` });
   }
@@ -187,19 +241,20 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
   const summary = {
     projectId: project.id,
     role,
-    provider: item.provider,
-    label: item.label,
-    category: item.category,
     track,
-    assetId,
-    itemId: clip?.itemId,
-    durationInFrames: clip?.durationInFrames,
-    downloadedBytes: file.bytes,
+    clips: clips.length,
+    itemIds: clips.map((entry) => entry.itemId),
+    durationInFrames: clips.reduce((total, entry) => total + entry.durationInFrames, 0),
+    downloadedBytes,
     note,
   };
   if (json) printJson(summary);
   else {
-    writeStdout(`placed ${describe(item)} on ${track} (${clip?.durationInFrames ?? '?'} frames)`);
+    for (const [index, item] of picks.entries()) {
+      if (index >= clips.length) break;
+      writeStdout(`placed ${describe(item)} on ${track} (${clips[index]!.durationInFrames} frames)`);
+    }
+    if (clips.length > 1) writeStdout(`  ${clips.length} tracks chained, ${summary.durationInFrames} frames total`);
     if (note) writeStdout(`  note: ${note}`);
   }
 }
