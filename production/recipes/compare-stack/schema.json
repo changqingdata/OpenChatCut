@@ -30,8 +30,8 @@
     },
     "topColor": {
       "type": "color",
-      "default": "#8A857C",
-      "description": "上半段文字色，默认压暗表示「弱」"
+      "default": "",
+      "description": "上半段文字色，留空则用 muted（压暗表示「弱」）"
     },
     "bottomColor": {
       "type": "color",

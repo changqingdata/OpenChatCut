@@ -116,12 +116,16 @@ function board(shots: unknown[], extra: Record<string, unknown> = {}) {
 
 const good = checkStoryboard(board([shot()]), catalog);
 assert.equal(good.ok, true, 'valid storyboard passes');
+// Validation checks params, it does not fill them. A baked default is
+// indistinguishable from an authored value, so the compiler could no longer
+// apply its own corrections (the over-footage colour) without overriding the
+// author.
 assert.deepEqual(good.storyboard?.shots[0]?.visual, {
   kind: 'mg',
   recipe: 'keyword-punch',
-  params: { text: '复利', label: '', ink: '#F2EFE9' },
+  params: { text: '复利' },
   layout: { anchor: 'full', widthRatio: 1 },
-}, 'schema defaults are merged into the params');
+}, 'the author\'s params survive validation untouched');
 
 const unknownRecipe = checkStoryboard(board([shot({
   visual: { kind: 'mg', recipe: 'nope', params: {}, layout: { anchor: 'full', widthRatio: 1 } },

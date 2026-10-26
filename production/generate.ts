@@ -129,17 +129,12 @@ ${OUTPUT_SHAPE}
 4. 画面有两种来源，可以同时使用：
    - underlay：真实素材（实拍视频或照片），画满整屏
    - visual：图形配方，叠在素材之上或独占画面
-5. 什么时候加 underlay（这一条决定成片像不像视频，务必认真判断）：
-   - 这句话讲的是**具体可见的东西**（人、场景、动作、物件、地点）→ 加 underlay
-   - 这句话是**抽象观点、数字、对照、清单、结论** → 不加，保持纯图形卡片
-   - 目标比例：大约每 3 个镜头里有 1 个用素材
-   - 第一个镜头优先考虑素材：实拍开场最能建立"这是视频"的观感
-   - query 用**英文**，2–5 个词，写画面里有什么，不要写情绪（"office worker typing" 而不是 "hard work"）
-6. 有 underlay 的镜头：
-   - 不要设 background（素材就是背景）
-   - 可以同时给 visual 做叠加，但 layout 要避开画面中心，用 "tc" 或 "mc"，widthRatio 0.8–0.9
-   - 只给 underlay 不给 visual 也合法，用于纯素材的过渡镜头
-7. 纯图形镜头通常设 background（如 "#0B0B0C"），让画面成为完整卡片。
+5. **每个镜头都要写 underlay.query**，英文，2–5 个词，写画面里有什么，不要写情绪
+   （"office worker typing" 而不是 "hard work"）。抽象观点也要写，选不选用由程序按密度决定，不需要你判断。
+6. 把"没有画面就废了"的镜头标 "essential": true（大约每 4–5 个镜头一个）。程序保证它们一定有素材，
+   其余镜头由程序按比例挑选。不要把所有镜头都标 essential，那等于没有标。
+7. **每个镜头都要设 background**（如 "#0B0B0C"），即使你给了 underlay。
+   程序可能不选用那条素材，那时 background 就是画面底色；没有它画面会露底。
 8. 配方选择：
    - 一个具体数字、比例、倍数 → number-count
    - 一句要被记住的断言、转折、结论 → keyword-punch
@@ -149,12 +144,13 @@ ${OUTPUT_SHAPE}
    - 完成度、占比、达成率 → progress-bar
    - 三个阶段以上、演进过程 → timeline-dots
    - 一个词需要最强冲击（整条视频最多一次）→ big-word-fill
-9. 同一配方不要连续使用超过 2 次；相邻镜头尽量换配方，保持节奏。
-10. 布局：单行短句用 "bc" 或 "mc"，配 widthRatio 0.85–0.95；需要留白时用 "bl" 或 "ml"。
-11. 参数必须遵守字数限制。超限会导致整份分镜被拒绝，所以宁可缩短文字。
-12. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
-13. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
-14. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
+9. 有 underlay 的镜头，visual 的 layout 要避开画面中心，用 "tc" 或 "mc"，widthRatio 0.8–0.9。
+10. 同一配方不要连续使用超过 2 次；相邻镜头尽量换配方，保持节奏。
+11. 布局：单行短句用 "bc" 或 "mc"，配 widthRatio 0.85–0.95；需要留白时用 "bl" 或 "ml"。
+12. 参数必须遵守字数限制。超限会导致整份分镜被拒绝，所以宁可缩短文字。
+13. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
+14. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
+15. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
 
 现在输出 JSON。`;
 
@@ -203,11 +199,14 @@ export function checkStoryboard(value: unknown, catalog: ReadonlyMap<string, Rec
       errors.push(`${shot.id}: unknown recipe "${visual.recipe}" (have: ${[...catalog.keys()].join(', ')})`);
       continue;
     }
+    // Validate only, never rewrite. Filling schema defaults into the storyboard
+    // bakes them in, and a baked default is indistinguishable from an authored
+    // value — which defeats every later correction the compiler wants to make
+    // (the over-footage colour is the one that bit). The compiler merges the
+    // defaults at build time instead.
     const checked = checkParams(schema, visual.params ?? {});
     if (!checked.ok) {
       for (const error of checked.errors) errors.push(`${shot.id}: ${error}`);
-    } else {
-      visual.params = checked.value;
     }
   }
 

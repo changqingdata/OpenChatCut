@@ -72,6 +72,11 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
   const providers = await createProviders();
   const fps = storyboard.meta?.fps || 30;
 
+  // Assets live inside a project, so an id from another project's pool is
+  // dangling here. Reusing a storyboard across projects must re-import, not
+  // inherit ids that the target pool has never heard of.
+  const poolIds = new Set((await readProjectDoc(project.id)).assets.map((asset) => asset.id));
+
   const resolved: Attribution[] = [];
   const misses: string[] = [];
   const short: string[] = [];
@@ -82,7 +87,9 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
   for (const shot of shots) {
     const underlay = shot.underlay;
     if (!underlay?.query?.trim()) continue;
-    if (underlay.assetId?.trim()) continue;
+    if (underlay.assetId?.trim() && poolIds.has(underlay.assetId)) continue;
+    // The density policy turned this shot down; downloading it would be waste.
+    if (underlay.selected === false) continue;
     if (maxClips > 0 && imported >= maxClips) break;
 
     const neededFrames = shot.endFrame - shot.startFrame;

@@ -15,6 +15,7 @@ import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../
 import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from '../../production/generate.ts';
+import { DEFAULT_FOOTAGE_POLICY, applyFootagePolicy } from '../../production/footage-policy.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
@@ -24,7 +25,21 @@ import { GLOBAL_FLAGS } from './common.ts';
 
 const MAX_ATTEMPTS = 3;
 
-const FLAGS = [...GLOBAL_FLAGS, 'srt', 'brief', 'out', 'prompt', 'from', 'generate', 'size', 'fps', 'json', 'chunk-seconds'] as const;
+/**
+ * Apply the density policy from `--footage-ratio`.
+ *
+ * Density is arithmetic, so it lives here rather than in the prompt: the model
+ * proposes a query per shot, this decides how many become footage. Re-running
+ * over an existing storyboard costs nothing.
+ */
+function policeFootage(storyboard: Storyboard, commandLine: CommandLine) {
+  const ratioFlag = flagText(commandLine, 'footage-ratio');
+  const ratio = ratioFlag === undefined ? DEFAULT_FOOTAGE_POLICY.targetRatio : Number(ratioFlag);
+  if (!(ratio >= 0 && ratio <= 1)) throw new UsageError('--footage-ratio must be between 0 and 1');
+  return applyFootagePolicy(storyboard, { ...DEFAULT_FOOTAGE_POLICY, targetRatio: ratio });
+}
+
+const FLAGS = [...GLOBAL_FLAGS, 'srt', 'brief', 'out', 'prompt', 'from', 'generate', 'size', 'fps', 'json', 'chunk-seconds', 'footage-ratio'] as const;
 
 /** Chapter length. 3 minutes keeps a reply near 45 shots, comfortably inside budget. */
 const CHUNK_SECONDS = 180;
@@ -101,11 +116,26 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
       throw new CliError(`storyboard rejected:\n  - ${checked.errors.join('\n  - ')}`);
     }
     await mkdir(dirname(outPath), { recursive: true });
-    await writeFile(outPath, `${JSON.stringify(checked.storyboard, null, 2)}\n`, 'utf8');
-    const summary = { out: outPath, shots: checked.storyboard!.shots.length, warnings: checked.warnings };
+    // Re-policing an already-validated storyboard is the cheap way to retune
+    // density: no model call, same shots, different selection.
+    const policed = policeFootage(checked.storyboard!, commandLine);
+    await writeFile(outPath, `${JSON.stringify(policed.storyboard, null, 2)}\n`, 'utf8');
+    const summary = {
+      out: outPath,
+      shots: policed.storyboard.shots.length,
+      footage: { kept: policed.kept, dropped: policed.dropped, target: policed.target, unproposed: policed.unproposed },
+      warnings: checked.warnings,
+    };
     if (json) printJson(summary);
     else {
       writeStdout(`storyboard → ${outPath} (${summary.shots} shots)`);
+      writeStdout(`  footage: ${policed.kept.length}/${policed.target} kept — ${policed.kept.join(', ') || 'none'}`);
+      if (policed.dropped.length) writeStdout(`  turned down: ${policed.dropped.join(', ')}`);
+      if (policed.unproposed.length) {
+        writeStdout(`  no query proposed: ${policed.unproposed.join(', ')} — the model was conservative`);
+      }
+      // Warnings are computed before the policy, so a shot the policy dropped
+      // still lists as unresolved here; that is the pre-policy state, not a bug.
       for (const warning of checked.warnings) writeStdout(`  warning: ${warning}`);
     }
     return;
@@ -193,20 +223,30 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     parts.push(await generateChapter(chapter, label));
   }
 
-  const storyboard = multi ? mergeChunkStoryboards(parts) : parts[0]!;
-  const checked = { ok: true as const, storyboard, warnings: [] as string[] };
+  const merged = multi ? mergeChunkStoryboards(parts) : parts[0]!;
+
+  // Density is arithmetic, so it is applied here rather than asked for in the
+  // prompt. The model proposed a query per shot; this decides how many become
+  // footage. Re-running with a different ratio costs nothing.
+  const policed = policeFootage(merged, commandLine);
+  const storyboard = policed.storyboard;
 
   await mkdir(dirname(outPath), { recursive: true });
-  await writeFile(outPath, `${JSON.stringify(checked.storyboard, null, 2)}\n`, 'utf8');
+  await writeFile(outPath, `${JSON.stringify(storyboard, null, 2)}\n`, 'utf8');
   const summary = {
     out: outPath,
     model: config.model,
-    shots: checked.storyboard!.shots.length,
-    warnings: checked.warnings,
+    shots: storyboard.shots.length,
+    footage: { kept: policed.kept, dropped: policed.dropped, target: policed.target, unproposed: policed.unproposed },
+    warnings: [] as string[],
   };
   if (json) printJson(summary);
   else {
     writeStdout(`storyboard → ${outPath} (${summary.shots} shots, ${config.model})`);
-    for (const warning of summary.warnings) writeStdout(`  warning: ${warning}`);
+    writeStdout(`  footage: ${policed.kept.length}/${policed.target} kept — ${policed.kept.join(', ') || 'none'}`);
+    if (policed.dropped.length) writeStdout(`  turned down: ${policed.dropped.join(', ')}`);
+    if (policed.unproposed.length) {
+      writeStdout(`  no query proposed: ${policed.unproposed.join(', ')} — the model was conservative`);
+    }
   }
 }

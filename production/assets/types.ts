@@ -24,6 +24,15 @@ export interface MaterialItem {
   width?: number;
   height?: number;
   sizeBytes?: number;
+  /**
+   * Whether `sizeBytes` is authoritative.
+   *
+   * The private library is generated from the files themselves, so a mismatch
+   * means a truncated transfer and must fail. Pexels and Pixabay report a size
+   * that does not always match what their CDN serves for the chosen rendition,
+   * so there the number is advisory and the import has to be the judge.
+   */
+  sizeIsExact?: boolean;
   thumbnailUrl?: string;
   /** Direct URL of the file to download. */
   downloadUrl: string;

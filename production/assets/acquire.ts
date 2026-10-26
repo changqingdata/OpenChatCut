@@ -55,7 +55,7 @@ export async function acquireToFile(item: MaterialItem, dir = DOWNLOAD_DIR): Pro
   if (!response.ok) throw new MaterialError(`download failed for ${item.label}: HTTP ${response.status}`);
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (item.sizeBytes && buffer.byteLength !== item.sizeBytes) {
+  if (item.sizeIsExact && item.sizeBytes && buffer.byteLength !== item.sizeBytes) {
     throw new MaterialError(
       `download for ${item.label} is ${buffer.byteLength} bytes, the index says ${item.sizeBytes}`,
     );

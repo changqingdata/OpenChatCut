@@ -86,7 +86,18 @@ const TRACK_ORDER = ['V3', 'V2', 'V1', 'A1', 'A2'] as const;
  * carry type without making the clip look muddy — and the footage is the reason
  * the shot exists, so it must stay visible.
  */
-const SCRIM_COLOR = 'rgba(11,11,12,0.42)';
+const SCRIM_COLOR = 'rgba(11,11,12,0.46)';
+
+/**
+ * Secondary text colour when the shot sits on footage.
+ *
+ * Recipes are designed against a near-black card, so their `muted` grey reads as
+ * quiet. Over a sunrise clip the same grey lands on a near-white pixel and
+ * disappears — the wash cannot fix it, because a 0.46 scrim over 240 still
+ * leaves the area brighter than the text. Over footage, secondary text has to be
+ * light and rely on weight rather than value for its hierarchy.
+ */
+export const OVER_FOOTAGE_MUTED = '#D6D1C7';
 
 export class CompileError extends Error {
   readonly errors: string[];
@@ -135,6 +146,10 @@ function buildUnderlay(
 ): TimelineItem | null {
   const underlay = shot.underlay;
   if (!underlay) return null;
+
+  // The footage policy turned this shot down. Its query stays on the record so
+  // raising the density later costs a recompile, not another model call.
+  if (underlay.selected === false) return null;
 
   if (!underlay.assetId) {
     warnings.push({
@@ -234,11 +249,19 @@ function buildItem(
       return null;
     }
     const rect = resolveRect(visual.layout, width, height, recipe.box.width, recipe.box.height);
+    const onFootage = Boolean(shot.underlay) && shot.underlay?.selected !== false;
     return {
       ...base,
       kind: 'motion-graphic',
       code: recipe.code,
-      props: { ...recipe.defaultProps, ...visual.params },
+      // The footage correction comes last: it is a legibility rule, not a
+      // preference, and a storyboard that has been through the CLI already
+      // carries every schema default.
+      props: {
+        ...recipe.defaultProps,
+        ...visual.params,
+        ...(onFootage ? { muted: OVER_FOOTAGE_MUTED } : {}),
+      },
       width: recipe.box.width,
       height: recipe.box.height,
       transform: transformFromRect(rect, width, height, recipe.box),
@@ -311,8 +334,10 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
   const items: TimelineItem[] = [];
   const assets = options.assets ?? new Map<string, CompileAsset>();
   for (const shot of [...storyboard.shots].sort((a, b) => a.startFrame - b.startFrame)) {
+    const footage = buildUnderlay(shot, assets, meta, warnings);
+
     // Footage is the background when present, so a solid would only hide it.
-    if (shot.background && !shot.underlay) {
+    if (shot.background && !footage) {
       items.push({
         id: `it-bg-${shot.id}`,
         kind: 'solid',
@@ -325,7 +350,6 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
         props: { color: shot.background },
       });
     }
-    const footage = buildUnderlay(shot, assets, meta, warnings);
     if (footage) {
       items.push(footage);
       // Only worth washing when something will be drawn over the footage.
@@ -348,11 +372,11 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
     // comes out on a transparency checkerboard. A shot needs a card colour or
     // footage; relying on the previous shot's picture does not work, items do
     // not span.
-    if (!shot.underlay && !shot.background) {
+    if (!footage && !shot.background) {
       warnings.push({
         shotId: shot.id,
         code: 'empty-base',
-        message: `${shot.id}: no underlay and no background — the canvas behind it is empty`,
+        message: `${shot.id}: nothing behind the graphics — the canvas would render on transparency`,
       });
     }
 

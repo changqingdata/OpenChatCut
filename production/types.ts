@@ -99,6 +99,17 @@ export interface UnderlaySpec {
   srcInFrame?: number;
   /** Cover the frame with a blurred copy behind a contained clip. Set by the resolver. */
   backgroundFill?: boolean;
+  /**
+   * Whether the footage policy kept this shot.
+   *
+   * The model proposes a query for most shots; the policy decides how many of
+   * those actually become footage, because density is arithmetic, not judgement.
+   * A deselected shot keeps its query — raising the density later is then a
+   * local re-run rather than another model call.
+   */
+  selected?: boolean;
+  /** The model's own claim that this shot is weak without footage. Always kept. */
+  essential?: boolean;
 }
 
 export interface Shot {

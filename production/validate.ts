@@ -93,7 +93,7 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
       }
       // Unresolved footage still compiles — the resolver may not have run yet —
       // but it must not pass silently, or a run quietly loses every real shot.
-      if (!underlay.assetId?.trim()) {
+      if (!underlay.assetId?.trim() && underlay.selected !== false) {
         warnings.push({
           shotId: shot.id,
           code: 'underlay-unresolved',

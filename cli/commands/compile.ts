@@ -12,7 +12,7 @@ import { printJson, writeStdout } from '../output.ts';
 import { resolveProject } from '../store.ts';
 import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-store.ts';
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
-import { compile, CompileError } from '../../production/compile.ts';
+import { compile, CompileError, OVER_FOOTAGE_MUTED } from '../../production/compile.ts';
 import type { CompileAsset } from '../../production/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildCaptions } from '../../production/captions.ts';
@@ -108,7 +108,16 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
       paramErrors.push(`${shot.id}: unknown recipe "${visual.recipe}" (have: ${[...schemas.keys()].join(', ') || 'none'})`);
       continue;
     }
-    const checked = checkParams(schema, visual.params ?? {});
+    // A generated storyboard already carries every schema default, so the
+    // footage correction has to be applied last rather than seeded. It is a
+    // legibility rule, not a taste: over footage, secondary text must be light
+    // whatever the storyboard says.
+    const onFootage = Boolean(shot.underlay) && shot.underlay?.selected !== false;
+    const seeded = onFootage
+      ? { ...(visual.params ?? {}), muted: OVER_FOOTAGE_MUTED }
+      : (visual.params ?? {});
+
+    const checked = checkParams(schema, seeded);
     if (!checked.ok) {
       for (const error of checked.errors) paramErrors.push(`${shot.id}: ${error}`);
     } else {

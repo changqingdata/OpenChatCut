@@ -57,7 +57,9 @@ const Component = ({ item }) => {
     <div style={rootStyle}>
       <div style={topBlockStyle}>
         <div style={labelStyle(p.muted)}>{p.topLabel}</div>
-        <div style={textStyle(p.topColor)}>{p.topText}</div>
+        {/* Empty topColor means "derive from muted": that way the compiler's
+             over-footage correction reaches the dimmed line too. */}
+        <div style={textStyle(p.topColor || p.muted)}>{p.topText}</div>
       </div>
       <div style={dividerStyle} />
       <div style={bottomBlockStyle}>
