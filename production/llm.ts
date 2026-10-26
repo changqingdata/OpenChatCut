@@ -2,9 +2,12 @@
 //
 // Deliberately not the agent runtime: storyboard generation is a single
 // request/response, and depending on the run executor would drag the whole
-// session machinery into a CLI command. Reads the same `.env.local` the app
-// uses, so one key configuration serves both.
-import { readFile } from 'node:fs/promises';
+// session machinery into a CLI command.
+//
+// Configuration comes from `production/config.ts`, which merges the checkout's
+// `.env.local` with the app's settings file — so a provider configured once in
+// the settings panel works here without a second copy.
+import { loadPipelineConfig } from './config.ts';
 
 export interface LlmConfig {
   provider: string;
@@ -14,30 +17,12 @@ export interface LlmConfig {
   apiKey: string;
 }
 
-function parseEnv(source: string): Record<string, string> {
-  const env: Record<string, string> = {};
-  // Split on either ending: a file edited on Windows can mix LF and CRLF, and
-  // a trailing \r makes `(.*)$` fail to match the line at all.
-  for (const line of source.split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
-    if (!match) continue;
-    env[match[1]!] = match[2]!.trim().replace(/^["']|["']$/g, '');
-  }
-  return env;
-}
-
 /**
  * Resolve the configured provider. Returns null when no key is set — callers
  * should fall back to emitting the prompt instead of failing.
  */
 export async function readLlmConfig(envPath = '.env.local'): Promise<LlmConfig | null> {
-  let source: string;
-  try {
-    source = await readFile(envPath, 'utf8');
-  } catch {
-    return null;
-  }
-  const env = parseEnv(source);
+  const { values: env } = await loadPipelineConfig(envPath);
 
   // A dedicated override keeps the storyboard generator from disturbing the
   // app's own LLM_PROVIDER — the app may be configured for a provider the

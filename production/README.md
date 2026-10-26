@@ -125,6 +125,26 @@ assumed.
 `make-video.mjs` runs it before the compile so a broken storyboard fails in a
 second rather than after a two-minute render.
 
+## Configuration
+
+Keys come from three places, merged lowest to highest:
+
+```
+.env.local              the checkout's dev file
+<profile>/settings.env  the app's settings panel
+process.env             the shell
+```
+
+Empty values never override a non-empty one. `occ config` prints the sources and
+which keys are set (names only, never values) plus the resolved provider.
+
+One thing worth knowing: **in the default profile the app's keystore *is*
+`.env.local`** — `runtimeProfile().keystorePath` resolves to `resolve(cwd,
+'.env.local')`, so the settings panel and the pipeline have always shared a file.
+The separate `settings.env` only exists for an isolated dev profile, and the
+pipeline now reads that one too. Before this, an isolated run could configure a
+provider in the UI and have `occ storyboard --generate` still report "no key".
+
 ## Failures
 
 A message is written for a human reading a terminal. That is not enough for

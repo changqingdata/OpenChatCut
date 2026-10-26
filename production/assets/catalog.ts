@@ -9,6 +9,7 @@
 // clone of this code cannot reach the library.
 
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { loadPipelineConfig } from '../config.ts';
 import { dirname, resolve } from 'node:path';
 import type { MaterialItem, MaterialProvider, MaterialQuery, MaterialRole } from './types.ts';
 import { MaterialError } from './types.ts';
@@ -24,17 +25,7 @@ export interface CatalogEnv {
 
 /** Read the private-library endpoints. Returns null when unconfigured. */
 export async function readCatalogEnv(envPath = '.env.local'): Promise<CatalogEnv | null> {
-  let source: string;
-  try {
-    source = await readFile(envPath, 'utf8');
-  } catch {
-    return null;
-  }
-  const env: Record<string, string> = {};
-  for (const line of source.split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
-    if (match) env[match[1]!] = match[2]!.trim().replace(/^["']|["']$/g, '');
-  }
+  const { values: env } = await loadPipelineConfig(envPath);
   const cdnBase = (env.PRESET_CDN_BASE ?? '').replace(/\/$/, '');
   if (!cdnBase) return null;
   return {

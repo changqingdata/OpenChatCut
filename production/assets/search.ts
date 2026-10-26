@@ -8,7 +8,7 @@
 // Keys come from `.env.local`; a missing key makes the provider unavailable
 // rather than throwing, so one unconfigured platform never blocks the others.
 
-import { readFile } from 'node:fs/promises';
+import { loadPipelineConfig } from '../config.ts';
 import type { MaterialItem, MaterialProvider, MaterialQuery, MaterialRole } from './types.ts';
 import { MaterialError } from './types.ts';
 
@@ -20,17 +20,7 @@ interface Keys {
 }
 
 export async function readProviderKeys(envPath = '.env.local'): Promise<Keys> {
-  let source: string;
-  try {
-    source = await readFile(envPath, 'utf8');
-  } catch {
-    return {};
-  }
-  const env: Record<string, string> = {};
-  for (const line of source.split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
-    if (match) env[match[1]!] = match[2]!.trim().replace(/^["']|["']$/g, '');
-  }
+  const { values: env } = await loadPipelineConfig(envPath);
   return {
     ...(env.PEXELS_API_KEY ? { pexels: env.PEXELS_API_KEY } : {}),
     ...(env.PIXABAY_API_KEY ? { pixabay: env.PIXABAY_API_KEY } : {}),

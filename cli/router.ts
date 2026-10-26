@@ -6,6 +6,7 @@ import { flagBoolean, type CommandLine } from './args.ts';
 import { UsageError } from './errors.ts';
 import { runAssetsCommand } from './commands/assets.ts';
 import { runCompileCommand } from './commands/compile.ts';
+import { runConfigCommand } from './commands/config.ts';
 import { runEditCommand } from './commands/edit.ts';
 import { runExportCommand } from './commands/export.ts';
 import { runFootageCommand } from './commands/footage.ts';
@@ -51,6 +52,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runFootageCommand(subLine(commandLine, positionals), json);
     case 'qc':
       return runQcCommand(subLine(commandLine, positionals), json);
+    case 'config':
+      return runConfigCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':

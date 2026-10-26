@@ -22,6 +22,7 @@ Refactor the change into new files instead of widening the patch surface.
 | 7 | `cli/router.ts` | `qc` case arm | register `occ qc` |
 | 8 | `cli/errors.ts` | error detail (code/step/cause/hint) | a supervisor needs structure, not prose |
 | 9 | `cli/main.ts` | structured failure printing | same |
+| 10 | `cli/router.ts` | `config` case arm | register `occ config` |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.
