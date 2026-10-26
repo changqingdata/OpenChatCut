@@ -198,6 +198,21 @@ if (footageShots.length && !args['no-footage']) {
   step('footage: none requested');
 }
 
+// --- 4c. quality control --------------------------------------------------
+
+// Runs before the compile so a broken storyboard fails in a second rather than
+// after a two-minute render. Report-only: the findings are printed here, then the
+// run stops on its own terms.
+step('qc');
+const qc = jsonOf(await occ('qc', '--storyboard', effectiveStoryboard, '--json', '--report-only'));
+const { stats } = qc;
+console.log(`  ${stats.shots} shots · ${stats.durationSec}s · ${stats.distinctRecipes} recipes · footage ${Math.round(stats.footageRatio * 100)}%`);
+for (const finding of qc.findings) console.log(`  ${finding.severity}: ${finding.message}`);
+if (!qc.ok) {
+  console.error('  blocking problems — fix the storyboard and re-run');
+  process.exit(1);
+}
+
 // --- 5. compile -----------------------------------------------------------
 
 step('compile onto the timeline');

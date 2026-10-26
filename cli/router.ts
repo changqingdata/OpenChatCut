@@ -12,6 +12,7 @@ import { runFootageCommand } from './commands/footage.ts';
 import { runItemCommand } from './commands/item.ts';
 import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
+import { runQcCommand } from './commands/qc.ts';
 import { runRenderCommand } from './commands/render.ts';
 import { runStillCommand } from './commands/still.ts';
 import { runStoryboardCommand } from './commands/storyboard.ts';
@@ -48,6 +49,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runAssetsCommand(subLine(commandLine, positionals), json);
     case 'footage':
       return runFootageCommand(subLine(commandLine, positionals), json);
+    case 'qc':
+      return runQcCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':

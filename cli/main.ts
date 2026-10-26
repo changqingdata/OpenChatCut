@@ -22,6 +22,7 @@ Usage
   occ assets search --role <role> [--query q] [--category c] [--limit n] [--json]
   occ assets place <project> --role music --category c --min-duration s [--track A2] [--volume 0.14]
   occ footage resolve <project> --storyboard <in.json> [--out <out.json>] [--max-clips n] [--dry-run]
+  occ qc --storyboard <file.json> [--strict] [--json]
   occ export jianying [<project>] [--draft-name <name>] [--out-dir <dir>] [--json]
   occ item move <clip> [--track <track>] [--start <frame|4s>] [--apply]
   occ item trim <clip> [--start <frame>] [--duration <frames|4s>] [--fade-in <s>] [--fade-out <s>] [--ripple] [--apply]

@@ -51,7 +51,7 @@ npx tsc -p production                     # type-check this directory only
 | Footage density | policy module — ratio, spacing, essentials; retunable without a model call |
 | CLI | `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
 | Storyboard generation | done — chapters, repair, footage intent |
-| QC | not started |
+| QC | `production/qc.ts` — nine rules, run by `occ qc` and after every generation |
 
 ## Three lanes
 
@@ -76,6 +76,41 @@ The wash flattens on a wide canvas (`scrimStopsFor`). The gradient assumes the
 type sits at the top and the captions at the bottom, leaving a quiet centre; on
 16:9 the graphic is a band across the centre, so the centre *is* the text zone and
 has to be washed harder.
+
+## QC
+
+`production/qc.ts` is arithmetic over the IR — no model, no network, no render. A
+check that costs money will not be run on every generation, and a check that
+cannot be reproduced cannot be trusted.
+
+| Code | Severity | Fires when |
+|---|---|---|
+| `frame-gap` | error | a shot leaves frames uncovered — renders as black |
+| `shot-too-short` | warn | a shot is under 1.2s |
+| `cut-burst` | warn | more than 4 cuts inside 6s |
+| `recipe-repeat` | warn | 3 consecutive shots use one recipe |
+| `recipe-dominance` | warn | one recipe is over 45% of a 6+ shot video |
+| `recipe-variety` | note | fewer than 4 recipes across 8+ shots |
+| `footage-adjacent` | warn | two footage shots in a row |
+| `footage-duplicate-clip` | warn | the same asset used twice |
+| `footage-duplicate-query` | note | the same search used twice |
+| `anchor-under-captions` | note | a card asks for a bottom anchor |
+| `text-near-limit` | note | a long text field is within 15% of its limit |
+
+Severity is a claim about consequence: `error` means the video is broken, `warn`
+means it will look wrong, `note` means worth knowing.
+
+Run on the 15-minute storyboard it reported exactly what a manual review had
+found — `keyword-punch` at 49% of 259 shots, three separate runs of three
+consecutive repeats, and ten cards anchored under the captions.
+
+```
+occ qc --storyboard sb.json [--strict] [--json]
+```
+
+`occ storyboard --generate` runs it automatically and fails on errors;
+`make-video.mjs` runs it before the compile so a broken storyboard fails in a
+second rather than after a two-minute render.
 
 ## Canvas shapes
 

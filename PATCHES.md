@@ -19,6 +19,7 @@ Refactor the change into new files instead of widening the patch surface.
 | 4 | `cli/main.ts` | usage lines for `storyboard`, `assets`, `footage` | keep `occ --help` truthful |
 | 5 | `cli/router.ts` | `footage` case arm | register `occ footage` |
 | 6 | `cli/commands/compile.ts` | seed the over-footage colour | legibility rule, applied before compile |
+| 7 | `cli/router.ts` | `qc` case arm | register `occ qc` |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.

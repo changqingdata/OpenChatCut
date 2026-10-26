@@ -16,6 +16,7 @@ import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from '../../production/generate.ts';
 import { DEFAULT_FOOTAGE_POLICY, applyFootagePolicy } from '../../production/footage-policy.ts';
+import { formatFindings, runQc } from '../../production/qc.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
@@ -240,7 +241,12 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     footage: { kept: policed.kept, dropped: policed.dropped, target: policed.target, unproposed: policed.unproposed },
     warnings: [] as string[],
   };
-  if (json) printJson(summary);
+  // QC runs on what was just written, so a generation that produced a gap or a
+  // one-recipe video says so immediately instead of after a two-minute render.
+  const qc = runQc(storyboard, { schemas, captions: !flagBoolean(commandLine, 'no-captions') });
+  const qcLines = formatFindings(qc);
+
+  if (json) printJson({ ...summary, qc });
   else {
     writeStdout(`storyboard → ${outPath} (${summary.shots} shots, ${config.model})`);
     writeStdout(`  footage: ${policed.kept.length}/${policed.target} kept — ${policed.kept.join(', ') || 'none'}`);
@@ -248,5 +254,9 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     if (policed.unproposed.length) {
       writeStdout(`  no query proposed: ${policed.unproposed.join(', ')} — the model was conservative`);
     }
+    for (const line of qcLines) writeStdout(`  ${line}`);
+    if (!qcLines.length) writeStdout('  qc: clean');
   }
+
+  if (!qc.ok) throw new CliError('generated storyboard has blocking QC problems');
 }
