@@ -14,7 +14,7 @@ import type { CaptionsData } from '../src/captions/types.ts';
 import { CURRENT_PROJECT_VERSION } from '../shared/project-version.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
 import type { ResolveOptions } from './layout.ts';
-import { buildScrimItem } from './scrim.ts';
+import { buildScrimItem, scrimStopsFor } from './scrim.ts';
 import { validateStoryboard } from './validate.ts';
 import type { Anchor, CompileWarning, LayoutSpec, Shot, Storyboard, VisualSpec } from './types.ts';
 
@@ -386,7 +386,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
       items.push(footage);
       // Only worth washing when something will be drawn over the footage.
       const needsScrim = Boolean(shot.visual) || Boolean(options.captions?.enabled);
-      if (needsScrim) items.push(buildScrimItem(shot, meta, SCRIM_TRACK));
+      if (needsScrim) items.push(buildScrimItem(shot, meta, SCRIM_TRACK, scrimStopsFor(meta)));
     }
     // Nothing behind the graphics means the canvas shows through — the render
     // comes out on a transparency checkerboard. A shot needs a card colour or

@@ -66,11 +66,25 @@ export function resolveRect(
   const bottomInset = Math.max(0, options.bottomInset ?? 0);
   const ratio = clamp(layout.widthRatio, 0.05, 1);
 
-  const width = layout.anchor === 'full' ? canvasWidth : canvasWidth * ratio;
+  // `widthRatio` is a share of the canvas *width*, which quietly breaks on a
+  // wide canvas: 0.85 of 1920 is 1632px, and a 900×520 recipe at that width is
+  // 943px tall — taller than the space a 1080px frame leaves once the captions
+  // and the insets are taken out. So the width is also capped by the height the
+  // box can actually occupy. On a portrait canvas that cap never binds; on a
+  // landscape one it is what keeps the graphic from filling the frame edge to
+  // edge.
+  const maxWidth = Math.max(0, canvasWidth - inset * 2);
+  const maxHeight = Math.max(0, canvasHeight - bottomInset - inset * 2);
+  const aspect = naturalWidth > 0 ? naturalHeight / naturalWidth : 0;
+  const widthByHeight = aspect > 0 ? maxHeight / aspect : Number.POSITIVE_INFINITY;
+
+  const width = layout.anchor === 'full'
+    ? canvasWidth
+    : Math.max(0, Math.min(canvasWidth * ratio, maxWidth, widthByHeight));
   const height = layout.anchor === 'full'
     ? canvasHeight
     : naturalWidth > 0
-      ? width * (naturalHeight / naturalWidth)
+      ? width * aspect
       : naturalHeight;
 
   const [fx, fy] = ANCHOR_FRACTION[layout.anchor];

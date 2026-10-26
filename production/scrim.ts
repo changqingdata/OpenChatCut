@@ -14,6 +14,12 @@
 
 import type { TimelineItem } from '../src/editor/clipTypes.ts';
 
+export interface ScrimStops {
+  top: number;
+  mid: number;
+  bottom: number;
+}
+
 /**
  * Opacity at the four stops, top to bottom.
  *
@@ -22,7 +28,24 @@ import type { TimelineItem } from '../src/editor/clipTypes.ts';
  * footage. 0.24 is the point where a white number still holds on a white-ish
  * frame without the picture going grey.
  */
-export const SCRIM_STOPS = { top: 0.55, mid: 0.24, bottom: 0.68 } as const;
+export const SCRIM_STOPS: ScrimStops = { top: 0.55, mid: 0.24, bottom: 0.68 };
+
+/**
+ * The same wash for a wide frame.
+ *
+ * The gradient exists because on a portrait frame the type lives at the top and
+ * the captions at the bottom, leaving the middle for the picture. On a 16:9
+ * frame that premise fails: the graphic is a wide band across the centre, so the
+ * middle *is* the text zone. A 0.24 wash there put white type on a mid-grey clock
+ * face and it disappeared. Wide frames get a flatter wash — less shape, more
+ * even coverage — because there is no quiet centre to protect.
+ */
+export const SCRIM_STOPS_WIDE: ScrimStops = { top: 0.46, mid: 0.42, bottom: 0.58 };
+
+/** Pick the wash for the canvas shape. */
+export function scrimStopsFor(canvas: { width: number; height: number }): ScrimStops {
+  return canvas.width > canvas.height ? SCRIM_STOPS_WIDE : SCRIM_STOPS;
+}
 
 /**
  * Inline template for the wash.
@@ -49,7 +72,7 @@ export function buildScrimItem(
   shot: { id: string; startFrame: number; endFrame: number },
   canvas: { width: number; height: number },
   track: string,
-  stops: { top: number; mid: number; bottom: number } = SCRIM_STOPS,
+  stops: ScrimStops = SCRIM_STOPS,
 ): TimelineItem {
   return {
     id: `it-scrim-${shot.id}`,

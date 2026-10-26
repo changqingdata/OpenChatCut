@@ -72,6 +72,26 @@ Bottom-anchored recipes are held above the caption band (16% of canvas height) b
 `layout.ts`, which the compiler enables whenever captions are on. Without it a
 `bc` recipe prints straight over the subtitle.
 
+The wash flattens on a wide canvas (`scrimStopsFor`). The gradient assumes the
+type sits at the top and the captions at the bottom, leaving a quiet centre; on
+16:9 the graphic is a band across the centre, so the centre *is* the text zone and
+has to be washed harder.
+
+## Canvas shapes
+
+Portrait and landscape both work, with three rules that differ:
+
+| | Portrait 1080×1920 | Landscape 1920×1080 |
+|---|---|---|
+| recipe width | `widthRatio × width` | capped by the height left after the caption band |
+| wash | gradient, mid 0.24 | flatter, mid 0.42 |
+| footage search | `9:16` | `16:9`, derived from the canvas |
+
+`widthRatio` is a share of the width, which breaks on 16:9: 0.85 of 1920 is 1632px
+and a 900×520 recipe at that width is 943px tall — taller than the 811 the frame
+leaves. The cap keeps the box inside both side margins; on portrait it never
+binds.
+
 Graphics always go to V3 rather than V2. If the scrim shared V2 with them the
 two would fight for one lane, and a shot that gained footage later would silently
 move its recipe to a different track.

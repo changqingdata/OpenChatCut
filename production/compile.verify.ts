@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { compile, CompileError, type CompileAsset, type RecipeRegistry } from './compile.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
 import { validateStoryboard } from './validate.ts';
+import { SCRIM_STOPS, scrimStopsFor } from './scrim.ts';
 import type { Storyboard } from './types.ts';
 
 const META = {
@@ -108,11 +109,13 @@ for (const [anchor, expectedX, expectedY, expectedWidth] of ANCHOR_CASES) {
   assert.ok(Math.abs(placed.y - expectedY) < 0.01, `${anchor}: y ${placed.y} != ${expectedY}`);
 }
 
-// The edge cases that make the clamp meaningful: a wide box cannot honour both
-// insets, so it must stay inside the left one rather than overflow.
+// `widthRatio: 1` used to produce a box exactly as wide as the canvas, which was
+// then clamped to x = 48 and overflowed the right edge by the same amount. The
+// width is now capped by the space the insets leave, so both edges are honoured.
 const tight = resolveRect({ anchor: 'br', widthRatio: 1, safeInset: 48 }, 1080, 1920, 900, 520);
-assert.equal(tight.x, 48, 'a full-width box falls back to the left inset');
-assert.equal(tight.width, 1080, 'a full-width box keeps the canvas width');
+assert.equal(tight.width, 984, 'a full-width request is capped by the insets');
+assert.equal(tight.x, 48, 'and sits inside the left inset');
+assert.equal(tight.x + tight.width, 1032, 'and stops inside the right one');
 
 // --- compile --------------------------------------------------------------
 
@@ -383,5 +386,36 @@ const overFootage = compile(footageTopWithVisual, { recipes, assets })
   .timeline.items.find((item) => item.id === 'it-S01')!;
 assert.ok((overFootage.transform?.y ?? 0) < -20, 'over footage a top anchor stays at the top');
 assert.ok(compile(footageTop, { assets }).timeline.items.length > 0, 'footage alone still compiles');
+
+// --- a wide canvas shrinks the box by height, not by width -----------------
+
+// `widthRatio` is a share of the width, which breaks on 16:9: 0.85 of 1920 is
+// 1632px, and a 900×520 recipe at that width is 943px tall — taller than the 811
+// a 1080px frame leaves after the caption band and the insets. The width is
+// capped by the height available, so the graphic keeps its margins.
+const wideFrame = resolveRect(
+  { anchor: 'mc', widthRatio: 0.85 }, 1920, 1080, 900, 520,
+  { bottomInset: Math.round(1080 * 0.16) },
+);
+const availableHeight = 1080 - Math.round(1080 * 0.16) - 96;
+assert.equal(Math.round(wideFrame.height), availableHeight, 'the box uses the height that is left');
+assert.ok(wideFrame.width < 1920 * 0.85, 'and is narrower than widthRatio alone would ask for');
+assert.ok(wideFrame.x >= 48, 'so it keeps its left margin');
+assert.ok(wideFrame.x + wideFrame.width <= 1920 - 48 + 0.001, 'and its right one');
+
+// On a portrait canvas the height cap never binds.
+const tallFrame = resolveRect({ anchor: 'mc', widthRatio: 0.85 }, 1080, 1920, 900, 520, { bottomInset: 307 });
+assert.equal(Math.round(tallFrame.width), Math.round(1080 * 0.85), 'a portrait canvas is unchanged');
+
+// --- the wash flattens on a wide frame ------------------------------------
+
+// The gradient assumes the type lives at the top and the captions at the bottom,
+// leaving a quiet centre. On 16:9 the graphic is a band across the centre, so the
+// middle is the text zone and the wash there has to be stronger.
+const portraitStops = scrimStopsFor({ width: 1080, height: 1920 });
+const wideStops = scrimStopsFor({ width: 1920, height: 1080 });
+assert.equal(portraitStops.mid, SCRIM_STOPS.mid, 'portrait keeps the gradient');
+assert.ok(wideStops.mid > portraitStops.mid, 'a wide frame washes its centre harder');
+assert.ok(wideStops.top - wideStops.mid < portraitStops.top - portraitStops.mid, 'and is flatter overall');
 
 console.log('compile.verify: determinism, layout, tracks, recipes, footage, captions and rejection OK');
