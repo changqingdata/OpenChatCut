@@ -11,6 +11,7 @@ import { runEditCommand } from './commands/edit.ts';
 import { runExportCommand } from './commands/export.ts';
 import { runFootageCommand } from './commands/footage.ts';
 import { runItemCommand } from './commands/item.ts';
+import { runMcpCommand } from './mcp.ts';
 import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
 import { runQcCommand } from './commands/qc.ts';
@@ -56,6 +57,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runConfigCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
+    case 'mcp':
+      return runMcpCommand();
     case 'where':
       return runWhereCommand(commandLine, json);
     case undefined:

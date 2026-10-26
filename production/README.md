@@ -125,6 +125,33 @@ assumed.
 `make-video.mjs` runs it before the compile so a broken storyboard fails in a
 second rather than after a two-minute render.
 
+## Driving it from an agent
+
+The pipeline is a CLI. That is already an interface, but it is one for a shell.
+`occ mcp` serves the same commands as MCP tools, so an agent can call them
+without building command lines:
+
+```json
+{ "mcpServers": { "openchatcut-pipeline": {
+    "command": "node", "args": ["cli/occ.mjs", "mcp"] } } }
+```
+
+| Tool | Does |
+|---|---|
+| `pipeline_config` | sources, which keys are set, resolved provider |
+| `pipeline_qc` | run the QC rules on a storyboard, no compile |
+| `pipeline_run` | the whole chain; `render:false` stops after the timeline |
+
+It is a thin adapter, not a second implementation: each tool shells out to the
+same `occ` command a person would type and returns its JSON. A change in the CLI
+reaches every client without touching `cli/mcp.ts`. Shelling out is also what
+keeps stdout clean — MCP uses it for the protocol, so nothing in-process may
+print there.
+
+Deliberately three tools. A supervisor needs to look, to check, and to run;
+anything finer-grained would invite an agent to re-implement the pipeline one
+call at a time, which is the thing the fixed order exists to prevent.
+
 ## Configuration
 
 Keys come from three places, merged lowest to highest:

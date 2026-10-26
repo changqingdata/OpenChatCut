@@ -23,6 +23,7 @@ Refactor the change into new files instead of widening the patch surface.
 | 8 | `cli/errors.ts` | error detail (code/step/cause/hint) | a supervisor needs structure, not prose |
 | 9 | `cli/main.ts` | structured failure printing | same |
 | 10 | `cli/router.ts` | `config` case arm | register `occ config` |
+| 11 | `cli/router.ts` | `mcp` case arm | register `occ mcp` |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.

@@ -24,6 +24,7 @@ Usage
   occ footage resolve <project> --storyboard <in.json> [--out <out.json>] [--max-clips n] [--dry-run]
   occ qc --storyboard <file.json> [--strict] [--json]
   occ config [--json]
+  occ mcp                      run the pipeline as an MCP server on stdio
   occ export jianying [<project>] [--draft-name <name>] [--out-dir <dir>] [--json]
   occ item move <clip> [--track <track>] [--start <frame|4s>] [--apply]
   occ item trim <clip> [--start <frame>] [--duration <frames|4s>] [--fade-in <s>] [--fade-out <s>] [--ripple] [--apply]

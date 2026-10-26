@@ -96,8 +96,15 @@ function jsonOf(stdout) {
   return JSON.parse(lines.slice(start).join('\n'));
 }
 
+// `--json` is for a caller that wants a result rather than a transcript: the
+// step lines are collected and returned in the payload instead of printed, so
+// stdout stays a single JSON document.
+const jsonMode = Boolean(args.json);
+const steps = [];
+
 function step(message) {
-  console.log(`\n▸ ${message}`);
+  steps.push(message);
+  if (!jsonMode) console.log(`\n▸ ${message}`);
 }
 
 // --- 1. duration ----------------------------------------------------------
@@ -188,7 +195,11 @@ const effectiveStoryboard = args.storyboard ? resolve(String(args.storyboard)) :
 // resolver turns those into pool assets and writes the ids back, so compiling
 // stays a pure transformation and re-rendering never re-downloads.
 const preResolve = JSON.parse(await readFile(effectiveStoryboard, 'utf8'));
-const footageShots = (preResolve.shots ?? []).filter((shot) => shot.underlay?.query && !shot.underlay?.assetId);
+// Count only what the resolver will actually fetch: a shot the density policy
+// turned down still carries its query, and reporting it would overstate the work.
+const footageShots = (preResolve.shots ?? []).filter(
+  (shot) => shot.underlay?.query && !shot.underlay?.assetId && shot.underlay?.selected !== false,
+);
 if (footageShots.length && !args['no-footage']) {
   step(`resolve footage (${footageShots.length} shot(s))`);
   await occ('footage', 'resolve', projectName,
@@ -301,11 +312,34 @@ if (sfxPlan.length && !args['no-sfx']) {
 
 // --- 9. render ------------------------------------------------------------
 
+// `--no-render` stops after the timeline is written: useful when the caller only
+// wants to inspect the storyboard, or when the render will be done elsewhere.
+if (args['no-render']) {
+  step('render: skipped');
+  if (jsonMode) {
+    console.log(JSON.stringify({ ok: true, out: null, project: projectName, storyboard: effectiveStoryboard, steps }, null, 2));
+  } else {
+    console.log(`\n✓ timeline written to ${projectName} (render skipped)`);
+  }
+  process.exit(0);
+}
+
 step('render');
 await mkdir(dirname(outPath), { recursive: true });
 // Absolute path is mandatory: a relative --out breaks the AAC delay probe.
 await occ('render', projectName, '--out', outPath, '--resolution', '1080p', '--quiet');
 
 if (!(await exists(outPath))) throw new Error(`render reported success but ${outPath} is missing`);
-console.log(`\n✓ ${outPath}`);
-console.log(`  storyboard: ${effectiveStoryboard}`);
+
+if (jsonMode) {
+  console.log(JSON.stringify({
+    ok: true,
+    out: outPath,
+    project: projectName,
+    storyboard: effectiveStoryboard,
+    steps,
+  }, null, 2));
+} else {
+  console.log(`\n✓ ${outPath}`);
+  console.log(`  storyboard: ${effectiveStoryboard}`);
+}
