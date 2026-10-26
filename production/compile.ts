@@ -350,6 +350,39 @@ function buildItem(
   return null;
 }
 
+/**
+ * Turn `transitionIn` into fades on both sides of the cut.
+ *
+ * The items are butt joined, so a `fade` dips through the background rather than
+ * cross-fading — which is the right transition between two cards, and the only
+ * honest one without overlapping items. A cross-fade between two full-frame cards
+ * reads as a double exposure.
+ *
+ * Only the graphic layer fades. Fading the background too was the first attempt
+ * and it rendered the canvas checkerboard for twelve frames: both cards' solids
+ * were half transparent at the same time and there was nothing behind them. A
+ * card video wants its background to be constant and its content to dissolve —
+ * which is also what a dip through black looks like, without needing one.
+ */
+function applyTransitions(items: TimelineItem[], storyboard: Storyboard): void {
+  const fadesWithContent = new Set(['motion-graphic', 'text']);
+  for (const shot of storyboard.shots) {
+    const transition = shot.transitionIn;
+    if (!transition || transition.type === 'none') continue;
+    const frames = Math.max(0, Math.round(transition.durationInFrames));
+    if (!frames) continue;
+
+    for (const item of items) {
+      if (!fadesWithContent.has(item.kind)) continue;
+      if (item.startFrame === shot.startFrame) {
+        item.fadeInFrames = frames;
+      } else if (item.startFrame + item.durationInFrames === shot.startFrame) {
+        item.fadeOutFrames = frames;
+      }
+    }
+  }
+}
+
 export function compile(storyboard: Storyboard, options: CompileOptions = {}): CompileResult {
   const validation = validateStoryboard(storyboard);
   if (!validation.ok) throw new CompileError(validation.errors);
@@ -419,6 +452,11 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
       volume: storyboard.audio.volume ?? 1,
     });
   }
+
+  // Transitions are applied after the fact because a fade needs both sides: the
+  // incoming shot fades in, and whatever ended exactly where it starts fades out.
+  // Doing it per shot would leave every fade one-sided.
+  applyTransitions(items, storyboard);
 
   if (items.length === 0) {
     warnings.push({ code: 'empty-timeline', message: 'no shot could be compiled into an item' });

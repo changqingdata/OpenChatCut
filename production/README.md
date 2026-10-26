@@ -46,7 +46,7 @@ npx tsc -p production                     # type-check this directory only
 | Layout | done — anchored placement, **verified against rendered frames**, pinned by a nine-anchor table |
 | Compiler | `solid` / `text` / `mg-code` / `mg` (with a registry) |
 | Compiler | footage + scrim + graphics on three lanes (V1 / V2 / V3) |
-| Recipes | 8, with schema validation and param checking |
+| Recipes | 12, with schema validation and param checking |
 | Material | private audio (music, SFX), Pexels, Pixabay |
 | Footage density | policy module — ratio, spacing, essentials; retunable without a model call |
 | CLI | `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
@@ -86,6 +86,9 @@ cannot be reproduced cannot be trusted.
 | Code | Severity | Fires when |
 |---|---|---|
 | `frame-gap` | error | a shot leaves frames uncovered — renders as black |
+| `rhythm-flat` | warn | 5 consecutive shots within 0.5s of each other |
+| `footage-low-confidence` | warn | a shot keeps a clip the model rated `low` |
+| `no-transition` | note | 10+ shots and every cut is hard |
 | `shot-too-short` | warn | a shot is under 1.2s |
 | `cut-burst` | warn | more than 4 cuts inside 6s |
 | `recipe-repeat` | warn | 3 consecutive shots use one recipe |
@@ -99,6 +102,11 @@ cannot be reproduced cannot be trusted.
 
 Severity is a claim about consequence: `error` means the video is broken, `warn`
 means it will look wrong, `note` means worth knowing.
+
+`stats` also reports `footageRelevance` — the share of proposed clips the model
+rated high or medium. That is the cheapest proxy for "is the picture about the
+thing being said", and the number that decides whether more recipes are worth
+writing.
 
 Run on the 15-minute storyboard it reported exactly what a manual review had
 found — `keyword-punch` at 49% of 259 shots, three separate runs of three

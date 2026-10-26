@@ -1,0 +1,30 @@
+{
+  "id": "line-chart",
+  "name": "折线图",
+  "nameEn": "Line chart",
+  "intent": "一条随时间变化的曲线，用来讲趋势、增长或衰减",
+  "box": { "width": 900, "height": 560 },
+  "params": {
+    "points": {
+      "type": "array",
+      "required": true,
+      "maxItems": 8,
+      "itemMaxChars": 6,
+      "description": "纵轴数值，2–8 个，按时间顺序；只写数字，例如 [\"1\",\"2\",\"4\",\"8\",\"16\",\"37\"]"
+    },
+    "labels": {
+      "type": "array",
+      "maxItems": 8,
+      "itemMaxChars": 6,
+      "description": "每个点下方的标签，可省略"
+    },
+    "title": { "type": "string", "maxChars": 12, "description": "图上方的小标题" },
+    "unit": { "type": "string", "maxChars": 3, "description": "单位，如 × 或 %" },
+    "bg": { "type": "color", "default": "", "description": "背景色，留空则透明" },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "muted": { "type": "color", "default": "#8A857C" },
+    "displayFont": { "type": "font", "default": "Smiley Sans" },
+    "bodyFont": { "type": "font", "default": "Noto Sans SC" }
+  }
+}

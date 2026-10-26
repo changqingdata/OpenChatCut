@@ -188,6 +188,48 @@ const shortLimit = new Map<string, RecipeSchema>([['big-word-fill', {
 assert.ok(!codes(board([{ recipe: 'big-word-fill', params: { text: '复利' } }]), { schemas: shortLimit })
   .includes('text-near-limit'), 'a two-character design is not a text overrun');
 
+// --- footage relevance ----------------------------------------------------
+
+// A clip the model itself rated low is worse than a card: the viewer notices the
+// mismatch immediately and stops trusting the picture.
+const lowConfidence = board([{ footage: 'hourglass sand', assetId: 'clip-x' }]);
+lowConfidence.shots[0]!.underlay = { ...lowConfidence.shots[0]!.underlay!, selected: true, confidence: 'low' };
+assert.ok(codes(lowConfidence).includes('footage-low-confidence'), 'a low-rated clip that survived is flagged');
+
+const rated = board([
+  { footage: 'a', assetId: 'clip-a' },
+  { recipe: 'number-count' },
+  { recipe: 'list-reveal', footage: 'c', assetId: 'clip-c' },
+]);
+rated.shots[0]!.underlay = { ...rated.shots[0]!.underlay!, confidence: 'high' };
+rated.shots[2]!.underlay = { ...rated.shots[2]!.underlay!, confidence: 'low' };
+const ratedReport = runQc(rated);
+assert.deepEqual(ratedReport.stats.footageConfidence, { high: 1, medium: 0, low: 1 }, 'confidence is counted');
+assert.equal(ratedReport.stats.footageRelevance, 0.5, 'relevance is high+medium over all rated');
+
+// --- rhythm ---------------------------------------------------------------
+
+// Five shots of the same length read as a metronome, even when each one is fine.
+const metronome = board(Array.from({ length: 5 }, (_, i) => ({ recipe: `r${i}` })));
+assert.ok(codes(metronome).includes('rhythm-flat'), 'five equal shots are flagged');
+
+// Varied lengths are the point: same shot count, different durations.
+const varied = board([
+  { recipe: 'a', seconds: 2.0 }, { recipe: 'b', seconds: 3.8 }, { recipe: 'c', seconds: 2.2 },
+  { recipe: 'd', seconds: 4.0 }, { recipe: 'e', seconds: 5.5 },
+]);
+assert.ok(!codes(varied).includes('rhythm-flat'), 'varied lengths pass');
+
+// --- transitions ----------------------------------------------------------
+
+const hardCuts = board(Array.from({ length: 10 }, (_, i) => ({ recipe: `r${i}`, seconds: 2 + (i % 3) })));
+assert.ok(codes(hardCuts).includes('no-transition'), 'ten hard cuts are noted');
+
+const withFade = board(Array.from({ length: 10 }, (_, i) => ({ recipe: `r${i}`, seconds: 2 + (i % 3) })));
+withFade.shots[4] = { ...withFade.shots[4]!, transitionIn: { type: 'fade', durationInFrames: 12 } };
+assert.ok(!codes(withFade).includes('no-transition'), 'one fade clears the note');
+assert.equal(runQc(withFade).stats.transitions, 1, 'transitions are counted');
+
 // --- formatting -----------------------------------------------------------
 
 const lines = formatFindings(runQc(gapped));

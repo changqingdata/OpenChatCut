@@ -43,6 +43,18 @@ export interface QcStats {
   /** Recipe id → number of shots. */
   recipes: Record<string, number>;
   distinctRecipes: number;
+  /** How the model rated the clips it proposed. */
+  footageConfidence: Record<'high' | 'medium' | 'low', number>;
+  /**
+   * Share of proposed clips the model rated high or medium.
+   *
+   * This is the number that matters for footage: a clip that illustrates the
+   * wrong sentence is worse than no clip, and this is the only cheap proxy for
+   * "is the picture about the thing being said".
+   */
+  footageRelevance: number | null;
+  /** Shots that carry a fade. */
+  transitions: number;
 }
 
 export interface QcReport {
@@ -168,6 +180,35 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
     }
   }
 
+  // Five cuts in a row of nearly the same length read as a metronome. Shot
+  // length is the cheapest rhythm tool there is, and the easiest to leave flat.
+  const WINDOW = 5;
+  const FLAT_SPREAD_SEC = 0.5;
+  for (let i = 0; i + WINDOW <= shots.length; i += 1) {
+    const slice = shots.slice(i, i + WINDOW);
+    const durations = slice.map((shot) => sec(shot.endFrame - shot.startFrame, fps));
+    const spread = Math.max(...durations) - Math.min(...durations);
+    if (spread < FLAT_SPREAD_SEC) {
+      findings.push({
+        code: 'rhythm-flat',
+        severity: 'warn',
+        shotIds: slice.map((shot) => shot.id),
+        message: `${WINDOW} shots from ${slice[0]!.id} run ${durations[0]!.toFixed(1)}s ±${spread.toFixed(2)}s — the pacing is a metronome`,
+      });
+      break;
+    }
+  }
+
+  const transitions = shots.filter((shot) => shot.transitionIn && shot.transitionIn.type !== 'none').length;
+  if (shots.length >= 10 && transitions === 0) {
+    findings.push({
+      code: 'no-transition',
+      severity: 'note',
+      shotIds: [],
+      message: `${shots.length} shots, every cut hard — a fade at section changes gives the eye somewhere to rest`,
+    });
+  }
+
   // --- vocabulary ----------------------------------------------------------
 
   const histogram: Record<string, number> = {};
@@ -219,6 +260,17 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
         severity: 'warn',
         shotIds: [shots[i - 1]!.id, shots[i]!.id],
         message: `${shots[i - 1]!.id} and ${shots[i]!.id} both use footage — no card between them breaks the rhythm`,
+      });
+    }
+  }
+
+  for (const shot of shots) {
+    if (hasFootage(shot) && shot.underlay?.confidence === 'low') {
+      findings.push({
+        code: 'footage-low-confidence',
+        severity: 'warn',
+        shotIds: [shot.id],
+        message: `${shot.id} keeps a clip the model rated low — a card would read better than a wrong picture`,
       });
     }
   }
@@ -305,6 +357,13 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
 
   const durationFrames = shots.reduce((end, shot) => Math.max(end, shot.endFrame), 0);
   const footageShots = shots.filter(hasFootage).length;
+
+  const confidence: Record<'high' | 'medium' | 'low', number> = { high: 0, medium: 0, low: 0 };
+  for (const shot of shots) {
+    const rated = shot.underlay?.confidence;
+    if (rated && shot.underlay?.query?.trim()) confidence[rated] += 1;
+  }
+  const ratedTotal = confidence.high + confidence.medium + confidence.low;
   const stats: QcStats = {
     shots: shots.length,
     durationSec: Number(sec(durationFrames, fps).toFixed(2)),
@@ -313,6 +372,9 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
     footageRatio: shots.length ? Number((footageShots / shots.length).toFixed(2)) : 0,
     recipes: histogram,
     distinctRecipes,
+    footageConfidence: confidence,
+    footageRelevance: ratedTotal ? Number(((confidence.high + confidence.medium) / ratedTotal).toFixed(2)) : null,
+    transitions,
   };
 
   return {

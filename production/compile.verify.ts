@@ -418,4 +418,37 @@ assert.equal(portraitStops.mid, SCRIM_STOPS.mid, 'portrait keeps the gradient');
 assert.ok(wideStops.mid > portraitStops.mid, 'a wide frame washes its centre harder');
 assert.ok(wideStops.top - wideStops.mid < portraitStops.top - portraitStops.mid, 'and is flatter overall');
 
-console.log('compile.verify: determinism, layout, tracks, recipes, footage, captions and rejection OK');
+// --- transitions ----------------------------------------------------------
+
+// A fade has to be applied on both sides of the cut, and only to the graphic
+// layer. Fading the background too left the canvas transparent mid-dissolve —
+// the checkerboard showed through for the length of the fade.
+const fadeBoard = board();
+fadeBoard.shots = [
+  {
+    ...fadeBoard.shots[0]!,
+    id: 'S01', startFrame: 0, endFrame: 120, background: '#0B0B0C',
+    visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'mc', widthRatio: 0.9 } },
+  },
+  {
+    ...fadeBoard.shots[0]!,
+    id: 'S02', startFrame: 120, endFrame: 240, background: '#0B0B0C',
+    visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 2 }, layout: { anchor: 'mc', widthRatio: 0.9 } },
+    transitionIn: { type: 'fade', durationInFrames: 12 },
+  },
+];
+const faded = compile(fadeBoard, { recipes }).timeline.items;
+const outgoing = faded.find((item) => item.id === 'it-S01')!;
+const incoming = faded.find((item) => item.id === 'it-S02')!;
+const outgoingBg = faded.find((item) => item.id === 'it-bg-S01')!;
+const incomingBg = faded.find((item) => item.id === 'it-bg-S02')!;
+assert.equal(outgoing.fadeOutFrames, 12, 'the outgoing graphic fades out');
+assert.equal(incoming.fadeInFrames, 12, 'the incoming graphic fades in');
+assert.equal(outgoingBg.fadeOutFrames, undefined, 'the outgoing background stays opaque');
+assert.equal(incomingBg.fadeInFrames, undefined, 'the incoming background stays opaque');
+
+// No transition means no fades at all: a hard cut is the default.
+const hard = compile(board(), { recipes }).timeline.items;
+assert.ok(hard.every((item) => item.fadeInFrames === undefined && item.fadeOutFrames === undefined), 'a hard cut adds no fades');
+
+console.log('compile.verify: determinism, layout, tracks, recipes, footage, captions, transitions and rejection OK');

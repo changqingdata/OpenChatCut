@@ -90,6 +90,17 @@ silent default.
 | `progress-bar` | 900×420 | 用长度表示比例，数字与条形同步 | 完成度、占比、达成率 |
 | `timeline-dots` | 960×420 | 把过程摊成阶段并指出当前在哪 | 步骤、演进、阶段 |
 | `big-word-fill` | 1080×1920 | 一个字占满画面，全片最强的一次冲击 | 单点强调（一条视频最多一次） |
+| `line-chart` | 900×560 | 折线自绘，末端标出终值 | 趋势、增长、衰减 |
+| `bar-compare` | 900×520 | 两条并排比长度，比例即结论 | 倍数、落差、A 是 B 的几倍 |
+| `icon-row` | 960×520 | 2–4 项并列，每项一个图标 | 要素、特征、条件 |
+| `chapter-card` | 1080×1920 | 章节分隔卡，序号 + 标题 | 长视频的导航 |
+
+Twelve recipes cover the shapes a spoken-word video needs: a claim, a number, a
+list, a contrast, a pause, a proportion, a sequence, a single hit, a trend, a
+ratio, a set of parts, and a chapter break.
+
+`chapter-card` and `big-word-fill` are full-frame (box = canvas), so the footage
+policy never puts a clip under them — it would be invisible.
 
 Eight is the working minimum for a long video: a 15-minute talk produced 259
 shots, and with four recipes the most common one took 49% of them. The four

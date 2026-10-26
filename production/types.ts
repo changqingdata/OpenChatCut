@@ -110,6 +110,19 @@ export interface UnderlaySpec {
   selected?: boolean;
   /** The model's own claim that this shot is weak without footage. Always kept. */
   essential?: boolean;
+  /**
+   * How well the footage illustrates *this sentence*.
+   *
+   * The failure this exists for: a shot about "decline" got an hourglass, because
+   * the model reached for the video's theme instead of the sentence's meaning. A
+   * wrong clip is worse than no clip — the viewer drops out immediately, whereas a
+   * plain card is merely quiet. Asking for a confidence costs a few tokens in the
+   * call that already happens; checking it afterwards would cost another call.
+   *
+   * `low` means "there is no honest clip for this line" and the density policy
+   * will not select it.
+   */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface Shot {
@@ -141,7 +154,14 @@ export interface Shot {
    * when `underlay` is present: footage is the background.
    */
   background?: string;
-  transitionIn?: { type: string; durationInFrames: number };
+  /**
+   * How the shot enters. `fade` dips through the background (the items are butt
+   * joined, so a cross-fade would be a double exposure of two cards).
+   *
+   * Absent means a hard cut, which is right *within* a section. Use it on section
+   * boundaries — a fade on every cut is a slideshow, not a rhythm.
+   */
+  transitionIn?: { type: 'fade' | 'none'; durationInFrames: number };
 }
 
 export interface Storyboard {

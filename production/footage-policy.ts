@@ -52,6 +52,8 @@ export interface FootagePolicyResult {
   target: number;
   /** Shots that had no query at all — the model was too conservative. */
   unproposed: string[];
+  /** Shots whose proposed clip was rated too weak to use. */
+  lowConfidence: string[];
 }
 
 function durationOf(shot: Shot): number {
@@ -84,6 +86,9 @@ export function applyFootagePolicy(
     if (!shot.underlay?.query?.trim()) return false;
     if (durationOf(shot) < policy.minFrames) return false;
     if (policy.protectLast && index === lastIndex) return false;
+    // The model said there is no honest clip for this line. A wrong clip is worse
+    // than a card: the viewer notices immediately, and stops trusting the picture.
+    if (shot.underlay?.confidence === 'low') return false;
     // A full-frame visual paints its own card across the whole canvas, so a clip
     // underneath it is never seen. Downloading one would be waste, and the scrim
     // would only dim a picture nobody can look at.
@@ -102,6 +107,11 @@ export function applyFootagePolicy(
 
   const unproposed = shots
     .filter((shot, index) => !shot.underlay?.query?.trim() && !(policy.protectLast && index === lastIndex))
+    .map((shot) => shot.id);
+  // Shots that proposed a clip but rated it low: the ratio cannot be met by
+  // selecting them, so the caller needs to know why it fell short.
+  const lowConfidence = shots
+    .filter((shot) => shot.underlay?.query?.trim() && shot.underlay?.confidence === 'low')
     .map((shot) => shot.id);
 
   const target = Math.max(
@@ -164,5 +174,6 @@ export function applyFootagePolicy(
     dropped,
     target,
     unproposed,
+    lowConfidence,
   };
 }

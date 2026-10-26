@@ -1,0 +1,66 @@
+{
+  "id": "icon-row",
+  "name": "图标横排",
+  "nameEn": "Icon row",
+  "intent": "三到四个并列项，每项配一个图标，比纯文字列表更有形",
+  "box": {
+    "width": 960,
+    "height": 520
+  },
+  "params": {
+    "items": {
+      "type": "array",
+      "required": true,
+      "maxItems": 4,
+      "itemMaxChars": 8,
+      "description": "2–4 项，每项不超过 8 字"
+    },
+    "icons": {
+      "type": "array",
+      "maxItems": 4,
+      "itemMaxChars": 10,
+      "description": "与 items 一一对应的图标名，可选：clock / growth / people / coin / check / arrow / star / shield"
+    },
+    "title": {
+      "type": "string",
+      "maxChars": 14
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 50,
+      "min": 24,
+      "max": 56
+    },
+    "bg": {
+      "type": "color",
+      "default": ""
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "Smiley Sans"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "Noto Sans SC"
+    },
+    "iconSize": {
+      "type": "number",
+      "default": 132,
+      "min": 72,
+      "max": 200,
+      "description": "图标边长（设计像素）"
+    }
+  }
+}

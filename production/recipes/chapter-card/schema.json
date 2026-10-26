@@ -1,0 +1,21 @@
+{
+  "id": "chapter-card",
+  "name": "章节卡",
+  "nameEn": "Chapter card",
+  "intent": "进入新章节或新话题时的分隔卡，给长视频一个导航感",
+  "box": { "width": 1080, "height": 1920 },
+  "params": {
+    "number": { "type": "string", "required": true, "maxChars": 3 },
+    "title": { "type": "string", "required": true, "maxChars": 10 },
+    "subtitle": { "type": "string", "maxChars": 18 },
+    "kicker": { "type": "string", "maxChars": 12, "default": "CHAPTER" },
+    "numberSize": { "type": "number", "default": 132, "min": 72, "max": 200 },
+    "titleSize": { "type": "number", "default": 96, "min": 56, "max": 140 },
+    "bg": { "type": "color", "default": "#0B0B0C" },
+    "ink": { "type": "color", "default": "#F2EFE9" },
+    "accent": { "type": "color", "default": "#E8B04B" },
+    "muted": { "type": "color", "default": "#8A857C" },
+    "displayFont": { "type": "font", "default": "Smiley Sans" },
+    "bodyFont": { "type": "font", "default": "Noto Sans SC" }
+  }
+}
