@@ -16,7 +16,7 @@ import { resolveRect, transformFromRect } from './layout.ts';
 import type { ResolveOptions } from './layout.ts';
 import { buildScrimItem } from './scrim.ts';
 import { validateStoryboard } from './validate.ts';
-import type { CompileWarning, Shot, Storyboard, VisualSpec } from './types.ts';
+import type { Anchor, CompileWarning, LayoutSpec, Shot, Storyboard, VisualSpec } from './types.ts';
 
 export interface Recipe {
   id: string;
@@ -113,6 +113,31 @@ export class CompileError extends Error {
 function isFullFrame(visual: VisualSpec): boolean {
   if (visual.kind === 'text' || visual.kind === 'solid') return true;
   return 'layout' in visual && visual.layout.anchor === 'full';
+}
+
+/**
+ * Vertical centring for shots whose picture *is* the graphic.
+ *
+ * On footage a top anchor is composition: the clip fills the frame and the type
+ * finds a quiet corner. On a flat card there is no clip, so a top anchor leaves
+ * the rest of the frame empty — `keyword-punch` at `tc` puts a 530px block at the
+ * top of a 1920px frame and leaves 70% of it blank, which reads as unfinished
+ * rather than as negative space.
+ *
+ * So a card is centred vertically, and only vertically: `tl` becomes `ml`, `bc`
+ * becomes `mc`. The horizontal choice is still composition — a list reads better
+ * hanging on the left — and it survives.
+ */
+function cardAnchor(anchor: Anchor): Anchor {
+  if (anchor === 'full') return anchor;
+  // The anchor reads row-then-column: `tc` is top-centre, `bl` is bottom-left.
+  // So the first character is the one that has to become `m`.
+  if (anchor[0] === 'm') return anchor;
+  return `m${anchor[1]}` as Anchor;
+}
+
+function cardLayout(layout: LayoutSpec, hasFootage: boolean): LayoutSpec {
+  return hasFootage ? layout : { ...layout, anchor: cardAnchor(layout.anchor) };
 }
 
 function trackFor(visual: VisualSpec, hasBackground = false, hasUnderlay = false): string {
@@ -231,6 +256,7 @@ function buildItem(
   const visual = shot.visual;
   if (!visual) return null;
 
+  const onFootage = Boolean(shot.underlay) && shot.underlay?.selected !== false;
   const { width, height } = storyboard.meta;
   const durationInFrames = shot.endFrame - shot.startFrame;
   const base = {
@@ -251,8 +277,7 @@ function buildItem(
       });
       return null;
     }
-    const rect = resolveRect(visual.layout, width, height, recipe.box.width, recipe.box.height, layoutOptions);
-    const onFootage = Boolean(shot.underlay) && shot.underlay?.selected !== false;
+    const rect = resolveRect(cardLayout(visual.layout, onFootage), width, height, recipe.box.width, recipe.box.height, layoutOptions);
     return {
       ...base,
       kind: 'motion-graphic',
@@ -272,7 +297,7 @@ function buildItem(
   }
 
   if (visual.kind === 'mg-code') {
-    const rect = resolveRect(visual.layout, width, height, visual.box.width, visual.box.height, layoutOptions);
+    const rect = resolveRect(cardLayout(visual.layout, onFootage), width, height, visual.box.width, visual.box.height, layoutOptions);
     return {
       ...base,
       kind: 'motion-graphic',

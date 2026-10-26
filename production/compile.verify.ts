@@ -276,16 +276,21 @@ assert.equal(trimmedItem.srcInFrame, 180, 'srcInFrame is clamped to what the cli
 
 // A `bc` recipe used to land on top of the burned-in subtitle: the layout had no
 // idea the band existed. With captions on, the rect has to stop above it.
+//
+// The shot carries footage because a card now centres vertically, which would
+// make the band irrelevant — and `bc` over footage is exactly the case that
+// broke.
 const bcBoard = board();
 bcBoard.shots = [{
   ...bcBoard.shots[0]!,
   startFrame: 0,
   endFrame: 120,
+  underlay: { assetId: 'asset-portrait' },
   visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'bc', widthRatio: 0.9 } },
 }];
 
-const bare = compile(bcBoard, { recipes }).timeline.items.find((item) => item.id === 'it-S01')!;
-const withCaptions = compile(bcBoard, { recipes, captions: { enabled: true } as never })
+const bare = compile(bcBoard, { recipes, assets }).timeline.items.find((item) => item.id === 'it-S01')!;
+const withCaptions = compile(bcBoard, { recipes, assets, captions: { enabled: true } as never })
   .timeline.items.find((item) => item.id === 'it-S01')!;
 assert.ok(
   (withCaptions.transform?.y ?? 0) < (bare.transform?.y ?? 0),
@@ -327,5 +332,56 @@ assert.equal(wash.width, 1080, 'the wash is sized to the canvas');
 assert.equal(wash.height, 1920, 'the wash is sized to the canvas');
 assert.ok(wash.code?.includes('linear-gradient'), 'the wash is a gradient');
 assert.ok((wash.props?.bottom ?? 0) > (wash.props?.mid ?? 1), 'the caption band is the darkest stop');
+
+// --- a card is centred vertically -----------------------------------------
+
+// On footage a top anchor is composition. On a flat card it leaves the frame
+// empty: keyword-punch at `tc` is a 530px block at the top of a 1920px frame,
+// with 70% of the picture blank.
+const cardTop = board();
+cardTop.shots = [{
+  ...cardTop.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  background: '#0B0B0C',
+  visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'tc', widthRatio: 0.85 } },
+}];
+const cardItem = compile(cardTop, { recipes }).timeline.items.find((item) => item.id === 'it-S01')!;
+assert.equal(cardItem.transform?.y, 0, 'a card ignores a top anchor and centres vertically');
+
+// The horizontal choice survives: a list still hangs on the left.
+const cardLeft = board();
+cardLeft.shots = [{
+  ...cardLeft.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  background: '#0B0B0C',
+  visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'tl', widthRatio: 0.85 } },
+}];
+const leftItem = compile(cardLeft, { recipes }).timeline.items.find((item) => item.id === 'it-S01')!;
+assert.equal(leftItem.transform?.y, 0, 'a card centres vertically');
+assert.ok((leftItem.transform?.x ?? 0) < 0, 'but keeps its left alignment');
+
+// Footage keeps the anchor it was given — that is where the composition lives.
+const footageTop = board();
+footageTop.shots = [{
+  ...footageTop.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  visual: undefined,
+  underlay: { assetId: 'asset-portrait' },
+}];
+const footageTopWithVisual = board();
+footageTopWithVisual.shots = [{
+  ...footageTopWithVisual.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  underlay: { assetId: 'asset-portrait' },
+  visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'tc', widthRatio: 0.85 } },
+}];
+const overFootage = compile(footageTopWithVisual, { recipes, assets })
+  .timeline.items.find((item) => item.id === 'it-S01')!;
+assert.ok((overFootage.transform?.y ?? 0) < -20, 'over footage a top anchor stays at the top');
+assert.ok(compile(footageTop, { assets }).timeline.items.length > 0, 'footage alone still compiles');
 
 console.log('compile.verify: determinism, layout, tracks, recipes, footage, captions and rejection OK');

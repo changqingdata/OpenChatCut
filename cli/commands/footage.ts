@@ -71,6 +71,12 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
   const storyboard = await readStoryboard(resolve(storyboardFlag));
   const providers = await createProviders();
   const fps = storyboard.meta?.fps || 30;
+  // Orientation comes from the canvas, not from a hardcoded vertical default:
+  // a 16:9 film filled with vertical clips would letterbox every shot.
+  const canvasW = storyboard.meta?.width ?? 1080;
+  const canvasH = storyboard.meta?.height ?? 1920;
+  const aspect: '9:16' | '16:9' | '1:1' =
+    canvasW === canvasH ? '1:1' : canvasW > canvasH ? '16:9' : '9:16';
 
   // Assets live inside a project, so an id from another project's pool is
   // dangling here. Reusing a storyboard across projects must re-import, not
@@ -97,6 +103,7 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
       query: underlay.query,
       neededFrames,
       fps,
+      aspect,
       ...(underlay.kind ? { kind: underlay.kind } : {}),
     });
 

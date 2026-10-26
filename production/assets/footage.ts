@@ -21,6 +21,8 @@ export interface FootageRequest {
   fps: number;
   /** `video` falls back to stills when no clip answers the query. */
   kind?: 'video' | 'image';
+  /** Canvas orientation. A 16:9 film must not be filled with vertical clips. */
+  aspect?: '9:16' | '16:9' | '1:1';
 }
 
 export interface FootagePick {
@@ -90,7 +92,7 @@ export async function findFootage(
     const outcome = await searchAll(providers, {
       role,
       query: request.query,
-      aspect: '9:16',
+      aspect: request.aspect ?? '9:16',
       // A handful is enough to rank; more only widens the chance of a bad first
       // page winning on a tie-break.
       limit: 12,
