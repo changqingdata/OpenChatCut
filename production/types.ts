@@ -62,18 +62,44 @@ export interface LayoutSpec {
 }
 
 /**
- * How one shot becomes picture.
+ * The graphics over a shot.
  *
  * `mg` is the default path: a named recipe plus parameters. `mg-code` is the
- * escape hatch for shots no recipe covers. The remaining kinds need media that
- * must already exist in the project's asset pool.
+ * escape hatch for shots no recipe covers. Footage is not a visual kind — it is
+ * `Shot.underlay`, because a shot can have both and a visual can only be one.
  */
 export type VisualSpec =
   | { kind: 'mg'; recipe: string; params: Record<string, unknown>; layout: LayoutSpec }
   | { kind: 'mg-code'; code: string; box: { width: number; height: number }; props?: Record<string, unknown>; layout: LayoutSpec }
   | { kind: 'text'; text: string; fontSize?: number; color?: string; fontWeight?: number; align?: 'left' | 'center' | 'right'; layout: LayoutSpec }
-  | { kind: 'solid'; color: string; layout: LayoutSpec }
-  | { kind: 'asset'; assetId: string; layout: LayoutSpec };
+  | { kind: 'solid'; color: string; layout: LayoutSpec };
+
+/**
+ * The picture underneath a shot: real footage or a still.
+ *
+ * A recipe alone is a card. A shot that shows something — a person working, a
+ * city at night — needs an image behind the graphics, and that image comes from
+ * outside the repo.
+ *
+ * `query` is the model's search intent; `assetId` is filled in by the footage
+ * resolver once a clip has been downloaded into the project pool. Keeping them
+ * separate is what makes a storyboard reproducible: the same storyboard always
+ * resolves to the same clip, and swapping the source library never invalidates
+ * the direction.
+ */
+export interface UnderlaySpec {
+  /** Resolved pool asset. Set by the resolver, never by the model. */
+  assetId?: string;
+  /** Search intent, in the footage library's language. */
+  query?: string;
+  /** Why this shot needs footage. Read by QC, not by the compiler. */
+  note?: string;
+  kind?: 'video' | 'image';
+  /** Frames to skip from the source start, so a long clip does not always open on frame 0. */
+  srcInFrame?: number;
+  /** Cover the frame with a blurred copy behind a contained clip. Set by the resolver. */
+  backgroundFill?: boolean;
+}
 
 export interface Shot {
   /** Stable across recompiles: "S01", "S02", … Never renumber. */
@@ -91,13 +117,17 @@ export interface Shot {
   };
   /** What the viewer should take away from this shot. Required; drives QC. */
   intent: string;
-  visual: VisualSpec;
+  /** Graphics over the picture. Optional when `underlay` carries the frame alone. */
+  visual?: VisualSpec;
+  /** Footage or a still underneath the graphics. */
+  underlay?: UnderlaySpec;
   /**
    * Fill the frame behind this shot with a solid colour.
    *
    * A recipe is an overlay — its box is usually smaller than the canvas, so a
    * shot that should read as a full-frame card needs this. The compiler emits a
-   * `solid` item underneath and moves the visual to the overlay track.
+   * `solid` item underneath and moves the visual to the overlay track. Ignored
+   * when `underlay` is present: footage is the background.
    */
   background?: string;
   transitionIn?: { type: string; durationInFrames: number };
@@ -136,6 +166,12 @@ export interface Storyboard {
 
 export interface CompileWarning {
   shotId?: string;
-  code: 'shot-too-long' | 'empty-timeline' | 'unsupported-visual' | 'asset-missing' | 'overlap';
+  code:
+    | 'shot-too-long'
+    | 'empty-timeline'
+    | 'unsupported-visual'
+    | 'asset-missing'
+    | 'overlap'
+    | 'underlay-unresolved';
   message: string;
 }

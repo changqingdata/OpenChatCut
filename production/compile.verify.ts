@@ -4,7 +4,7 @@
 //   npx tsx production/compile.verify.ts
 
 import assert from 'node:assert/strict';
-import { compile, CompileError, type RecipeRegistry } from './compile.ts';
+import { compile, CompileError, type CompileAsset, type RecipeRegistry } from './compile.ts';
 import { resolveRect, transformFromRect } from './layout.ts';
 import { validateStoryboard } from './validate.ts';
 import type { Storyboard } from './types.ts';
@@ -161,7 +161,7 @@ assert.equal(mg.kind, 'motion-graphic', 'mg visual becomes a motion-graphic item
 assert.ok(mg.code?.includes('Component'), 'recipe code is inlined into the item');
 assert.equal(mg.props?.unit, '%', 'recipe defaults survive');
 assert.equal(mg.props?.value, 37, 'shot params override defaults');
-assert.equal(mg.track, 'V2', 'anchored visual lands on the overlay track');
+assert.equal(mg.track, 'V3', 'anchored visual lands on the graphics track');
 assert.equal(mg.width, 720, 'natural box width kept on the item');
 assert.equal(mg.transform?.scale, 0.9, 'placement scale derived from the rect and the fitted box');
 
@@ -194,4 +194,82 @@ outOfOrder.shots = [
 const sorted = compile(outOfOrder).timeline.items;
 assert.deepEqual(sorted.map((item) => item.id), ['it-S01', 'it-S02'], 'items are ordered by start frame');
 
-console.log('compile.verify: determinism, layout, tracks, recipes and rejection OK');
+// --- footage underlay -----------------------------------------------------
+
+// A shot can carry footage below and graphics above. The three lanes are the
+// contract: V1 picture, V2 scrim, V3 graphics.
+const assets = new Map<string, CompileAsset>([
+  ['asset-portrait', { id: 'asset-portrait', src: '/media/uploads/a.mp4', kind: 'video', width: 1080, height: 1920, durationInFrames: 300 }],
+  ['asset-landscape', { id: 'asset-landscape', src: '/media/uploads/b.mp4', kind: 'video', width: 1920, height: 1080, durationInFrames: 300 }],
+  ['asset-still', { id: 'asset-still', src: '/media/uploads/c.jpg', kind: 'image', width: 1080, height: 1920 }],
+]);
+
+const hybrid = board();
+hybrid.shots = [{
+  ...hybrid.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  underlay: { assetId: 'asset-portrait', query: 'person typing' },
+  visual: { kind: 'mg', recipe: 'stat-impact', params: { value: 1 }, layout: { anchor: 'tc', widthRatio: 0.8 } },
+}];
+
+const hybridItems = compile(hybrid, { recipes, assets }).timeline.items;
+const footage = hybridItems.find((item) => item.id === 'it-f-S01');
+const scrim = hybridItems.find((item) => item.id === 'it-scrim-S01');
+const graphic = hybridItems.find((item) => item.id === 'it-S01');
+assert.ok(footage && scrim && graphic, 'footage, scrim and graphic are all emitted');
+assert.equal(footage.kind, 'video', 'footage becomes a video item');
+assert.equal(footage.track, 'V1', 'footage owns the base lane');
+assert.equal(footage.src, '/media/uploads/a.mp4', 'footage src comes from the pool');
+assert.equal(footage.volume, 0, 'footage is muted: the mix is built from A1-A3');
+assert.equal(scrim.track, 'V2', 'scrim sits between footage and graphics');
+assert.equal(graphic.track, 'V3', 'graphics sit above the scrim');
+assert.equal(footage.backgroundFill, undefined, 'portrait footage needs no blurred cover');
+
+// Footage alone is a legitimate shot: no graphic, but still a scrim, because the
+// burned-in captions need contrast against an unknown clip.
+const footageOnly = board();
+footageOnly.shots = [{ ...footageOnly.shots[0]!, startFrame: 0, endFrame: 120, visual: undefined, underlay: { assetId: 'asset-still' } }];
+const onlyItems = compile(footageOnly, { assets, captions: { enabled: true } as never }).timeline.items;
+assert.equal(onlyItems.length, 2, 'footage-only shot emits footage plus scrim');
+assert.equal(onlyItems[0]!.kind, 'image', 'a still becomes an image item');
+assert.equal(onlyItems[0]!.track, 'V1', 'a still also owns the base lane');
+
+// Landscape footage in a portrait canvas is letterboxed by the renderer, so the
+// compiler asks for the blurred cover treatment instead of shipping black bars.
+const wide = board();
+wide.shots = [{ ...wide.shots[0]!, startFrame: 0, endFrame: 120, visual: undefined, underlay: { assetId: 'asset-landscape' } }];
+const wideItem = compile(wide, { assets }).timeline.items[0]!;
+assert.equal(wideItem.backgroundFill, true, 'landscape footage gets a blurred cover');
+
+// An unresolved query must not pass silently: the run would lose every real shot.
+const unresolved = board();
+unresolved.shots = [{ ...unresolved.shots[0]!, startFrame: 0, endFrame: 120, visual: undefined, underlay: { query: 'office' } }];
+const unresolvedResult = compile(unresolved);
+assert.equal(unresolvedResult.timeline.items.length, 0, 'unresolved footage emits nothing');
+assert.ok(
+  unresolvedResult.warnings.some((w) => w.code === 'underlay-unresolved'),
+  'unresolved footage warns',
+);
+
+// A resolved id that is not in the pool is a different failure: the reference is
+// stale, and the message has to say which id.
+const dangling = board();
+dangling.shots = [{ ...dangling.shots[0]!, startFrame: 0, endFrame: 120, visual: undefined, underlay: { assetId: 'gone' } }];
+assert.ok(
+  compile(dangling, { assets }).warnings.some((w) => w.code === 'asset-missing'),
+  'a stale asset id warns',
+);
+
+// srcInFrame is clamped so a long clip never runs past its own end.
+const trimmed = board();
+trimmed.shots = [{
+  ...trimmed.shots[0]!,
+  startFrame: 0,
+  endFrame: 120,
+  underlay: { assetId: 'asset-portrait', srcInFrame: 5000 },
+}];
+const trimmedItem = compile(trimmed, { assets }).timeline.items.find((item) => item.id === 'it-f-S01')!;
+assert.equal(trimmedItem.srcInFrame, 180, 'srcInFrame is clamped to what the clip can spare');
+
+console.log('compile.verify: determinism, layout, tracks, recipes, footage and rejection OK');

@@ -12,7 +12,7 @@ export interface ValidationResult {
   warnings: CompileWarning[];
 }
 
-const SUPPORTED_VISUALS = new Set(['mg', 'mg-code', 'text', 'solid', 'asset']);
+const SUPPORTED_VISUALS = new Set(['mg', 'mg-code', 'text', 'solid']);
 
 export function validateStoryboard(storyboard: Storyboard): ValidationResult {
   const errors: string[] = [];
@@ -71,8 +71,40 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
 
     if (!shot.intent?.trim()) errors.push(`${label}: intent is required — it drives QC`);
 
+    const underlay = shot.underlay;
     const visual = shot.visual;
-    if (!visual || !SUPPORTED_VISUALS.has(visual.kind)) {
+
+    // A shot needs at least one source of picture. Footage alone is legitimate —
+    // an establishing clip needs no graphics on top of it.
+    if (!visual && !underlay) {
+      errors.push(`${label}: needs a visual or an underlay — a shot cannot be empty`);
+      continue;
+    }
+
+    if (underlay) {
+      if (!underlay.assetId?.trim() && !underlay.query?.trim()) {
+        errors.push(`${label}: underlay needs assetId or query`);
+      }
+      if (underlay.kind && underlay.kind !== 'video' && underlay.kind !== 'image') {
+        errors.push(`${label}: underlay.kind must be "video" or "image"`);
+      }
+      if (underlay.srcInFrame !== undefined && !(underlay.srcInFrame >= 0)) {
+        errors.push(`${label}: underlay.srcInFrame must be >= 0`);
+      }
+      // Unresolved footage still compiles — the resolver may not have run yet —
+      // but it must not pass silently, or a run quietly loses every real shot.
+      if (!underlay.assetId?.trim()) {
+        warnings.push({
+          shotId: shot.id,
+          code: 'underlay-unresolved',
+          message: `${label}: footage "${underlay.query ?? ''}" is not resolved yet — run the footage resolver`,
+        });
+      }
+    }
+
+    if (!visual) continue;
+
+    if (!SUPPORTED_VISUALS.has(visual.kind)) {
       errors.push(`${label}: unsupported visual kind "${String((visual as { kind?: string } | undefined)?.kind)}"`);
       continue;
     }
@@ -83,7 +115,6 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
         errors.push(`${label}: mg-code.box must have positive width and height`);
       }
     }
-    if (visual.kind === 'asset' && !visual.assetId?.trim()) errors.push(`${label}: asset.assetId is required`);
     if (visual.kind === 'text' && !visual.text?.trim()) errors.push(`${label}: text.text is required`);
 
     const layout = 'layout' in visual ? visual.layout : undefined;

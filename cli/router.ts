@@ -8,6 +8,7 @@ import { runAssetsCommand } from './commands/assets.ts';
 import { runCompileCommand } from './commands/compile.ts';
 import { runEditCommand } from './commands/edit.ts';
 import { runExportCommand } from './commands/export.ts';
+import { runFootageCommand } from './commands/footage.ts';
 import { runItemCommand } from './commands/item.ts';
 import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
@@ -45,6 +46,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runStoryboardCommand(subLine(commandLine, positionals), json);
     case 'assets':
       return runAssetsCommand(subLine(commandLine, positionals), json);
+    case 'footage':
+      return runFootageCommand(subLine(commandLine, positionals), json);
     case 'export':
       return runExportCommand(positionals, commandLine, json);
     case 'where':

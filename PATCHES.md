@@ -16,7 +16,8 @@ Refactor the change into new files instead of widening the patch surface.
 | 1 | `cli/router.ts` | import + two `case` arms (`still`, `compile`) | register the production CLI commands |
 | 2 | `cli/main.ts` | three lines in the usage text | keep `occ --help` truthful |
 | 3 | `cli/router.ts` | import + `storyboard` / `assets` case arms | register the production commands |
-| 4 | `cli/main.ts` | usage lines for `storyboard` and `assets` | keep `occ --help` truthful |
+| 4 | `cli/main.ts` | usage lines for `storyboard`, `assets`, `footage` | keep `occ --help` truthful |
+| 5 | `cli/router.ts` | `footage` case arm | register `occ footage` |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.

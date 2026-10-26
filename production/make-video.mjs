@@ -182,6 +182,22 @@ if (args.storyboard) {
 
 const effectiveStoryboard = args.storyboard ? resolve(String(args.storyboard)) : storyboardPath;
 
+// --- 4b. footage ----------------------------------------------------------
+
+// Shots that name something visible carry a search query instead of a clip. The
+// resolver turns those into pool assets and writes the ids back, so compiling
+// stays a pure transformation and re-rendering never re-downloads.
+const preResolve = JSON.parse(await readFile(effectiveStoryboard, 'utf8'));
+const footageShots = (preResolve.shots ?? []).filter((shot) => shot.underlay?.query && !shot.underlay?.assetId);
+if (footageShots.length && !args['no-footage']) {
+  step(`resolve footage (${footageShots.length} shot(s))`);
+  await occ('footage', 'resolve', projectName,
+    '--storyboard', effectiveStoryboard,
+    '--out', effectiveStoryboard);
+} else if (!args['no-footage']) {
+  step('footage: none requested');
+}
+
 // --- 5. compile -----------------------------------------------------------
 
 step('compile onto the timeline');

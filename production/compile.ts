@@ -27,8 +27,29 @@ export interface Recipe {
 
 export type RecipeRegistry = ReadonlyMap<string, Recipe>;
 
+/**
+ * The slice of a pool asset the compiler needs.
+ *
+ * Compile is pure, so it never reads the pool itself — the caller hands over the
+ * assets a storyboard references. Passing the whole doc would invite the
+ * compiler to start making placement decisions from project state.
+ */
+export interface CompileAsset {
+  id: string;
+  src: string;
+  /** Pool kind; anything that is not an image or gif renders as video. */
+  kind: string;
+  width?: number;
+  height?: number;
+  durationInFrames?: number;
+  sourceFilename?: string;
+  sourceRevision?: string;
+}
+
 export interface CompileOptions {
   recipes?: RecipeRegistry;
+  /** Pool assets referenced by shot underlays, keyed by id. */
+  assets?: ReadonlyMap<string, CompileAsset>;
   /** Timeline id to emit. Defaults to `tl-main`. */
   timelineId?: string;
   /** Caption overlay. Built from the subtitle file by the caller. */
@@ -41,10 +62,31 @@ export interface CompileResult {
   warnings: CompileWarning[];
 }
 
-/** Overlays sit above the base layer; full-frame visuals own the base track. */
+/**
+ * Three video lanes, because a shot can have three things stacked in it.
+ *
+ *   V3  graphics   always — recipes and text
+ *   V2  scrim      only over footage: a dark wash that keeps white type readable
+ *   V1  base       footage, or a solid card
+ *
+ * Graphics always go to V3 rather than V2. If a scrim shared V2 with them the
+ * two would fight for the same lane, and a shot that gained footage later would
+ * silently change which lane its recipe was on.
+ */
 const BASE_TRACK = 'V1';
-const OVERLAY_TRACK = 'V2';
-const TRACK_ORDER = ['V2', 'V1', 'A1', 'A2'] as const;
+const SCRIM_TRACK = 'V2';
+const OVERLAY_TRACK = 'V3';
+const TRACK_ORDER = ['V3', 'V2', 'V1', 'A1', 'A2'] as const;
+
+/**
+ * How dark the wash over footage is.
+ *
+ * Footage arrives with its own exposure: a sunrise clip is nearly white where a
+ * recipe expects a dark card, and white type on it disappears. 0.42 is enough to
+ * carry type without making the clip look muddy — and the footage is the reason
+ * the shot exists, so it must stay visible.
+ */
+const SCRIM_COLOR = 'rgba(11,11,12,0.42)';
 
 export class CompileError extends Error {
   readonly errors: string[];
@@ -60,17 +102,99 @@ function isFullFrame(visual: VisualSpec): boolean {
   return 'layout' in visual && visual.layout.anchor === 'full';
 }
 
-function trackFor(visual: VisualSpec, hasBackground = false): string {
-  // A shot with its own background puts the visual on top of it.
-  if (hasBackground) return OVERLAY_TRACK;
-  // Authored text is a full-frame layer in the editor; keep it on the overlay
-  // track so it never displaces footage placed underneath.
+function trackFor(visual: VisualSpec, hasBackground = false, hasUnderlay = false): string {
+  // Graphics always sit on the top lane: footage below, scrim between them.
+  if (hasUnderlay || hasBackground) return OVERLAY_TRACK;
+  // A card with nothing under it still needs its own lane when it fills the
+  // frame — a full-frame solid on V1 would be the base layer itself.
   if (visual.kind === 'text') return OVERLAY_TRACK;
   return isFullFrame(visual) ? BASE_TRACK : OVERLAY_TRACK;
 }
 
 function emptyRegistry(): RecipeRegistry {
   return new Map();
+}
+
+/**
+ * Footage item for one shot.
+ *
+ * Two details are not obvious:
+ *
+ * - The clip is muted. A stock clip carries its own ambience, which fights the
+ *   voiceover and the music bed; the mix is built from A1–A3, not from V1.
+ * - Landscape footage in a portrait canvas is letterboxed, because the renderer
+ *   fits media with `contain` and only applies transforms to motion graphics.
+ *   `backgroundFill` paints a blurred cover copy behind it, which reads as a
+ *   deliberate treatment instead of a mistake. Portrait footage needs neither.
+ */
+function buildUnderlay(
+  shot: Shot,
+  assets: ReadonlyMap<string, CompileAsset>,
+  canvas: { width: number; height: number },
+  warnings: CompileWarning[],
+): TimelineItem | null {
+  const underlay = shot.underlay;
+  if (!underlay) return null;
+
+  if (!underlay.assetId) {
+    warnings.push({
+      shotId: shot.id,
+      code: 'underlay-unresolved',
+      message: `${shot.id}: footage "${underlay.query ?? ''}" has no asset yet`,
+    });
+    return null;
+  }
+
+  const asset = assets.get(underlay.assetId);
+  if (!asset) {
+    warnings.push({
+      shotId: shot.id,
+      code: 'asset-missing',
+      message: `${shot.id}: footage asset ${underlay.assetId} is not in the project pool`,
+    });
+    return null;
+  }
+
+  const durationInFrames = shot.endFrame - shot.startFrame;
+  const available = asset.durationInFrames ?? 0;
+
+  // A clip shorter than its shot freezes on the last frame. Say so; the resolver
+  // can re-pick, but the compiler must not hide it.
+  if (available > 0 && available < durationInFrames) {
+    warnings.push({
+      shotId: shot.id,
+      code: 'shot-too-long',
+      message: `${shot.id}: footage is ${available} frames but the shot needs ${durationInFrames}`,
+    });
+  }
+
+  const requestedIn = underlay.srcInFrame ?? 0;
+  const maxIn = available > 0 ? Math.max(0, available - durationInFrames) : requestedIn;
+  const srcInFrame = Math.min(requestedIn, maxIn);
+
+  const width = asset.width ?? canvas.width;
+  const height = asset.height ?? canvas.height;
+  const portrait = height >= width;
+
+  return {
+    id: `it-f-${shot.id}`,
+    kind: asset.kind === 'image' ? 'image' : asset.kind === 'gif' ? 'gif' : 'video',
+    track: BASE_TRACK,
+    startFrame: shot.startFrame,
+    durationInFrames,
+    name: `${shot.id} footage`,
+    src: asset.src,
+    sourceAssetId: asset.id,
+    ...(asset.sourceFilename ? { sourceFilename: asset.sourceFilename } : {}),
+    ...(asset.sourceRevision ? { sourceRevision: asset.sourceRevision } : {}),
+    width,
+    height,
+    volume: 0,
+    ...(srcInFrame > 0 ? { srcInFrame } : {}),
+    ...(underlay.backgroundFill ?? !portrait
+      ? { backgroundFill: true, backgroundFillStrength: 70 }
+      : {}),
+  };
 }
 
 /**
@@ -86,17 +210,18 @@ function buildItem(
   recipes: RecipeRegistry,
   warnings: CompileWarning[],
 ): TimelineItem | null {
+  const visual = shot.visual;
+  if (!visual) return null;
+
   const { width, height } = storyboard.meta;
   const durationInFrames = shot.endFrame - shot.startFrame;
   const base = {
     id: `it-${shot.id}`,
-    track: trackFor(shot.visual, Boolean(shot.background)),
+    track: trackFor(visual, Boolean(shot.background), Boolean(shot.underlay)),
     startFrame: shot.startFrame,
     durationInFrames,
     name: shot.id,
   } satisfies Pick<TimelineItem, 'id' | 'track' | 'startFrame' | 'durationInFrames' | 'name'>;
-
-  const visual = shot.visual;
 
   if (visual.kind === 'mg') {
     const recipe = recipes.get(visual.recipe);
@@ -166,11 +291,10 @@ function buildItem(
     };
   }
 
-  // `asset` needs a resolved media URL from the project pool; not wired yet.
   warnings.push({
     shotId: shot.id,
     code: 'unsupported-visual',
-    message: `${shot.id}: visual kind "asset" needs a project asset and is not implemented yet`,
+    message: `${shot.id}: unknown visual kind — footage belongs in shot.underlay, not in visual`,
   });
   return null;
 }
@@ -185,10 +309,10 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
   const { meta } = storyboard;
 
   const items: TimelineItem[] = [];
+  const assets = options.assets ?? new Map<string, CompileAsset>();
   for (const shot of [...storyboard.shots].sort((a, b) => a.startFrame - b.startFrame)) {
-    // Backgrounds are separate items so a recipe stays a pure overlay and the
-    // same recipe can sit on footage or on a flat card.
-    if (shot.background) {
+    // Footage is the background when present, so a solid would only hide it.
+    if (shot.background && !shot.underlay) {
       items.push({
         id: `it-bg-${shot.id}`,
         kind: 'solid',
@@ -200,6 +324,25 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
         height: meta.height,
         props: { color: shot.background },
       });
+    }
+    const footage = buildUnderlay(shot, assets, meta, warnings);
+    if (footage) {
+      items.push(footage);
+      // Only worth washing when something will be drawn over the footage.
+      const needsScrim = Boolean(shot.visual) || Boolean(options.captions?.enabled);
+      if (needsScrim) {
+        items.push({
+          id: `it-scrim-${shot.id}`,
+          kind: 'solid',
+          track: SCRIM_TRACK,
+          startFrame: shot.startFrame,
+          durationInFrames: shot.endFrame - shot.startFrame,
+          name: `${shot.id} scrim`,
+          width: meta.width,
+          height: meta.height,
+          props: { color: SCRIM_COLOR },
+        });
+      }
     }
     const item = buildItem(shot, storyboard, recipes, warnings);
     if (item) items.push(item);
@@ -236,7 +379,8 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
     trackOrder: [...TRACK_ORDER],
     ...(options.captions ? { captions: options.captions } : {}),
     tracks: {
-      V2: { kind: 'video', name: 'Overlay' },
+      V3: { kind: 'video', name: 'Graphics' },
+      V2: { kind: 'video', name: 'Scrim' },
       V1: { kind: 'video', name: 'Base' },
       A1: { kind: 'audio', name: 'Voice' },
       A2: { kind: 'audio', name: 'Music' },

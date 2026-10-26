@@ -41,17 +41,36 @@ npx tsc -p production                     # type-check this directory only
 
 | Piece | State |
 |---|---|
-| IR types | done — `solid`, `text`, `mg`, `mg-code`, `asset` declared |
-| Validation | done — frame ranges, beats, intents, layout bounds |
+| IR types | done — `solid`, `text`, `mg`, `mg-code` as `visual`; footage as `underlay` |
+| Validation | done — frame ranges, beats, intents, layout bounds, unresolved footage |
 | Layout | done — anchored placement, **verified against rendered frames**, pinned by a nine-anchor table |
 | Compiler | `solid` / `text` / `mg-code` / `mg` (with a registry) |
-| Compiler | `asset` not implemented — needs pool resolution |
-| Recipes | 1 — `keyword-punch`, with schema validation and param checking |
-| CLI | `occ compile`, `occ still` |
-| Storyboard generation | not started |
+| Compiler | footage + scrim + graphics on three lanes (V1 / V2 / V3) |
+| Recipes | 8, with schema validation and param checking |
+| Material | private audio (music, SFX), Pexels, Pixabay |
+| CLI | `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
+| Storyboard generation | done — chapters, repair, footage intent |
 | QC | not started |
 
-The layout maths was confirmed by rendering `bl` and `tr` placements and checking
+## Three lanes
+
+A shot is not one picture. It is a stack:
+
+```
+V3  graphics   recipes and text — always
+V2  scrim      a dark wash, only over footage, so white type stays readable
+V1  base       footage or a solid card
+```
+
+Graphics always go to V3 rather than V2. If the scrim shared V2 with them the
+two would fight for one lane, and a shot that gained footage later would silently
+move its recipe to a different track.
+
+`Shot.underlay` carries footage; `Shot.visual` carries graphics. Either can be
+absent — footage alone is a legitimate transition shot, and graphics alone is the
+card the first eight recipes were built for.
+
+## The layout maths was confirmed by rendering `bl` and `tr` placements and checking
 the box edges land at the expected pixel positions. Two corrections came out of
 that pass:
 

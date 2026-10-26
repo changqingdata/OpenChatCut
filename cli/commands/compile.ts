@@ -13,14 +13,40 @@ import { resolveProject } from '../store.ts';
 import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-store.ts';
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
 import { compile, CompileError } from '../../production/compile.ts';
+import type { CompileAsset } from '../../production/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildCaptions } from '../../production/captions.ts';
 import { parseSrtCues } from '../../production/srt.ts';
+import type { ProjectDoc } from '../../src/editor/projectTypes.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { GLOBAL_FLAGS, projectReference } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json',
   'srt', 'captions-template', 'captions-motion', 'no-captions'] as const;
+
+/**
+ * The compiler's view of the asset pool.
+ *
+ * Only fields an underlay can use are copied across. Handing the compiler the
+ * whole doc would let it start reasoning about project state, which is exactly
+ * what keeps it testable.
+ */
+function poolAssets(doc: ProjectDoc): Map<string, CompileAsset> {
+  const assets = new Map<string, CompileAsset>();
+  for (const asset of doc.assets) {
+    assets.set(asset.id, {
+      id: asset.id,
+      src: asset.src,
+      kind: asset.kind,
+      ...(asset.width ? { width: asset.width } : {}),
+      ...(asset.height ? { height: asset.height } : {}),
+      ...(asset.durationInFrames ? { durationInFrames: asset.durationInFrames } : {}),
+      ...(asset.sourceFilename ? { sourceFilename: asset.sourceFilename } : {}),
+      ...(asset.sourceRevision ? { sourceRevision: asset.sourceRevision } : {}),
+    });
+  }
+  return assets;
+}
 
 async function readStoryboard(path: string): Promise<Storyboard> {
   let raw: string;
@@ -93,10 +119,20 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
     throw new CliError(`storyboard rejected:\n  - ${paramErrors.join('\n  - ')}`);
   }
 
+  // Read the project before compiling: the compiler is pure, so it needs the
+  // pool handed to it in order to turn an underlay's assetId into a media item.
+  const key = `project:${project.id}`;
+  const entry = await getStoredEntry(key);
+  if (!entry.found) throw new CliError(`Project ${project.name} has no stored document.`);
+  const migrated = runProjectMigrations(entry.value);
+  if (!migrated) throw new CliError(`Project ${project.name} has an unreadable document.`);
+  const currentDoc = migrated.doc;
+
   let compiled;
   try {
     compiled = compile(storyboard, {
       recipes: registry,
+      assets: poolAssets(currentDoc),
       ...(captions ? { captions } : {}),
       ...(flagText(commandLine, 'timeline') ? { timelineId: flagText(commandLine, 'timeline')! } : {}),
     });
@@ -135,13 +171,7 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   // initialisation and never settles in the CLI process; a single-shot command
   // run by hand does not need cross-process serialisation. Replace with the
   // locked path once the CLI grows a long-running mode.
-  const key = `project:${project.id}`;
-  const entry = await getStoredEntry(key);
-  if (!entry.found) throw new CliError(`Project ${project.name} has no stored document.`);
-  const migrated = runProjectMigrations(entry.value);
-  if (!migrated) throw new CliError(`Project ${project.name} has an unreadable document.`);
-
-  const current = migrated.doc;
+  const current = currentDoc;
   const existing = current.timelines.find((candidate) => candidate.id === timeline.id);
   if (existing && !replace) {
     throw new CliError(
