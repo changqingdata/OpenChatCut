@@ -344,6 +344,18 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
         });
       }
     }
+    // Nothing behind the graphics means the canvas shows through — the render
+    // comes out on a transparency checkerboard. A shot needs a card colour or
+    // footage; relying on the previous shot's picture does not work, items do
+    // not span.
+    if (!shot.underlay && !shot.background) {
+      warnings.push({
+        shotId: shot.id,
+        code: 'empty-base',
+        message: `${shot.id}: no underlay and no background — the canvas behind it is empty`,
+      });
+    }
+
     const item = buildItem(shot, storyboard, recipes, warnings);
     if (item) items.push(item);
   }

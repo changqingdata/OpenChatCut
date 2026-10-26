@@ -172,6 +172,7 @@ export interface CompileWarning {
     | 'unsupported-visual'
     | 'asset-missing'
     | 'overlap'
-    | 'underlay-unresolved';
+    | 'underlay-unresolved'
+    | 'empty-base';
   message: string;
 }

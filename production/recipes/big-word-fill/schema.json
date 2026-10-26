@@ -26,19 +26,20 @@
     },
     "fontSize": {
       "type": "number",
-      "default": 760,
+      "default": 720,
       "min": 320,
-      "max": 900
+      "max": 900,
+      "description": "字号上限；实际字号会按字数收窄，保证不超出画布"
     },
     "tracking": {
       "type": "number",
-      "default": -20,
+      "default": -6,
       "min": -40,
       "max": 20
     },
     "captionOffset": {
       "type": "number",
-      "default": 300,
+      "default": 260,
       "min": 80,
       "max": 700
     },
@@ -56,7 +57,7 @@
     },
     "bg": {
       "type": "color",
-      "default": ""
+      "default": "#0B0B0C"
     },
     "displayFont": {
       "type": "font",

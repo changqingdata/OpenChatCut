@@ -9,6 +9,12 @@ const Component = ({ item }) => {
   const opacity = Math.min(1, enter * 2.2);
   const glow = interpolate(frame, [0, fps * 0.8], [0.22, 0], { extrapolateRight: 'clamp' });
 
+  // Two characters at 620px each is 1240px in a 1080px box: the outer strokes
+  // get cropped. Size is capped by the box so any character count fits.
+  const glyphs = Array.from(String(p.text ?? ''));
+  const perGlyph = glyphs.length > 0 ? (item.width / glyphs.length) * 0.9 : p.fontSize;
+  const size = Math.min(p.fontSize, perGlyph);
+
   const rootStyle = {
     position: 'absolute',
     inset: 0,
@@ -20,8 +26,9 @@ const Component = ({ item }) => {
   };
   const wordStyle = {
     fontFamily: p.displayFont,
-    fontSize: p.fontSize,
-    lineHeight: 0.86,
+    fontSize: size,
+    // 0.86 collided: a 760px em box in a 654px line box overlapped the line above.
+    lineHeight: 1.0,
     fontWeight: 400,
     letterSpacing: p.tracking,
     color: p.ink,
