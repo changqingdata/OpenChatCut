@@ -160,6 +160,38 @@ Deliberately three tools. A supervisor needs to look, to check, and to run;
 anything finer-grained would invite an agent to re-implement the pipeline one
 call at a time, which is the thing the fixed order exists to prevent.
 
+### The second lane: a skill for the built-in agent
+
+MCP is for *other* agents. The app's own agent already has `run_skill_script`,
+which runs a whitelisted binary inside an installed skill directory on this
+machine — so the same pipeline is also shipped as a skill, `production/skill/`.
+
+```bash
+node production/skill/install.mjs          # copy + configure into ~/.openchatcut/skills/occ-video
+node production/skill/install.mjs --check  # report drift against the repo copy
+```
+
+The skill is one entry point, `scripts/step.mjs`, because `run_skill_script`
+imposes four things the pipeline would otherwise trip over:
+
+| The tool | What the pipeline needs |
+|---|---|
+| starts in the skill dir | the repo root — the default profile derives its media directory from `process.cwd()` |
+| splits the command on whitespace | one token per value, so a space is written `%20` |
+| kills the call at 120s | a 15-minute render takes ~7 minutes |
+| passes no useful env | `OPENCHATCUT_DATA_DIR` must stay unset |
+
+So `step.mjs run` always detaches and writes a run record, and the agent polls
+`step.mjs status latest`. It also builds `cli-dist/occ.mjs` on first use, which
+turns a 6.3s `tsx` start-up into ~0.4s per step.
+
+One rule is enforced in code rather than prose: a generated storyboard gets a
+`.lock.json` hash, and `compile` refuses a storyboard whose hash changed
+(`storyboard-edited`). Hand-editing a generated storyboard would bypass the
+validator and QC — that is the single boundary worth a hard failure.
+
+`SKILL.md` is the agent-facing playbook; keep it a playbook, not documentation.
+
 ## Configuration
 
 Keys come from three places, merged lowest to highest:

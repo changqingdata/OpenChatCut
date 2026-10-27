@@ -107,3 +107,8 @@ public/whisper-cli/
 
 # Agent tooling local state (Command Code taste captures)
 .commandcode/
+
+# Production pipeline work area: rendered mp4s, downloaded footage, run records.
+# Only the skill source under production/skill/ is versioned.
+production/work/
+production/skill/occ-video/config.json
