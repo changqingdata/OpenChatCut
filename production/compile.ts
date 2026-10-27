@@ -358,14 +358,16 @@ function buildItem(
  * honest one without overlapping items. A cross-fade between two full-frame cards
  * reads as a double exposure.
  *
- * Only the graphic layer fades. Fading the background too was the first attempt
- * and it rendered the canvas checkerboard for twelve frames: both cards' solids
- * were half transparent at the same time and there was nothing behind them. A
- * card video wants its background to be constant and its content to dissolve —
- * which is also what a dip through black looks like, without needing one.
+ * Everything except the background fades. Fading the solids too was the first
+ * attempt and it rendered the canvas checkerboard for twelve frames: both cards'
+ * backgrounds were half transparent at once with nothing behind them.
+ *
+ * Footage is content, not background, so it fades with the graphic — otherwise a
+ * fade into a footage shot pops the clip in while its overlays dissolve. Only
+ * `solid` is excluded: that is the canvas itself.
  */
 function applyTransitions(items: TimelineItem[], storyboard: Storyboard): void {
-  const fadesWithContent = new Set(['motion-graphic', 'text']);
+  const fadesWithContent = new Set(['motion-graphic', 'text', 'video', 'image', 'gif', 'svg']);
   for (const shot of storyboard.shots) {
     const transition = shot.transitionIn;
     if (!transition || transition.type === 'none') continue;

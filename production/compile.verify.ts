@@ -447,6 +447,18 @@ assert.equal(incoming.fadeInFrames, 12, 'the incoming graphic fades in');
 assert.equal(outgoingBg.fadeOutFrames, undefined, 'the outgoing background stays opaque');
 assert.equal(incomingBg.fadeInFrames, undefined, 'the incoming background stays opaque');
 
+// Footage is content, not background: a fade into a footage shot must dissolve
+// the clip too, or it pops in while its overlays are still arriving.
+const fadeIntoFootage = board();
+fadeIntoFootage.shots = [{
+  ...fadeIntoFootage.shots[0]!,
+  id: 'S01', startFrame: 0, endFrame: 120,
+  underlay: { assetId: 'asset-portrait' },
+  transitionIn: { type: 'fade', durationInFrames: 12 },
+}];
+const clip = compile(fadeIntoFootage, { assets }).timeline.items.find((item) => item.id === 'it-f-S01')!;
+assert.equal(clip.fadeInFrames, 12, 'footage fades with the shot');
+
 // No transition means no fades at all: a hard cut is the default.
 const hard = compile(board(), { recipes }).timeline.items;
 assert.ok(hard.every((item) => item.fadeInFrames === undefined && item.fadeOutFrames === undefined), 'a hard cut adds no fades');
