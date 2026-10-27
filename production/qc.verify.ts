@@ -28,6 +28,8 @@ interface ShotSpec {
   footage?: string | boolean;
   assetId?: string;
   params?: Record<string, unknown>;
+  /** Declared widthRatio; defaults to 0.85. */
+  ratio?: number;
   /** Frames of nothing before this shot. */
   gapBefore?: number;
 }
@@ -56,7 +58,7 @@ function shot(index: number, startFrame: number, spec: ShotSpec = {}): Shot {
       kind: 'mg' as const,
       recipe: spec.recipe ?? 'keyword-punch',
       params: spec.params ?? {},
-      layout: { anchor, widthRatio: 0.85 },
+      layout: { anchor, widthRatio: spec.ratio ?? 0.85 },
     },
   };
 }
@@ -176,6 +178,19 @@ assert.ok(layoutReport.findings.some((f) => f.code === 'anchor-under-captions'),
 
 // Without captions a bottom anchor is legitimate.
 assert.ok(!codes(bottomCards).includes('anchor-under-captions'), 'no captions, no collision');
+
+// A narrow card hanging left on a solid background leaves half the frame
+// empty — the shape that reads as an unfinished slide.
+const narrowLeft = board(Array.from({ length: 4 }, () => ({ anchor: 'ml' as const, ratio: 0.5 })));
+assert.ok(codes(narrowLeft).includes('solid-offcentre'), 'narrow left card on a solid background warns');
+
+// The same layout behind footage is a deliberate composition, not a defect.
+const narrowLeftOverFootage = board(Array.from({ length: 4 }, () => ({ anchor: 'ml' as const, ratio: 0.5, footage: true })));
+assert.ok(!codes(narrowLeftOverFootage).includes('solid-offcentre'), 'footage makes the same layout intentional');
+
+// Widening the card fills the row, so the anchor stops mattering.
+const wideLeft = board(Array.from({ length: 4 }, () => ({ anchor: 'ml' as const, ratio: 0.9 })));
+assert.ok(!codes(wideLeft).includes('solid-offcentre'), 'a wide left card is fine');
 
 // --- text -----------------------------------------------------------------
 

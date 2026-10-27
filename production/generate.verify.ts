@@ -65,13 +65,29 @@ const prompt = buildStoryboardPrompt({
 });
 
 assert.ok(prompt.user.includes('讲复利'), 'brief reaches the prompt');
-assert.ok(prompt.user.includes('keyword-punch'), 'recipe ids reach the prompt');
-assert.ok(prompt.user.includes('maxChars=6'), 'param constraints reach the prompt');
+assert.ok(prompt.system.includes('keyword-punch'), 'recipe ids reach the system prompt');
+assert.ok(prompt.system.includes('maxChars=6'), 'param constraints reach the system prompt');
 assert.ok(prompt.user.includes('关于复利'), 'cue text reaches the prompt');
 assert.ok(prompt.user.includes('总时长约 5.6 秒'), 'duration is derived from the last cue');
 assert.ok(prompt.user.includes('5.60'), 'cue timestamps are formatted');
 // Colour and font params are noise for a director; they must not be listed.
-assert.ok(!prompt.user.includes('- ink:'), 'presentation params are omitted from the catalog');
+assert.ok(!prompt.system.includes('- ink:'), 'presentation params are omitted from the catalog');
+
+// The static half must be byte-identical across chunks of one video, or the
+// prefix cache never hits and a long video pays for the catalogue every time.
+const secondChunk = buildStoryboardPrompt({
+  cues: [{ startMs: 0, endMs: 2000, text: '另一段字幕' }],
+  brief: '讲复利',
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  aspect: '9:16',
+  language: 'zh',
+  catalog,
+});
+assert.equal(secondChunk.system, prompt.system, 'system prompt is identical across chunks');
+assert.notEqual(secondChunk.user, prompt.user, 'user prompt carries the chunk');
+assert.ok(prompt.system.length > prompt.user.length, 'the cacheable prefix is the bulk of the request');
 
 // --- JSON extraction --------------------------------------------------
 

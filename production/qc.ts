@@ -355,6 +355,26 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
 
   // --- text ----------------------------------------------------------------
 
+  // A card alone on a solid background that hangs left or right leaves the
+  // other half of the frame empty. Behind footage that reads as a deliberate
+  // layout; with nothing behind it, it reads as an unfinished slide.
+  const offCentre = shots.filter((shot) => {
+    if (hasFootage(shot)) return false;
+    const visual = shot.visual;
+    if (!visual || visual.kind !== 'mg') return false;
+    const { anchor, widthRatio } = visual.layout;
+    if (anchor !== 'ml' && anchor !== 'mr') return false;
+    return (widthRatio ?? 1) < 0.7;
+  });
+  if (offCentre.length) {
+    findings.push({
+      code: 'solid-offcentre',
+      severity: 'warn',
+      shotIds: offCentre.map((shot) => shot.id),
+      message: `${offCentre.length} card(s) hang left or right on an empty background at widthRatio < 0.7 — centre them ("mc") or widen them`,
+    });
+  }
+
   if (options.schemas) {
     for (const shot of shots) {
       const visual = shot.visual;

@@ -342,4 +342,7 @@ if (jsonMode) {
 } else {
   console.log(`\n✓ ${outPath}`);
   console.log(`  storyboard: ${effectiveStoryboard}`);
+  // Machine-readable artifact line. The skill host reports what was produced
+  // without knowing this script's output layout.
+  console.log(`artifact: ${outPath}`);
 }

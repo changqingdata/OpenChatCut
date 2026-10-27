@@ -92,12 +92,6 @@ const OUTPUT_SHAPE = `{
 }`;
 
 export function buildStoryboardPrompt(input: PromptInput): { system: string; user: string } {
-  const system = [
-    '你是一位短视频分镜导演。你把一段口播的字幕切成镜头，为每个镜头选择视觉配方并填写参数。',
-    '你只输出一个 JSON 对象，不要 Markdown 代码块，不要解释，不要在 JSON 前后加任何文字。',
-    '你填写的每个参数都必须满足给定的约束，否则整份分镜会被拒绝。',
-  ].join('\n');
-
   const durationMs = input.cues.length ? input.cues[input.cues.length - 1]!.endMs : 0;
   const cueLines = input.cues.map((cue) => `${formatMs(cue.startMs)} → ${formatMs(cue.endMs)}  ${cue.text}`).join('\n');
 
@@ -105,27 +99,52 @@ export function buildStoryboardPrompt(input: PromptInput): { system: string; use
     ? `\n# 配乐情绪分类\n${input.musicCategories.join(' / ')}\n`
     : '';
 
+  // Static first. The catalogue and the rules are ~9k characters that do not
+  // change from one chunk of a video to the next, so they belong in `system`
+  // where the provider's prefix cache covers them; a 15-minute video is cut
+  // into five chunks and used to re-send that block five times. What actually
+  // varies — the brief, this chunk's length, its subtitles — stays in `user`,
+  // which also leaves the script as the last thing the model reads.
+  const system = [
+    '你是一位短视频分镜导演。你把一段口播的字幕切成镜头，为每个镜头选择视觉配方并填写参数。',
+    '你只输出一个 JSON 对象，不要 Markdown 代码块，不要解释，不要在 JSON 前后加任何文字。',
+    '你填写的每个参数都必须满足给定的约束，否则整份分镜会被拒绝。',
+    '',
+    '# 画布',
+    `${input.width}x${input.height}（${input.aspect}），${input.fps}fps，语言 ${input.language}。`,
+    '',
+    '# 可用配方',
+    recipeCatalog(input.catalog),
+    musicLine,
+    '# 输出格式',
+    '严格按这个结构输出 JSON：',
+    '',
+    OUTPUT_SHAPE,
+    '',
+    rulesBlock(input.fps),
+  ].join('\n');
+
   const user = `# 任务
 ${input.brief}
 
-# 画布
-${input.width}x${input.height}（${input.aspect}），${input.fps}fps，语言 ${input.language}，总时长约 ${(durationMs / 1000).toFixed(1)} 秒。
+# 本段字幕
+总时长约 ${(durationMs / 1000).toFixed(1)} 秒（${Math.round((durationMs / 1000) * input.fps)} 帧），共 ${input.cues.length} 条。
 
-# 可用配方
-${recipeCatalog(input.catalog)}
-${musicLine}
-
-# 字幕（时间 → 文本）
 ${cueLines}
 
-# 输出格式
-严格按这个结构输出 JSON：
+现在输出 JSON。`;
 
-${OUTPUT_SHAPE}
+  return { system, user };
+}
 
-# 规则
+/**
+ * The rules never vary within one video, so they live in `system` with the
+ * catalogue. `fps` is the only interpolation, and it is fixed per project.
+ */
+function rulesBlock(fps: number): string {
+  return `# 规则
 1. 镜头必须覆盖整段字幕：第一个从第 0 帧开始，最后一个到总帧数结束，中间不留空洞、不重叠。
-2. 镜头时长**不要平均**，按内容给三档（${input.fps}fps 换算成帧）：
+2. 镜头时长**不要平均**，按内容给三档（${fps}fps 换算成帧）：
    - 短句、转折、过渡 → 2.0–2.5 秒
    - 陈述、数字、清单 → 3.5–4.0 秒
    - 金句、结论、收尾 → 5.0–6.0 秒
@@ -173,19 +192,16 @@ ${OUTPUT_SHAPE}
     **同一配方再次使用时，换锚点和配色**：同一个 keyword-punch 放在 "tc"、"ml"、"mc"
     在观众眼里是三种版式。换锚点比换配方便宜，而且不会稀释视觉语言。
 12. 布局，按底座分两种：
-    - **纯色卡片**（这一镜没有素材）：锚点用 "mc"；需要左右构图时用 "ml" 或 "mr"。
-      不要用 tc —— 卡片上没有别的画面，顶部对齐会让中间 70% 全空，看起来像没做完。
+    - **纯色卡片**（这一镜没有素材）：锚点只用 "mc"。卡片是画面里唯一的东西，
+      靠左或靠右会把另外半屏留空，看起来像没做完；要左右构图就把 widthRatio 提到 0.85 以上。
+      也不要用 tc —— 顶部对齐会让中间 70% 全空。
     - **有素材**：锚点按画面空处选，"tc"（空在上方）、"mc"、"ml" 或 "mr"。
     - 任何情况都不要用 bl / bc / br —— 底部 16% 留给字幕。
     - widthRatio 用 0.85–0.95。
 13. 参数必须遵守字数限制。超限会导致整份分镜被拒绝，所以宁可缩短文字。
 14. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
 15. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
-16. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。
-
-现在输出 JSON。`;
-
-  return { system, user };
+16. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。`;
 }
 
 /** Pull the JSON object out of a model reply that may be fenced or padded. */

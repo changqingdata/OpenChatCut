@@ -1,13 +1,14 @@
-// Worker half of step.mjs: runs the bundled CLI as a real child, so the exit
-// code survives even though the caller (step.mjs) has already returned. Writes
-// the terminal state back into the run record — that file is the only thing the
-// agent polls, so it must be updated exactly once, atomically.
+// Worker half of step.mjs: runs the target program as a real child, so the
+// exit code survives even though the caller (step.mjs) has already returned.
+// Writes the terminal state back into the run record — that file is the only
+// thing the agent polls, so it must be updated exactly once, atomically.
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { collectArtifacts } from './step.mjs';
 
-const [recordFile, occBin, ...argv] = process.argv.slice(2);
+const [recordFile, program, ...argv] = process.argv.slice(2);
 const record = JSON.parse(readFileSync(recordFile, 'utf8'));
 
 /** Write through a temp file: a poller must never read a half-written record. */
@@ -21,24 +22,10 @@ function sha256(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
 
-/** Every `--out` / `--out-dir` path the command was given, resolved. */
+/** Paths the step announced (`artifact: …`) plus any `--out` it was given. */
 function outPaths() {
-  const found = [];
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--out' || argv[i] === '--out-dir') {
-      const value = argv[i + 1];
-      if (value) found.push(resolve(record.cwd, value));
-    }
-  }
-  // `make` defaults its output to production/work/<name>/out.mp4 and takes no
-  // --out, so the artifact would otherwise be invisible to the agent.
-  if (record.action === 'make') {
-    const at = argv.indexOf('--name');
-    if (at >= 0 && argv[at + 1]) {
-      found.push(resolve(record.cwd, 'production', 'work', argv[at + 1], 'out.mp4'));
-    }
-  }
-  return found;
+  const log = existsSync(record.log) ? readFileSync(record.log, 'utf8') : '';
+  return collectArtifacts(argv, log).map((path) => resolve(record.cwd, path));
 }
 
 function describe(path) {
@@ -65,7 +52,7 @@ function lockStoryboard() {
   return lock;
 }
 
-const child = spawn(process.execPath, [occBin, ...argv], {
+const child = spawn(process.execPath, [program, ...argv], {
   cwd: record.cwd,
   env: process.env,
   stdio: 'inherit',

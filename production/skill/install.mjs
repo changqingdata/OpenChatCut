@@ -2,13 +2,14 @@
 // Install (or refresh) the occ-video skill into the app's skill directory.
 //
 //   node production/skill/install.mjs            # copy + configure
-//   node production/skill/install.mjs --check    # report drift only
+//   node production/skill/install.mjs --check    # report drift
 //   node production/skill/install.mjs --data-dir <abs path>   # isolated library
 //
-// The skill is copied, not linked: the app discovers skills by walking
-// <root>/<slug>/SKILL.md, and a Windows junction reports as a symlink to that
-// walk, which would make the skill silently invisible. `--check` exists so the
-// copy can never drift unnoticed.
+// What lands in the skill directory is deliberately tiny: SKILL.md (the
+// playbook the agent reads) plus a bootstrap that imports the host layer from
+// this repository. All the logic — cwd, environment, quoting, timeouts, run
+// records — stays in production/skill-host/, so it is versioned, diffable and
+// testable instead of living in a copy under the user's home directory.
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -20,6 +21,8 @@ const SOURCE = resolve(dirname(fileURLToPath(import.meta.url)), SLUG);
 const REPO_ROOT = resolve(SOURCE, '..', '..', '..');
 const SKILLS_ROOT = process.env.OPENCHATCUT_SKILLS_DIR?.trim() || join(homedir(), '.openchatcut', 'skills');
 const TARGET = join(SKILLS_ROOT, SLUG);
+/** Everything the agent actually reads; the rest is generated per install. */
+const INSTALLED_FILES = ['SKILL.md', 'scripts/step.mjs'];
 
 const args = process.argv.slice(2);
 const checkOnly = args.includes('--check');
@@ -29,8 +32,7 @@ const dataDir = dataDirAt >= 0 ? resolve(args[dataDirAt + 1] ?? '') : null;
 const sha = (file) => (existsSync(file) ? createHash('sha256').update(readFileSync(file)).digest('hex') : null);
 
 if (checkOnly) {
-  const files = ['SKILL.md', 'scripts/step.mjs', 'scripts/_child.mjs'];
-  const rows = files.map((file) => ({
+  const rows = INSTALLED_FILES.map((file) => ({
     file,
     source: sha(join(SOURCE, file)),
     installed: sha(join(TARGET, file)),
@@ -58,6 +60,7 @@ console.log(JSON.stringify({
   installed: TARGET,
   repoRoot: REPO_ROOT,
   dataDir: dataDir ?? '(default profile: media resolves under the repo)',
+  host: join(REPO_ROOT, 'production', 'skill-host', 'step.mjs'),
   next: [
     `run_skill_script(skill="${SLUG}", command="node scripts/step.mjs doctor")`,
     `run_skill_script(skill="${SLUG}", command="node scripts/step.mjs run -- where")`,

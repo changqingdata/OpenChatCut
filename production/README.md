@@ -164,20 +164,33 @@ call at a time, which is the thing the fixed order exists to prevent.
 
 MCP is for *other* agents. The app's own agent already has `run_skill_script`,
 which runs a whitelisted binary inside an installed skill directory on this
-machine — so the same pipeline is also shipped as a skill, `production/skill/`.
+machine — so the same pipeline is also shipped as a skill.
 
 ```bash
 node production/skill/install.mjs          # copy + configure into ~/.openchatcut/skills/occ-video
-node production/skill/install.mjs --check  # report drift against the repo copy
+node production/skill/install.mjs --check  # report drift
 ```
 
-The skill is one entry point, `scripts/step.mjs`, because `run_skill_script`
-imposes four things the pipeline would otherwise trip over:
+Three layers, with one invariant each:
+
+| Layer | Lives in | Knows about |
+|---|---|---|
+| core | `production/*.ts`, `cli/` | video, not the environment |
+| host | `production/skill-host/` | the environment, not video |
+| binding | `production/skill/occ-video/` | neither — SKILL.md, config, and a bootstrap |
+
+The installed skill directory holds only what the agent reads (`SKILL.md`) plus
+a six-line bootstrap that imports the host layer from the repository. All the
+logic stays in git: versioned, diffable, and checkable with
+`node production/skill-host/step.verify.mjs` in about a second, with no model
+and no browser.
+
+`run_skill_script` imposes four things the pipeline would otherwise trip over:
 
 | The tool | What the pipeline needs |
 |---|---|
 | starts in the skill dir | the repo root — the default profile derives its media directory from `process.cwd()` |
-| splits the command on whitespace | one token per value, so a space is written `%20` |
+| splits the command on whitespace | one token per value, so a space is written `%20` and quotes arrive literally |
 | kills the call at 120s | a 15-minute render takes ~7 minutes |
 | passes no useful env | `OPENCHATCUT_DATA_DIR` must stay unset |
 

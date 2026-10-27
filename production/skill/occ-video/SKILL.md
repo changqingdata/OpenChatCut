@@ -92,7 +92,7 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 `compile` 输出里带 QC 结果。规则分三级：
 
 - `error`（`frame-gap`）：帧不连续，**必须**修，片子会卡帧。
-- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`footage-low-confidence`、`rhythm-flat`。这些是观感问题，值得修。
+- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`footage-low-confidence`、`rhythm-flat`、`solid-offcentre`（纯色背景上的卡片靠左/靠右且宽度不足，另外半屏是空的）。这些是观感问题，值得修。
 - `note`：`recipe-variety`、`anchor-under-captions`、`text-near-limit`。知道就行。
 
 **修法只有一条**：把 QC 的具体抱怨写进 `--brief` 重跑第①步。例如"上一版 recipe-repeat 了，换用不同配方，且不要连续三个镜头都用中间锚点"。不要手动删镜头——删完节奏和字幕对位就散了。
