@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
-import { collectArtifacts } from './step.mjs';
+import { collectArtifacts, collectProject } from './step.mjs';
 
 const [recordFile, program, ...argv] = process.argv.slice(2);
 const record = JSON.parse(readFileSync(recordFile, 'utf8'));
@@ -26,6 +26,11 @@ function sha256(file) {
 function outPaths() {
   const log = existsSync(record.log) ? readFileSync(record.log, 'utf8') : '';
   return collectArtifacts(argv, log).map((path) => resolve(record.cwd, path));
+}
+
+function projectOf() {
+  const log = existsSync(record.log) ? readFileSync(record.log, 'utf8') : '';
+  return collectProject(log) ?? record.project ?? null;
 }
 
 function describe(path) {
@@ -72,6 +77,7 @@ child.on('exit', (code, signal) => {
     signal: signal ?? null,
     endedAt: new Date().toISOString(),
     artifacts: outPaths().map(describe).filter(Boolean),
+    project: projectOf(),
   };
   if (next.exitCode === 0 && (record.action === 'storyboard' || record.action === 'footage')) {
     const lock = lockStoryboard();

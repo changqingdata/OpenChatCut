@@ -186,6 +186,22 @@ export function collectArtifacts(args, log) {
   return [...found];
 }
 
+/**
+ * The project a step wrote into, read from its `project: <id> <name>` line.
+ *
+ * `make` creates a project but cannot switch the editor to it — nothing outside
+ * the browser can change the URL. The agent's instinct after a render is to look
+ * at the frames, and the only tool that shows frames reads the *open* project,
+ * so it calls `target_project` … which navigates away from the chat that is
+ * driving the run and kills the turn. Reporting the id here lets the agent tell
+ * the user where the video is instead of walking into that.
+ */
+export function collectProject(log) {
+  const match = /^project:\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*(.*)$/m.exec(log);
+  if (!match) return null;
+  return { id: match[1], name: match[2].trim() || null };
+}
+
 function readRecord(dir, id) {
   const file = join(dir, `${id}.json`);
   if (!existsSync(file)) return null;
@@ -228,6 +244,13 @@ function report(dir, record, waited) {
     durationMs: record.endedAt ? Date.parse(record.endedAt) - Date.parse(record.startedAt) : null,
     waitedMs: waited,
     artifacts: record.artifacts ?? [],
+    project: record.project
+      ? {
+        ...record.project,
+        opened: false,
+        note: 'Created but not opened: the editor is still on the previous project. Do NOT call target_project for this — it navigates away from this chat and ends the turn. Give the user the project name so they can open it.',
+      }
+      : null,
     storyboard: record.storyboard ?? null,
     tail,
   });

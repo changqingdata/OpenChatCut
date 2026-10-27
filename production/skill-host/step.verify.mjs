@@ -7,7 +7,7 @@
 // Deliberately no model and no browser: the whole point of keeping this logic
 // in the repository is that it can be checked in a second.
 import assert from 'node:assert/strict';
-import { collectArtifacts, decode, newRunId, parseRunArgs } from './step.mjs';
+import { collectArtifacts, collectProject, decode, newRunId, parseRunArgs } from './step.mjs';
 
 // --- decode ---------------------------------------------------------------
 // The caller splits the command on whitespace, so a space can only arrive as
@@ -67,8 +67,24 @@ assert.deepEqual(
 );
 assert.deepEqual(collectArtifacts(['x', '--out-dir', 'E:/d'], ''), ['E:/d'], '--out-dir counts as an output');
 
+// --- collectProject -------------------------------------------------------
+// `make` announces the project it wrote into. The id matters: it is what the
+// agent hands the user instead of calling target_project and killing the turn.
+assert.deepEqual(
+  collectProject('✓ E:/w/out.mp4\nartifact: E:/w/out.mp4\nproject: 14c1d2e5-8aef-4384-a797-d53ee7e4139a 桌面测试3\n'),
+  { id: '14c1d2e5-8aef-4384-a797-d53ee7e4139a', name: '桌面测试3' },
+  'the project line yields id and name',
+);
+assert.deepEqual(
+  collectProject('project: 14c1d2e5-8aef-4384-a797-d53ee7e4139a\n'),
+  { id: '14c1d2e5-8aef-4384-a797-d53ee7e4139a', name: null },
+  'a name is optional',
+);
+assert.equal(collectProject('project: 桌面测试3\n'), null, 'a name without an id is not a project line');
+assert.equal(collectProject(''), null, 'no line, no project');
+
 // --- newRunId -------------------------------------------------------------
 const id = newRunId(new Date('2026-10-27T03:12:33.000Z'));
 assert.match(id, /^20261027031233-[a-z0-9]{5}$/, 'run ids sort by time and stay unique enough');
 
-console.log('skill-host.verify: decode, flags, artifacts and run ids OK');
+console.log('skill-host.verify: decode, flags, artifacts, project and run ids OK');

@@ -159,6 +159,10 @@ if (projectId) {
   if (!projectId) throw new Error(`could not read the new project id from: ${created.trim()}`);
   console.log(`  created ${projectId}`);
 }
+// Machine-readable: which project this run wrote into. The editor is not
+// switched to it, and the skill host reports it so the agent does not try to
+// switch by itself (that would end its turn).
+console.log(`project: ${projectId} ${projectName}`);
 
 // --- 3. audio into the pool ----------------------------------------------
 
@@ -345,7 +349,7 @@ if (sfxPlan.length && !args['no-sfx']) {
 if (args['no-render']) {
   step('render: skipped');
   if (jsonMode) {
-    console.log(JSON.stringify({ ok: true, out: null, project: projectName, storyboard: effectiveStoryboard, steps }, null, 2));
+    console.log(JSON.stringify({ ok: true, out: null, project: projectName, projectId, storyboard: effectiveStoryboard, steps }, null, 2));
   } else {
     console.log(`\n✓ timeline written to ${projectName} (render skipped)`);
   }
@@ -364,6 +368,7 @@ if (jsonMode) {
     ok: true,
     out: outPath,
     project: projectName,
+    projectId,
     storyboard: effectiveStoryboard,
     steps,
   }, null, 2));
