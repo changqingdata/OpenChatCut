@@ -20,7 +20,25 @@ node scripts/step.mjs doctor
 - **media-dir 不对** → 素材全 404。默认档案的素材目录是从 `process.cwd()` 推的，所以命令必须在仓库根跑；`OPENCHATCUT_DATA_DIR` 一旦被继承就会把目录指偏。`step.mjs` 已经处理，不要自己绕开。
 - **keys 为空** → `--generate` 会失败。要么让用户配 `.env.local`，要么走 `--prompt` / `--from` 让外部模型写分镜（零 API 成本）。
 
-## 1. 四步主线
+## 1. 一条命令（首选）
+
+音频 + 字幕 + 一句话主题 → 成片，`make` 会把下面第 2 节的所有步骤串起来，中途 QC 不过会直接停下并告诉你原因。
+
+```
+node scripts/step.mjs run --wait 60000 -- make --audio <绝对路径.mp3> --srt <绝对路径.srt> --brief 复利 --name 复利v3 --generate --size 1080x1920
+```
+
+- `--generate` 调配置好的模型；不写它只会打印提示词然后退出。
+- 名字里的空格写 `%20`；路径里有空格也写 `%20`。
+- 一条短片约 60–120 秒，长片 7 分钟以上。返回 `status: "running"` 就接 `status latest`：
+
+```
+node scripts/step.mjs status latest --wait 90000
+```
+
+返回里的 `artifacts` 就是成片路径，`tail` 是完整日志。**成片必须亲眼看过再交付**，用第 2 节的 `still` 或直接打开 mp4。
+
+## 2. 分步主线（需要精细控制时）
 
 工作目录固定是 `production/work/<工程名>/`，下面用 `w/` 代指。
 
@@ -84,6 +102,8 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 | 目的 | 命令（`run --` 之后） |
 | --- | --- |
 | 查环境 | `doctor`（不需要 `run`） |
+| 一条命令出片 | `make --audio a.mp3 --srt a.srt --brief 主题 --name 工程名 --generate` |
+| 只到时间线不出片 | `make … --no-render` |
 | 有哪些工程 | `run -- project list --json` |
 | 新建工程 | `run -- project new <名字> --size 1920x1080` |
 | 只出提示词不调模型 | `run -- storyboard --srt f.srt --brief … --prompt --json`（提示词打到 stdout，`tail` 里是完整 `{cues,system,user}`） |
@@ -95,7 +115,9 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 ## 5. 一句话流程
 
 ```
-doctor → storyboard --generate → footage resolve → compile --replace --apply → still 看三帧 → render
+doctor → make --generate → status latest → 看片
 ```
+
+精细控制时：`storyboard --generate → footage resolve → compile --replace --apply → still 看三帧 → render`。
 
 任何一步失败，先读 `tail` 里的结构化错误（`{code, step, cause, hint}`），`hint` 通常就是修法。

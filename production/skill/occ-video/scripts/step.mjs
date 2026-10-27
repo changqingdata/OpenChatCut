@@ -211,7 +211,9 @@ function cmdInit(args) {
 
 function cmdDoctor() {
   const checks = [];
-  const add = (name, ok, detail) => checks.push({ name, ok, detail });
+  // `soft` checks never fail the run: no LLM key only blocks --generate, and
+  // --prompt / --from are legitimate ways to work without one.
+  const add = (name, ok, detail, soft = false) => checks.push({ name, ok, detail, ...(soft ? { soft } : {}) });
   const cfg = loadConfig();
   add('config', true, cfg.repoRoot);
 
@@ -258,15 +260,26 @@ function cmdDoctor() {
       .map((line) => line.split('=', 1)[0].trim())
       .filter((name) => name && !name.startsWith('#'));
   }
-  // Names only, never values — and only the ones that decide whether
-  // `storyboard --generate` can run. The full list is noise to an agent.
-  const llm = keys.filter((name) => /^LLM_[A-Z0-9]+_API_KEY$/.test(name)).map((name) => name.slice(4, -8).toLowerCase());
+  // Names only, never values — and a name with an empty value is not a
+  // provider. Reporting it as one sends the agent straight into a failed
+  // --generate, so this reads the value length.
+  const values = new Map();
+  if (existsSync(envFile)) {
+    for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+      const at = line.indexOf('=');
+      if (at > 0) values.set(line.slice(0, at).trim(), line.slice(at + 1).replace(/[\s\r]/g, ''));
+    }
+  }
+  const llm = keys
+    .filter((name) => /^LLM_[A-Z0-9]+_API_KEY$/.test(name) && (values.get(name) ?? '').length > 0)
+    .map((name) => name.slice(4, -8).toLowerCase());
   add(
     'keys',
     llm.length > 0,
     llm.length
       ? `${keys.length} keys; storyboard --generate available via: ${llm.join(', ')}`
-      : 'no LLM key in .env.local — use --prompt (hand the prompt to an external model) or --from (feed its reply back)',
+      : 'no LLM key has a value in .env.local — --generate cannot work. Use --prompt (hand the prompt to an external model) or --from (feed its reply back)',
+    true,
   );
 
   const ffmpeg = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8', env });
@@ -280,8 +293,9 @@ function cmdDoctor() {
   }
   add('runs', true, `${runs} (${active} running)`);
 
-  emit({ ok: checks.every((c) => c.ok), checks, repoRoot: cfg.repoRoot });
-  process.exit(checks.every((c) => c.ok) ? 0 : 1);
+  const blocking = checks.filter((c) => !c.ok && !c.soft);
+  emit({ ok: blocking.length === 0, checks, repoRoot: cfg.repoRoot });
+  process.exit(blocking.length === 0 ? 0 : 1);
 }
 
 function cmdRun(rest) {
@@ -290,7 +304,12 @@ function cmdRun(rest) {
   if (argv.length === 0) die('bad-usage', 'run needs an occ subcommand', 'e.g. run -- render --project 名字 --out E:/abs.mp4');
   const bin = ensureCli(cfg);
   const decoded = argv.map(decode);
-  const storyboard = checkStoryboardLock(cfg, decoded, opts.allowEdited);
+  // `make` is the one-command orchestrator (audio + srt + brief → mp4). It is
+  // the right verb for "make me a video"; `run` stays the surgical lane.
+  const isMake = decoded[0] === 'make';
+  const program = isMake ? join(cfg.repoRoot, 'production', 'make-video.mjs') : bin;
+  const args = isMake ? decoded.slice(1) : decoded;
+  const storyboard = isMake ? null : checkStoryboardLock(cfg, decoded, opts.allowEdited);
 
   const dir = runsDir(cfg.repoRoot);
   const id = newRunId();
@@ -309,7 +328,7 @@ function cmdRun(rest) {
   writeFileSync(join(dir, 'latest.json'), `${JSON.stringify({ id }, null, 2)}\n`, 'utf8');
 
   const fd = openSync(record.log, 'a');
-  const child = spawn(process.execPath, [join(SKILL_DIR, 'scripts', '_child.mjs'), recordFile, bin, ...decoded], {
+  const child = spawn(process.execPath, [join(SKILL_DIR, 'scripts', '_child.mjs'), recordFile, program, ...args], {
     cwd: cfg.repoRoot,
     env: childEnv(cfg),
     detached: true,

@@ -30,6 +30,14 @@ function outPaths() {
       if (value) found.push(resolve(record.cwd, value));
     }
   }
+  // `make` defaults its output to production/work/<name>/out.mp4 and takes no
+  // --out, so the artifact would otherwise be invisible to the agent.
+  if (record.action === 'make') {
+    const at = argv.indexOf('--name');
+    if (at >= 0 && argv[at + 1]) {
+      found.push(resolve(record.cwd, 'production', 'work', argv[at + 1], 'out.mp4'));
+    }
+  }
   return found;
 }
 
