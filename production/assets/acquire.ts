@@ -8,6 +8,7 @@
 // the caller, because that step needs the project store.
 
 import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { normalizeVideoRate } from './normalize.ts';
 import { dirname, extname, join, resolve } from 'node:path';
 import type { MaterialItem } from './types.ts';
 import { MaterialError } from './types.ts';
@@ -63,6 +64,12 @@ export async function acquireToFile(item: MaterialItem, dir = DOWNLOAD_DIR): Pro
   if (!buffer.byteLength) throw new MaterialError(`download for ${item.label} was empty`);
 
   await writeFile(target, buffer);
+
+  // A fractional frame rate breaks the compositor's seek maths (30000/1001 is
+  // read as 30000), so a downloaded video is normalised before anything imports
+  // it. Images and audio skip this; normalizeVideoRate leaves whole rates alone.
+  if (item.role === 'video') await normalizeVideoRate(target);
+
   const info = await stat(target);
   return { path: target, bytes: info.size, item };
 }
