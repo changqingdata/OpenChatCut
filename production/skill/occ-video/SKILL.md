@@ -110,6 +110,8 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 | 用外部模型的分镜 | `run -- storyboard --srt f.srt --brief … --from w/reply.json --out w/sb.json` |
 | 单查 QC | `run -- qc --storyboard w/sb.json --json` |
 | 放音乐 | `run -- assets place <工程名> --role music --category <类目> --min-duration <秒>` |
+| 逐字字幕（更贵） | `make … --captions-pacing word --captions-motion karaoke-pulse`（渲染约 3 倍慢） |
+| 单跑语音时间 | `run -- transcribe --audio a.mp3 --out w/timing.json --json` |
 | 历史运行 | `runs`（不需要 `run`） |
 
 ## 5. 一句话流程

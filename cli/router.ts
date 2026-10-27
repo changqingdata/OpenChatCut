@@ -17,6 +17,7 @@ import { runProjectCommand } from './commands/project.ts';
 import { runQcCommand } from './commands/qc.ts';
 import { runRenderCommand } from './commands/render.ts';
 import { runStillCommand } from './commands/still.ts';
+import { runTranscribeCommand } from './commands/transcribe.ts';
 import { runStoryboardCommand } from './commands/storyboard.ts';
 import { runTimelineCommand } from './commands/timeline.ts';
 import { runToolsCommand } from './commands/tools.ts';
@@ -53,6 +54,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runFootageCommand(subLine(commandLine, positionals), json);
     case 'qc':
       return runQcCommand(subLine(commandLine, positionals), json);
+    case 'transcribe':
+      return runTranscribeCommand(subLine(commandLine, positionals), json);
     case 'config':
       return runConfigCommand(subLine(commandLine, positionals), json);
     case 'export':

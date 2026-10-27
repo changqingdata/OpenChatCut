@@ -69,4 +69,70 @@ assert.equal(buildCaptions(cues).template, 'deyi-card', 'default template is dey
 assert.equal(buildCaptions(cues, { template: 'tiktok' }).template, 'tiktok', 'template override applies');
 assert.equal(buildCaptions(cues, { enabled: false }).enabled, false, 'captions can be disabled');
 
+// --- measured timing ------------------------------------------------------
+//
+// One cue, four characters, four seconds — but the speaker said the first three
+// in half a second and then paused before the last. An estimate spreads that
+// evenly and puts "利" at 3s; the measured version has to put it at 3.5s.
+
+const uneven = parseSrtCues('00:00:00,000 --> 00:00:04,000\n关于复利\n');
+const timing = {
+  model: 'test',
+  language: 'zh',
+  durationMs: 4000,
+  tokens: [
+    { text: '关', start: 0, end: 200 },
+    { text: '于', start: 200, end: 350 },
+    { text: '复', start: 350, end: 500 },
+    { text: '利', start: 3500, end: 4000 },
+  ],
+};
+
+const estimated = wordsFromCues(uneven);
+const measured = wordsFromCues(uneven, timing);
+assert.deepEqual(measured.map((word) => word.text), ['关', '于', '复', '利'], 'measured timing keeps the subtitle text');
+assert.equal(estimated[3]!.start, 3000, 'the estimate puts the last character at 3/4 of the cue');
+assert.equal(measured[3]!.start, 3500, 'the measurement puts it where it was spoken');
+assert.equal(measured[0]!.start, 0, 'the first character still starts with the cue');
+assert.equal(measured[3]!.end, 4000, 'the last character still ends with the cue');
+assert.equal(measured[2]!.end, 3500, 'the character before the pause holds the highlight through it');
+
+// When the model's token count differs from the line's character count — it
+// merges and splits differently, and punctuation rides along with a character —
+// the tokens become a speech-density curve instead of a one-to-one mapping.
+const merged = wordsFromCues(uneven, {
+  model: 'test',
+  language: 'zh',
+  durationMs: 4000,
+  tokens: [
+    { text: '关于', start: 0, end: 200 },
+    { text: '复', start: 200, end: 500 },
+    { text: '利', start: 3500, end: 4000 },
+  ],
+});
+assert.equal(merged.length, 4, 'unit count comes from the text, not the tokens');
+assert.equal(merged[3]!.start, 3750, 'the density curve still lands late, near the real syllable');
+assert.notEqual(merged[3]!.start, estimated[3]!.start, 'and still beats the flat estimate');
+
+// Whatever the placement, the words must stay inside the cue and walk forward.
+for (let index = 0; index < measured.length; index += 1) {
+  const word = measured[index]!;
+  assert.ok(word.start >= 0 && word.end <= 4000, `word ${index} stays inside the cue`);
+  assert.ok(word.end > word.start, `word ${index} has positive length`);
+  if (index > 0) assert.ok(word.start >= measured[index - 1]!.end, `word ${index} does not overlap the previous one`);
+}
+
+// A cue the model heard nothing in must fall back, not collapse to zero length.
+const silent = wordsFromCues(uneven, { model: 'test', language: 'zh', durationMs: 0, tokens: [] });
+assert.deepEqual(silent, estimated, 'an empty profile falls back to the estimate');
+
+// Tokens from a neighbouring cue must not leak into this one.
+const shifted = wordsFromCues(uneven, {
+  model: 'test',
+  language: 'zh',
+  durationMs: 9000,
+  tokens: [{ text: '别的', start: 6000, end: 9000 }],
+});
+assert.deepEqual(shifted, estimated, 'tokens outside the cue are ignored');
+
 console.log('captions.verify: splitting, timing, page breaks and defaults OK');

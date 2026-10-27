@@ -116,6 +116,35 @@ consecutive repeats, and ten cards anchored under the captions.
 occ qc --storyboard sb.json [--strict] [--json]
 ```
 
+## Captions
+
+The subtitle file supplies the words; the local whisper model supplies the
+timing. `occ transcribe --audio a.mp3 --out timing.json` runs the same
+whisper.cpp build and the same GGML model the app's own transcription uses, and
+`occ compile --srt a.srt --timing timing.json` places each character where it was
+actually spoken.
+
+The model's *text* is deliberately unused. Its Chinese comes out traditional and
+it mishears homophones (复利 → 復律), which is worse than the subtitle the author
+already has. So the two halves are never aligned against each other — the cue
+keeps its own words and its own boundaries, and only the rhythm inside each cue
+comes from the model. Measured against the estimate on the test clip, a
+character landed 389ms late: 12 frames of highlight on the wrong syllable.
+
+`make` runs the transcribe step automatically and skips it when no model is on
+disk, in which case captions fall back to spreading each cue by character count.
+
+How much of that you can see depends on the caption mode:
+
+| Mode | What the timing changes | Render cost |
+|---|---|---|
+| `phrase` (default) | when a page appears and disappears | baseline |
+| `phrase` + `karaoke-pulse` | which character pulses inside the page | baseline |
+| `word` | one character per page, so the timing *is* the caption | ~3× (104 pages instead of 13) |
+
+`--captions-pacing word` on a 25-second clip took the render from 83s to 247s.
+That is a real cost, so it stays opt-in rather than the default.
+
 ## Long cuts
 
 The music library is a set of songs, not loops: the longest track in a mood is

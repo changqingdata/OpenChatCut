@@ -16,13 +16,14 @@ import { compile, CompileError, OVER_FOOTAGE_MUTED } from '../../production/comp
 import type { CompileAsset } from '../../production/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildCaptions } from '../../production/captions.ts';
+import type { SpeechTiming } from '../../production/transcribe.ts';
 import { parseSrtCues } from '../../production/srt.ts';
 import type { ProjectDoc } from '../../src/editor/projectTypes.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { GLOBAL_FLAGS, projectReference } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json',
-  'srt', 'captions-template', 'captions-motion', 'no-captions'] as const;
+  'srt', 'timing', 'captions-template', 'captions-motion', 'captions-pacing', 'no-captions'] as const;
 
 /**
  * The compiler's view of the asset pool.
@@ -87,12 +88,37 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   if (srtFlag && !flagBoolean(commandLine, 'no-captions')) {
     const cues = parseSrtCues(await readFile(resolve(srtFlag), 'utf8'));
     if (!cues.length) throw new CliError(`no cues parsed from ${srtFlag}`);
+    // Word-level timing from `occ transcribe`. Optional: without it the caption
+    // builder falls back to spreading each cue by character count.
+    const timingFlag = flagText(commandLine, 'timing');
+    let timing;
+    if (timingFlag?.trim()) {
+      try {
+        timing = JSON.parse(await readFile(resolve(timingFlag), 'utf8')) as SpeechTiming;
+      } catch (error) {
+        throw new CliError(`cannot read --timing ${timingFlag}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      if (!Array.isArray(timing?.tokens) || !timing.tokens.length) {
+        throw new CliError(`--timing ${timingFlag} contains no tokens`, {
+          code: 'timing-empty',
+          step: 'compile',
+          hint: 're-run occ transcribe on the same audio; an empty profile means the model heard nothing',
+        });
+      }
+    }
     captions = buildCaptions(cues, {
+      ...(timing ? { timing } : {}),
       ...(flagText(commandLine, 'captions-template')
         ? { template: flagText(commandLine, 'captions-template') as never }
         : {}),
       ...(flagText(commandLine, 'captions-motion')
         ? { motion: flagText(commandLine, 'captions-motion') as never }
+        : {}),
+      // 'word' shows one unit per page, so the measured timing is what decides
+      // when each character appears. 'phrase' (the default) still uses the word
+      // timings, but only to place page boundaries.
+      ...(flagText(commandLine, 'captions-pacing')
+        ? { pacing: flagText(commandLine, 'captions-pacing') as never }
         : {}),
     });
   }

@@ -119,6 +119,31 @@ const fps = 30;
 const durationFrames = Math.round(seconds * fps);
 console.log(`  ${seconds.toFixed(2)}s → ${durationFrames} frames @ ${fps}fps`);
 
+// --- 1b. speech timing ----------------------------------------------------
+
+// The subtitle file knows what was said; the local model knows when. Only the
+// second half is taken from the model — its Chinese comes out traditional and
+// mishears homophones, so using its text would make the captions worse, not
+// better. Without a model on disk this step is skipped and the caption builder
+// falls back to spreading each cue by character count.
+let timingPath = null;
+if (!args['no-timing'] && !args['no-captions']) {
+  step('speech timing');
+  const candidate = resolve(`${workDir}/timing.json`);
+  try {
+    await mkdir(dirname(candidate), { recursive: true });
+    const out = await occ('transcribe', '--audio', audioPath, '--out', candidate, '--json',
+      ...(args['asr-model'] ? ['--model', String(args['asr-model'])] : []));
+    const timing = jsonOf(out);
+    timingPath = candidate;
+    console.log(`  ${timing.tokens.length} tokens · ${timing.model} · ${timing.language}`);
+  } catch (error) {
+    // A missing model is not a failure: the render is still correct, the
+    // highlight is just evenly spaced.
+    console.log(`  skipped — ${String(error.message ?? error).split('\n')[0].slice(0, 160)}`);
+  }
+}
+
 // --- 2. project -----------------------------------------------------------
 
 step(`project ${projectName}`);
@@ -233,7 +258,10 @@ const compiled = jsonOf(await occ(
   // Captions come from the subtitle file so the burned-in text matches what is
   // actually said, not what the storyboard asked for.
   '--srt', srtPath,
+  ...(timingPath ? ['--timing', timingPath] : []),
   ...(args['captions-template'] ? ['--captions-template', String(args['captions-template'])] : []),
+  ...(args['captions-motion'] ? ['--captions-motion', String(args['captions-motion'])] : []),
+  ...(args['captions-pacing'] ? ['--captions-pacing', String(args['captions-pacing'])] : []),
   ...(args['no-captions'] ? ['--no-captions'] : []),
 ));
 console.log(`  ${compiled.items} items on ${compiled.timelineId}`);
