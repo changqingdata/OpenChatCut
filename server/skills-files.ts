@@ -37,6 +37,9 @@ export interface DiscoveredSkillFile {
 
 export async function readSkillDirFiles(dir: string): Promise<Record<string, string>> {
   const contents: Record<string, string> = {};
+  // Keys are POSIX-style on every platform. The agent-side skill loader
+  // rejects any path containing a backslash as unsafe, so a Windows join()
+  // here would make every skill with a subdirectory fail to load at all.
   const walk = async (relative: string): Promise<void> => {
     let entries: Dirent[];
     try {
@@ -45,10 +48,10 @@ export async function readSkillDirFiles(dir: string): Promise<Record<string, str
       return;
     }
     for (const entry of entries) {
+      const name = relative ? `${relative}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
-        await walk(join(relative, entry.name));
+        await walk(name);
       } else if (entry.isFile()) {
-        const name = join(relative, entry.name);
         try {
           contents[name] = await readFile(join(dir, name), 'utf8');
         } catch {

@@ -25,6 +25,7 @@ Refactor the change into new files instead of widening the patch surface.
 | 10 | `cli/router.ts` | `config` case arm | register `occ config` |
 | 11 | `cli/router.ts` | `mcp` case arm | register `occ mcp` |
 | 12 | `.gitignore` | two lines: `production/work/`, skill `config.json` | rendered mp4s and per-machine paths must never be committed |
+| 13 | `server/skills-files.ts` | build skill file keys with `/` instead of `join()` | `isSafeRelativePath` rejects backslashes, so on Windows every skill with a subdirectory failed `load_skill` outright |
 
 Everything else lives in new files: `production/**`, and one file per command
 under `cli/commands/`.

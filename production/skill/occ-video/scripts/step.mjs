@@ -37,12 +37,20 @@ function die(code, message, hint) {
 
 /** The tool splits the command on whitespace, so a space arrives as %20. */
 function decode(token) {
-  return token.replace(/%(20|25|09)/gi, (m) => {
+  let out = token.replace(/%(20|25|09)/gi, (m) => {
     const u = m.toUpperCase();
     if (u === '%20') return ' ';
     if (u === '%09') return '\t';
     return '%';
   });
+  // Callers wrap values in quotes out of habit, but the split does not honour
+  // quoting: `--audio "E:/a.mp3"` arrives with literal quotes and every file
+  // lookup then fails on a path that starts with a quote. Accept and drop them.
+  if (out.length >= 2) {
+    const head = out[0];
+    if ((head === '"' || head === "'") && out[out.length - 1] === head) out = out.slice(1, -1);
+  }
+  return out;
 }
 
 function sha256File(file) {
