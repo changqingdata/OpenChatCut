@@ -8,6 +8,7 @@
 //
 // Every mode runs the same validation, so a hand-filled reply and a generated
 // one are held to the same bar.
+import { readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { CliError, UsageError } from '../errors.ts';
@@ -25,6 +26,17 @@ import { musicCategories } from '../../production/assets/music.ts';
 import { GLOBAL_FLAGS } from './common.ts';
 
 const MAX_ATTEMPTS = 3;
+
+/** Words that read as ideas rather than images. See assets/query-cliches.json. */
+function queryCliches(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(resolve('production/assets/query-cliches.json'), 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === 'string') : [];
+  } catch {
+    // A missing list only costs prompt guidance; it must not stop a run.
+    return [];
+  }
+}
 
 /**
  * Apply the density policy from `--footage-ratio`.
@@ -90,6 +102,7 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     aspect: width === height ? '1:1' : width > height ? '16:9' : '9:16',
     language: /[\u4e00-\u9fa5]/.test(cues.map((cue) => cue.text).join('')) ? 'zh' : 'en',
     catalog: schemas,
+    cliches: queryCliches(),
   });
 
   // Mode 1: emit the prompt. Works with no key at all.
