@@ -42,10 +42,18 @@ function durationOf(item: MaterialItem): number {
  *
  * Order matters more than the score: a clip that covers the shot always beats a
  * prettier one that does not, because a short clip freezes on its last frame
- * mid-sentence. After that, the rendition closest to 1080 wide wins — Pexels
- * offers 640 through 4K and the master is often 40 MB for a four-second cut.
+ * mid-sentence. Then the rendition has to be at least as wide as the delivery.
+ *
+ * Width used to be a distance ("closest to 1080"), and that quietly outranked
+ * everything: a completely unrelated Pixabay clip at exactly 1080 beat twelve
+ * relevant Pexels clips offered at 1280, because 1280 is 200px away and 1080 is
+ * zero. A 1280 clip downscales to 1080 perfectly well, so the only thing worth
+ * asking is whether it is wide enough — not how exactly it matches.
+ *
+ * After that the provider's own order decides, and providers are queried in
+ * registry order, so Pexels (the better search) wins ties against Pixabay.
  */
-function rank(items: readonly MaterialItem[], neededSec: number): MaterialItem[] {
+export function rank(items: readonly MaterialItem[], neededSec: number): MaterialItem[] {
   const scored = items.map((item, index) => {
     const covers = neededSec <= 0 || durationOf(item) >= neededSec;
     const width = item.width ?? 0;
@@ -54,7 +62,9 @@ function rank(items: readonly MaterialItem[], neededSec: number): MaterialItem[]
       index,
       // 0 for a covering clip, 1 for a short one: the primary sort key.
       covers: covers ? 0 : 1,
-      distance: width > 0 ? Math.abs(width - TARGET_WIDTH) : TARGET_WIDTH,
+      // 0 when the rendition is at least as wide as the delivery, 1 when it is
+      // not. An unknown width is not evidence of a bad clip.
+      under: width > 0 && width < TARGET_WIDTH ? 1 : 0,
       // Longer is better among short clips; irrelevant among covering ones.
       shortfall: Math.max(0, neededSec - durationOf(item)),
     };
@@ -63,8 +73,9 @@ function rank(items: readonly MaterialItem[], neededSec: number): MaterialItem[]
   scored.sort((a, b) =>
     a.covers - b.covers
     || a.shortfall - b.shortfall
-    || a.distance - b.distance
-    // Tie-break on the provider's own order so the result is stable.
+    || a.under - b.under
+    // Tie-break on the provider's own order so the result is stable, and so the
+    // better search engine wins when two clips are equally usable.
     || a.index - b.index);
 
   return scored.map((entry) => entry.item);
