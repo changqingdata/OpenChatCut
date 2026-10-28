@@ -1,8 +1,8 @@
 {
   "version": 1,
   "meta": {
-    "title": "从夜班到自己拍视频",
-    "runId": "factory-night-to-filming",
+    "title": "从夜班到镜头",
+    "runId": "factory-night-shift-to-filmmaker",
     "aspect": "9:16",
     "width": 1080,
     "height": 1920,
@@ -10,8 +10,8 @@
     "language": "zh"
   },
   "rhythm": {
-    "avgShotSec": 3.1,
-    "maxShotSec": 6,
+    "avgShotSec": 2.8,
+    "maxShotSec": 4.6,
     "grammarChangeEverySec": 6,
     "maxRepeatRecipe": 2,
     "hookMaxSec": 3.5
@@ -23,18 +23,18 @@
     {
       "id": "S01",
       "startFrame": 0,
-      "endFrame": 84,
+      "endFrame": 102,
       "narration": {
         "text": "三年前他还在工厂上夜班",
         "startMs": 0,
-        "endMs": 2800
+        "endMs": 3400
       },
-      "intent": "故事的起点是一个具体的岗位：工厂夜班。",
+      "intent": "起点很低也很具体：三年前，工厂，夜班。",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "工厂夜班",
-        "query": "factory night shift machines",
-        "confidence": "medium",
+        "subject": "夜班车间",
+        "query": "factory workshop at night fluorescent lights wide shot",
+        "confidence": "high",
         "essential": true,
         "selected": true
       },
@@ -44,30 +44,30 @@
         "params": {
           "text": "夜班",
           "label": "三年前",
-          "tail": "机器不停，人也不停",
-          "fontSize": 150,
-          "align": "center"
+          "tail": "凌晨的车间，机器不停",
+          "fontSize": 140,
+          "align": "left"
         },
         "layout": {
-          "anchor": "tc",
+          "anchor": "ml",
           "widthRatio": 0.85
         }
       }
     },
     {
       "id": "S02",
-      "startFrame": 84,
-      "endFrame": 162,
+      "startFrame": 102,
+      "endFrame": 156,
       "narration": {
         "text": "每天下班是早上七点",
-        "startMs": 2800,
-        "endMs": 5400
+        "startMs": 3400,
+        "endMs": 5200
       },
-      "intent": "把作息钉死在一个数字上：七点下班。",
-      "background": "#0B0B0C",
+      "intent": "把「夜班」落到一个具体时间：早上七点才下班。",
+      "background": "#0E0F11",
       "underlay": {
         "subject": "清晨街道",
-        "query": "empty street sunrise morning",
+        "query": "empty street outside factory gate at dawn cold light",
         "confidence": "medium",
         "essential": false,
         "selected": false
@@ -81,7 +81,7 @@
           "decimals": 0,
           "unit": "点",
           "label": "下班时间",
-          "note": "出车间时天已经亮",
+          "note": "早上七点走出车间",
           "fontSize": 260,
           "align": "center"
         },
@@ -93,111 +93,105 @@
     },
     {
       "id": "S03",
-      "startFrame": 162,
-      "endFrame": 258,
+      "startFrame": 156,
+      "endFrame": 294,
       "narration": {
         "text": "他用手机会拍下车间里没人注意的细节",
-        "startMs": 5400,
-        "endMs": 8600
+        "startMs": 5200,
+        "endMs": 9800
       },
-      "intent": "转变的源头是一个很小的动作：顺手拍下没人看的地方。",
-      "background": "#0B0B0C",
+      "intent": "转折点：他开始用手机记录车间里别人不看的地方。",
+      "background": "#101013",
       "underlay": {
         "subject": "手机拍摄",
-        "query": "hand holding phone filming machine closeup",
+        "query": "hand holding phone filming machine parts close up",
         "confidence": "high",
         "essential": true,
-        "selected": true
+        "selected": false
       },
       "visual": {
         "kind": "mg",
         "recipe": "annotation",
         "params": {
           "x": 0.5,
-          "y": 0.45,
-          "size": 0.32,
+          "y": 0.42,
+          "size": 0.3,
           "shape": "circle",
-          "label": "没人注意的细节",
+          "label": "没人在意的细节",
           "fontSize": 34,
           "strokeWidth": 6
         },
         "layout": {
-          "anchor": "mc",
-          "widthRatio": 0.9
+          "anchor": "full",
+          "widthRatio": 0.95
         }
       }
     },
     {
       "id": "S04",
-      "startFrame": 258,
-      "endFrame": 348,
+      "startFrame": 294,
+      "endFrame": 372,
       "narration": {
         "text": "拍了两年 存了四千多条",
-        "startMs": 8600,
-        "endMs": 11600
+        "startMs": 9800,
+        "endMs": 12400
       },
-      "intent": "这不是灵感，是两年攒下的四千多条存货。",
+      "intent": "两年时间被量化成四千多条素材，这是积累的实感。",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "-",
-        "query": "-",
-        "confidence": "low",
+        "subject": "手机相册",
+        "query": "thumb scrolling photo gallery on phone screen close up",
+        "confidence": "medium",
         "essential": false,
-        "selected": false
+        "selected": true
       },
       "visual": {
         "kind": "mg",
-        "recipe": "number-count",
+        "recipe": "line-chart",
         "params": {
-          "value": 4000,
-          "from": 0,
-          "decimals": 0,
-          "unit": "条",
-          "label": "两年素材",
-          "note": "没挑过，全存着",
-          "fontSize": 260,
-          "align": "center"
+          "points": [
+            "0",
+            "600",
+            "1800",
+            "3200",
+            "4000"
+          ],
+          "labels": [
+            "第1月",
+            "半年",
+            "1年",
+            "1年半",
+            "2年"
+          ],
+          "title": "两年存下的",
+          "unit": "条"
         },
         "layout": {
           "anchor": "mc",
-          "widthRatio": 0.9
+          "widthRatio": 0.85
         }
       }
     },
     {
       "id": "S05",
-      "startFrame": 348,
-      "endFrame": 444,
+      "startFrame": 372,
+      "endFrame": 408,
       "narration": {
         "text": "有一天他把其中一条剪成了三十秒",
-        "startMs": 11600,
-        "endMs": 14800
+        "startMs": 12400,
+        "endMs": 13600
       },
-      "intent": "从四千条到一条，中间只做了一件事：剪到三十秒。",
-      "background": "#0B0B0C",
-      "underlay": {
-        "subject": "-",
-        "query": "-",
-        "confidence": "low",
-        "essential": false,
-        "selected": false
-      },
+      "intent": "四千条里只挑出一条，剪成三十秒——关键动作发生。",
+      "background": "#141312",
       "visual": {
         "kind": "mg",
-        "recipe": "flow-chain",
+        "recipe": "keyword-punch",
         "params": {
-          "steps": [
-            "四千条素材",
-            "挑出一条",
-            "剪成30秒"
-          ],
-          "labels": [
-            "存量",
-            "动作",
-            "成片"
-          ],
-          "title": "一条的诞生",
-          "fontSize": 46
+          "text": "30秒",
+          "label": "其中一条",
+          "tail": "从四千条里挑出来",
+          "fontSize": 160,
+          "align": "center"
         },
         "layout": {
           "anchor": "mc",
@@ -207,35 +201,38 @@
     },
     {
       "id": "S06",
-      "startFrame": 444,
-      "endFrame": 528,
+      "startFrame": 408,
+      "endFrame": 522,
       "narration": {
         "text": "那条视频有一百万人看过",
-        "startMs": 14800,
-        "endMs": 17600
+        "startMs": 13600,
+        "endMs": 17400
       },
-      "intent": "全片唯一的高点，只给两个字：百万。",
+      "intent": "结果只有一个数字：一百万播放。",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "-",
-        "query": "-",
-        "confidence": "low",
+        "subject": "手机屏幕",
+        "query": "smartphone screen glowing in dark room close up",
+        "confidence": "medium",
         "essential": false,
         "selected": false
       },
       "visual": {
         "kind": "mg",
-        "recipe": "big-word-fill",
+        "recipe": "number-count",
         "params": {
-          "text": "百万",
-          "caption": "一条三十秒的视频",
-          "fontSize": 720,
-          "tracking": -8,
-          "captionOffset": 300
+          "value": 100,
+          "from": 0,
+          "decimals": 0,
+          "unit": "万人",
+          "label": "看过这条视频",
+          "note": "一条三十秒的车间片段",
+          "fontSize": 300,
+          "align": "left"
         },
         "layout": {
-          "anchor": "full",
-          "widthRatio": 1
+          "anchor": "tc",
+          "widthRatio": 0.85
         }
       },
       "transitionIn": {
@@ -245,35 +242,28 @@
     },
     {
       "id": "S07",
-      "startFrame": 528,
-      "endFrame": 600,
+      "startFrame": 522,
+      "endFrame": 570,
       "narration": {
         "text": "后来他辞了工作",
-        "startMs": 17600,
-        "endMs": 20000
+        "startMs": 17400,
+        "endMs": 19000
       },
-      "intent": "辞职是第三步，不是第一步。",
-      "background": "#0B0B0C",
-      "underlay": {
-        "subject": "-",
-        "query": "-",
-        "confidence": "low",
-        "essential": false,
-        "selected": false
-      },
+      "intent": "身份发生了变化：从工厂夜班变成全职拍视频。",
+      "background": "#101013",
       "visual": {
         "kind": "mg",
-        "recipe": "timeline-dots",
+        "recipe": "compare-stack",
         "params": {
-          "items": [
-            "夜班",
-            "随手拍",
-            "辞职"
-          ],
-          "activeIndex": 2,
-          "title": "顺序是这样的",
-          "fontSize": 40,
-          "trackColor": "#2A2A2D"
+          "topLabel": "之前",
+          "topText": "工厂夜班",
+          "bottomLabel": "之后",
+          "bottomText": "全职拍视频",
+          "topColor": "#8A857C",
+          "bottomColor": "#E8B04B",
+          "fontSize": 72,
+          "gap": 40,
+          "dividerWidth": 160
         },
         "layout": {
           "anchor": "mc",
@@ -283,67 +273,99 @@
     },
     {
       "id": "S08",
-      "startFrame": 600,
-      "endFrame": 684,
+      "startFrame": 570,
+      "endFrame": 672,
       "narration": {
         "text": "现在他拍的就是那些细节",
-        "startMs": 20000,
-        "endMs": 22800
+        "startMs": 19000,
+        "endMs": 22400
       },
-      "intent": "题材没换，还是车间里那些没人看的地方。",
+      "intent": "他拍的东西没换主题，还是那些车间里的具体物件。",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "拍摄细节",
-        "query": "hand filming machine detail workshop",
+        "subject": "车间细节",
+        "query": "rusty machine bolts and oil stains close up macro",
         "confidence": "high",
         "essential": false,
-        "selected": true
+        "selected": false
       },
       "visual": {
         "kind": "mg",
-        "recipe": "keyword-punch",
+        "recipe": "list-reveal",
         "params": {
-          "text": "细节",
-          "accentText": "没换",
-          "label": "现在",
-          "tail": "镜头对着的还是车间",
-          "fontSize": 150,
-          "align": "center"
+          "items": [
+            "机器上的油污",
+            "墙上的排班表",
+            "没人扫的角落"
+          ],
+          "title": "他拍的东西",
+          "fontSize": 50,
+          "gap": 30,
+          "markWidth": 72,
+          "align": "left"
         },
         "layout": {
-          "anchor": "tc",
+          "anchor": "ml",
           "widthRatio": 0.85
         }
       }
     },
     {
       "id": "S09",
-      "startFrame": 684,
-      "endFrame": 840,
+      "startFrame": 672,
+      "endFrame": 732,
       "narration": {
-        "text": "工厂还是那个工厂，只是看它的人变了",
-        "startMs": 22800,
-        "endMs": 28000
+        "text": "工厂还是那个工厂",
+        "startMs": 22400,
+        "endMs": 24400
       },
-      "intent": "变的是看的人，不是工厂。",
-      "background": "#0B0B0C",
+      "intent": "客体没变：车间、机器、灯光，全都原样。",
+      "background": "#0E0F11",
       "underlay": {
-        "subject": "工厂外观",
-        "query": "factory building exterior dusk",
+        "subject": "工厂车间",
+        "query": "empty factory floor wide shot fluorescent lights at night",
         "confidence": "high",
         "essential": true,
-        "selected": false
+        "selected": true
       },
       "visual": {
         "kind": "mg",
         "recipe": "quote-card",
         "params": {
-          "text": "工厂还是那个工厂，只是看它的人变了。",
-          "fontSize": 62
+          "text": "工厂还是那个工厂",
+          "source": "同一间车间",
+          "fontSize": 66
         },
         "layout": {
           "anchor": "mc",
-          "widthRatio": 0.9
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S10",
+      "startFrame": 732,
+      "endFrame": 852,
+      "narration": {
+        "text": "只是看它的人变了",
+        "startMs": 24400,
+        "endMs": 28400
+      },
+      "intent": "落点只有一件事：变的是看的人。",
+      "background": "#0B0B0C",
+      "visual": {
+        "kind": "mg",
+        "recipe": "big-word-fill",
+        "params": {
+          "text": "变",
+          "caption": "看它的人变了",
+          "fontSize": 820,
+          "tracking": -8,
+          "captionOffset": 300
+        },
+        "layout": {
+          "anchor": "full",
+          "widthRatio": 0.95
         }
       },
       "transitionIn": {

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "meta": {
-    "title": "每天1%的复利力量",
+    "title": "每天1%，一年37倍",
     "runId": "compound-1pct-daily",
     "aspect": "9:16",
     "width": 1080,
@@ -10,7 +10,7 @@
     "language": "zh"
   },
   "rhythm": {
-    "avgShotSec": 3.25,
+    "avgShotSec": 3.8,
     "maxShotSec": 6,
     "grammarChangeEverySec": 6,
     "maxRepeatRecipe": 2,
@@ -23,30 +23,30 @@
     {
       "id": "S01",
       "startFrame": 0,
-      "endFrame": 66,
+      "endFrame": 102,
       "narration": {
-        "text": "每天进步百分之一",
+        "text": "每天进步百分之一，一年之后是多少",
         "startMs": 0,
-        "endMs": 2200
+        "endMs": 3400
       },
-      "intent": "记住这件事的单位是「每天1%」，不是一年一次的大动作",
+      "intent": "把问题砸出来：每天多1%，一年后到底是多少",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "晨跑的人",
-        "query": "person running morning street",
+        "subject": "硬币",
+        "query": "stack of coins on wooden table close up warm light",
         "confidence": "high",
-        "essential": true,
-        "selected": true
+        "essential": false,
+        "selected": false
       },
       "visual": {
         "kind": "mg",
         "recipe": "keyword-punch",
         "params": {
-          "text": "每天+1%",
-          "accentText": "进步",
-          "label": "复利起点",
-          "tail": "一年后见分晓",
-          "fontSize": 136,
+          "text": "1%",
+          "accentText": "每天",
+          "label": "复利",
+          "tail": "一年之后是多少",
+          "fontSize": 150,
           "align": "center"
         },
         "layout": {
@@ -57,53 +57,19 @@
     },
     {
       "id": "S02",
-      "startFrame": 66,
-      "endFrame": 150,
-      "narration": {
-        "text": "一年之后是多少",
-        "startMs": 2200,
-        "endMs": 5000
-      },
-      "intent": "把问题砸出来：一年后到底变成多少",
-      "background": "#0E0C08",
-      "underlay": {
-        "subject": "-",
-        "query": "calendar pages flipping",
-        "confidence": "low",
-        "essential": false,
-        "selected": false
-      },
-      "visual": {
-        "kind": "mg",
-        "recipe": "big-word-fill",
-        "params": {
-          "text": "一年",
-          "caption": "之后是多少",
-          "fontSize": 720,
-          "tracking": -8,
-          "captionOffset": 300
-        },
-        "layout": {
-          "anchor": "full",
-          "widthRatio": 1
-        }
-      }
-    },
-    {
-      "id": "S03",
-      "startFrame": 150,
-      "endFrame": 246,
+      "startFrame": 102,
+      "endFrame": 216,
       "narration": {
         "text": "很多人第一反应是三点六五倍",
-        "startMs": 5000,
-        "endMs": 8200
+        "startMs": 3400,
+        "endMs": 7200
       },
-      "intent": "先给出直觉答案 3.65 倍，让观众以为这题很简单",
+      "intent": "先说大家心里的那个答案：3.65倍，制造落差",
       "background": "#0B0B0C",
       "underlay": {
-        "subject": "-",
-        "query": "person thinking hand on chin",
-        "confidence": "low",
+        "subject": "计算器",
+        "query": "fingers pressing calculator buttons macro shot desk",
+        "confidence": "high",
         "essential": false,
         "selected": false
       },
@@ -116,44 +82,37 @@
           "decimals": 2,
           "unit": "倍",
           "label": "第一反应",
-          "note": "大多数人的直觉",
-          "fontSize": 260,
+          "note": "很多人算的是这个",
+          "fontSize": 240,
           "align": "center"
         },
         "layout": {
           "anchor": "mc",
-          "widthRatio": 0.9
+          "widthRatio": 0.86
         }
       }
     },
     {
-      "id": "S04",
-      "startFrame": 246,
-      "endFrame": 324,
+      "id": "S03",
+      "startFrame": 216,
+      "endFrame": 312,
       "narration": {
         "text": "真实答案接近三十七倍",
-        "startMs": 8200,
-        "endMs": 10800
+        "startMs": 7200,
+        "endMs": 10400
       },
-      "intent": "看到直觉和真实答案之间差了整整一个数量级",
-      "background": "#0C0B09",
-      "underlay": {
-        "subject": "-",
-        "query": "plant sprout growing time lapse",
-        "confidence": "low",
-        "essential": false,
-        "selected": false
-      },
+      "intent": "两个数字并排一放，37倍把3.65倍压成小条",
+      "background": "#0B0B0C",
       "visual": {
         "kind": "mg",
         "recipe": "bar-compare",
         "params": {
-          "aLabel": "直觉",
+          "aLabel": "第一反应",
           "aValue": 3.65,
-          "bLabel": "真实",
+          "bLabel": "真实答案",
           "bValue": 37,
           "unit": "倍",
-          "title": "直觉差了十倍",
+          "title": "一年之后",
           "aColor": "#8A857C",
           "bColor": "#E8B04B"
         },
@@ -164,96 +123,24 @@
       }
     },
     {
-      "id": "S05",
-      "startFrame": 324,
-      "endFrame": 396,
+      "id": "S04",
+      "startFrame": 312,
+      "endFrame": 480,
       "narration": {
-        "text": "反过来每天退百分之一",
-        "startMs": 10800,
-        "endMs": 13200
+        "text": "反过来每天退百分之一，一年只剩百分之三",
+        "startMs": 10400,
+        "endMs": 16000
       },
-      "intent": "意识到同一台复利机器反着开也在加速",
+      "intent": "同一套规则反向走，一年只剩3%——复利也会向下咬人",
       "background": "#0B0B0C",
-      "underlay": {
-        "subject": "下坡台阶",
-        "query": "stairs going down shadow",
-        "confidence": "medium",
-        "essential": false,
-        "selected": true
-      },
-      "visual": {
-        "kind": "mg",
-        "recipe": "keyword-punch",
-        "params": {
-          "text": "每天-1%",
-          "accentText": "退步",
-          "label": "反过来",
-          "tail": "同样是一年",
-          "fontSize": 140,
-          "align": "left"
-        },
-        "layout": {
-          "anchor": "ml",
-          "widthRatio": 0.85
-        }
-      },
       "transitionIn": {
         "type": "fade",
         "durationInFrames": 12
-      }
-    },
-    {
-      "id": "S06",
-      "startFrame": 396,
-      "endFrame": 468,
-      "narration": {
-        "text": "一年只剩百分之三",
-        "startMs": 13200,
-        "endMs": 15600
       },
-      "intent": "记住退步的代价：一年后只剩 3%",
-      "background": "#0D0B0A",
       "underlay": {
-        "subject": "枯萎的植物",
-        "query": "wilted plant dry leaves closeup",
+        "subject": "枯叶",
+        "query": "single dry brown leaf falling onto concrete floor",
         "confidence": "high",
-        "essential": false,
-        "selected": false
-      },
-      "visual": {
-        "kind": "mg",
-        "recipe": "number-count",
-        "params": {
-          "value": 3,
-          "from": 100,
-          "decimals": 0,
-          "unit": "%",
-          "label": "一年后只剩",
-          "note": "0.99的365次方",
-          "fontSize": 280,
-          "align": "center"
-        },
-        "layout": {
-          "anchor": "mc",
-          "widthRatio": 0.85
-        }
-      }
-    },
-    {
-      "id": "S07",
-      "startFrame": 468,
-      "endFrame": 612,
-      "narration": {
-        "text": "差距不在努力的程度，而在方向对不对",
-        "startMs": 15600,
-        "endMs": 20400
-      },
-      "intent": "把差距的归因从「努力多少」挪到「方向对不对」",
-      "background": "#0B0B0C",
-      "underlay": {
-        "subject": "-",
-        "query": "crossroads signpost direction",
-        "confidence": "low",
         "essential": false,
         "selected": false
       },
@@ -261,54 +148,124 @@
         "kind": "mg",
         "recipe": "compare-stack",
         "params": {
-          "topLabel": "差距不在",
-          "topText": "努力的程度",
-          "bottomLabel": "而在",
-          "bottomText": "方向对不对",
-          "bottomColor": "#E8B04B",
-          "fontSize": 66,
+          "topLabel": "进步",
+          "topText": "一年 37 倍",
+          "bottomLabel": "退步",
+          "bottomText": "一年只剩 3%",
+          "topColor": "#E8B04B",
+          "bottomColor": "#8A857C",
+          "fontSize": 62,
           "gap": 40,
           "dividerWidth": 160
         },
         "layout": {
           "anchor": "mc",
-          "widthRatio": 0.9
+          "widthRatio": 0.86
         }
-      },
-      "transitionIn": {
-        "type": "fade",
-        "durationInFrames": 12
       }
     },
     {
-      "id": "S08",
-      "startFrame": 612,
-      "endFrame": 780,
+      "id": "S05",
+      "startFrame": 480,
+      "endFrame": 594,
       "narration": {
-        "text": "更在于你坚持了多久，时间才是真正的燃料",
-        "startMs": 20400,
-        "endMs": 26000
+        "text": "差距不在努力的程度，而在方向对不对",
+        "startMs": 16000,
+        "endMs": 19800
       },
-      "intent": "把结论落到一句话上：时间才是复利的燃料，所以要拉长持有的时间",
-      "background": "#0A0A0C",
+      "intent": "问题被搬走了：差的不是努力多少，是朝哪边走",
+      "background": "#0B0B0C",
       "underlay": {
-        "subject": "沙漏",
-        "query": "hourglass sand falling closeup",
+        "subject": "路牌",
+        "query": "wooden signpost two arrows forest path daylight",
         "confidence": "high",
         "essential": true,
-        "selected": false
+        "selected": true
       },
       "visual": {
         "kind": "mg",
-        "recipe": "quote-card",
+        "recipe": "keyword-punch",
         "params": {
-          "text": "时间才是真正的燃料",
-          "source": "每天1%的复利",
-          "fontSize": 64
+          "text": "方向",
+          "accentText": "对不对",
+          "label": "关键点",
+          "tail": "差距不在努力的程度",
+          "fontSize": 140,
+          "align": "center"
         },
         "layout": {
           "anchor": "tc",
-          "widthRatio": 0.88
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "startFrame": 594,
+      "endFrame": 720,
+      "narration": {
+        "text": "更在于你坚持了多久",
+        "startMs": 19800,
+        "endMs": 24000
+      },
+      "intent": "曲线告诉你：拐点都在后面，坚持的时间长度决定高度",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "年轮",
+        "query": "tree rings cross section macro detail texture",
+        "confidence": "high",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "line-chart",
+        "params": {
+          "points": [
+            "1",
+            "2",
+            "4",
+            "8",
+            "16",
+            "37"
+          ],
+          "title": "坚持越久",
+          "unit": "倍"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.86
+        }
+      }
+    },
+    {
+      "id": "S07",
+      "startFrame": 720,
+      "endFrame": 792,
+      "narration": {
+        "text": "时间才是真正的燃料",
+        "startMs": 24000,
+        "endMs": 26400
+      },
+      "intent": "落点只有一个词：时间，它才是把1%放大成37倍的东西",
+      "background": "#0B0B0C",
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "big-word-fill",
+        "params": {
+          "text": "时间",
+          "caption": "真正的燃料",
+          "fontSize": 720,
+          "tracking": -6,
+          "captionOffset": 280
+        },
+        "layout": {
+          "anchor": "full",
+          "widthRatio": 1
         }
       }
     }

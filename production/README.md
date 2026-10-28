@@ -135,7 +135,17 @@ and a story with a cause and an effect. No audio — `storyboard --generate` onl
 needs subtitles and a brief, so a full content iteration is about three minutes
 rather than a render.
 
-The fourth one matters most. `flow-chain`, `timeline-dots`, `icon-row` and
+Two things the first draft got wrong, both caught by reading the numbers:
+
+- Every corpus line was 2.2–3.2 seconds, and the scorecard then reported a flat
+  rhythm on all four items. Shots follow cue boundaries, so uniformly-timed
+  lines cannot produce varied shot lengths no matter what the prompt asks. The
+  pacing is now 1.0–4.6 seconds, like speech.
+- One sample per brief is not enough to measure recipe coverage. The count moves
+  between runs — `icon-row` and `timeline-dots` appeared in one round and not
+  the next — so treat "11 of 15" as a range, not a score.
+
+The fourth brief matters most. `flow-chain`, `timeline-dots`, `icon-row` and
 `annotation` had never been chosen in six storyboards, and it was tempting to
 conclude they were badly designed. They were never *reachable*: every brief up
 to then was the same compound-interest explainer. One narrative brief and one
@@ -150,6 +160,7 @@ product brief pulled four of them out immediately.
 | `dur μ/span` | mean and spread — five shots at 3.5s is a metronome |
 | `trans` | fades over shots — a fade on every cut is a slideshow |
 | `foot` / `use` | shots asking for footage, and shots with a subject the pipeline can actually use |
+| `clic` | selected queries that name an idea instead of a picture |
 | `dup` | cards repeating the line being spoken |
 | `top` | the dominant recipe and its share |
 

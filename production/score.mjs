@@ -15,6 +15,23 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
+// The same list the prompt forbids. Counting what the prompt bans is the only
+// way to know whether the ban does anything.
+const CLICHES = (() => {
+  try {
+    const parsed = JSON.parse(readFileSync('production/assets/query-cliches.json', 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : [];
+  } catch {
+    return [];
+  }
+})();
+
+function clicheQuery(query) {
+  const text = String(query ?? '').toLowerCase();
+  if (!text) return false;
+  return CLICHES.some((term) => text.includes(term));
+}
+
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const files = args.filter((arg) => !arg.startsWith('--'));
@@ -90,6 +107,14 @@ export function scoreStoryboard(storyboard) {
   // A card that repeats the line being spoken reads as a stutter. Measured as
   // the longest shared run, because the card is often longer than the cue (a
   // quote) or shorter than it (a keyword) — containment only catches one side.
+  // Queries that describe an idea instead of a picture. Only the ones the
+  // pipeline would actually fetch count — a deselected shot costs nothing.
+  const clicheQueries = shots.filter((shot) => {
+    const underlay = shot.underlay;
+    if (!underlay?.query || underlay.selected === false) return false;
+    return clicheQuery(underlay.query);
+  }).length;
+
   const duplicates = shots.filter((shot) => {
     const narration = String(shot.narration?.text ?? '');
     if (!narration) return false;
@@ -112,6 +137,7 @@ export function scoreStoryboard(storyboard) {
     transitionShare: Number((transitions / total).toFixed(2)),
     asksFootage,
     usableFootage,
+    clicheQueries,
     duplicates,
     recipeCounts: Object.fromEntries(ranked),
   };
@@ -158,6 +184,7 @@ for (const row of rows) {
     num(`${row.transitions}/${row.shots}`, 6),
     num(row.asksFootage, 5),
     num(row.usableFootage, 4),
+    num(row.clicheQueries, 5),
     num(row.duplicates, 4),
     `  ${row.topRecipe}×${row.topCount} (${Math.round(row.topShare * 100)}%)`,
   );
@@ -175,6 +202,7 @@ if (rows.length > 1) {
     num(mean('transitions').toFixed(1), 6),
     num(mean('asksFootage').toFixed(1), 5),
     num(mean('usableFootage').toFixed(1), 4),
+    num(mean('clicheQueries').toFixed(1), 5),
     num(mean('duplicates').toFixed(1), 4),
     `  ${Math.round(mean('topShare') * 100)}% top share`,
   );

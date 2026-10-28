@@ -25,6 +25,11 @@ export interface PromptInput {
   aspect: string;
   language: string;
   catalog: ReadonlyMap<string, RecipeSchema>;
+  /**
+   * Search terms that read as ideas rather than images. Injected rather than
+   * hardcoded so the prompt and the scorecard cannot drift apart.
+   */
+  cliches?: readonly string[];
 }
 
 function formatMs(ms: number): string {
@@ -122,7 +127,7 @@ export function buildStoryboardPrompt(input: PromptInput): { system: string; use
     '',
     outputShape(input),
     '',
-    rulesBlock(input.fps, input.aspect),
+    rulesBlock(input.fps, input.aspect, input.cliches ?? []),
   ].join('\n');
 
   const user = `# 任务
@@ -142,7 +147,7 @@ ${cueLines}
  * The rules never vary within one video, so they live in `system` with the
  * catalogue. `fps` is the only interpolation, and it is fixed per project.
  */
-function rulesBlock(fps: number, aspect: string): string {
+function rulesBlock(fps: number, aspect: string, cliches: readonly string[] = []): string {
   // Landscape and portrait do not share a recipe vocabulary. A vertical stack
   // (compare-stack, list-reveal, timeline-dots) is capped by frame height on a
   // 16:9 canvas, so it lands as a narrow column in the middle with half the
@@ -171,15 +176,25 @@ function rulesBlock(fps: number, aspect: string): string {
 5. **每个镜头先找主语，再写检索词**。三步：
    ① 写 underlay.subject：这句话里那个**能被拍到的具体东西**，中文，不超过 6 个字。
       如果这句话只有抽象概念（利率、时间、复利、重要性），写 "-"。
-   ② 写 underlay.query：英文 2–5 个词，画的就是这个主语。
+   ② 写 underlay.query：英文 2–6 个词，描述**画面里看得见的东西**——物件 + 动作/场景 + 景别或光线。
+      - subject 写了 "-" 的镜头，**不要写 query**，整条 underlay 只留 confidence: "low"。
+        给抽象句子硬凑一个检索词，只会拿到一张和内容无关的图库图。
+      - 不要写这句话的**意思**，写这句话对应的**画面**。句子讲"时间不够"，画面可以是
+        「桌上一叠翻开的日历，逆光」，不是 "time passing"。
+      - 禁用这些词，它们是概念不是画面：${cliches.join("、") || "无"}。
+      - 也不要用图库陈词：托腮思考的人、灯泡、握手、拼图、迷宫、发芽延时、日历翻页。
    ③ 写 underlay.confidence，按主语定，不要凭感觉：
       - 主语是一个**具体的东西**（硬币、沙漏、枯树、时钟、跑步的人）→ "high"
       - 主语是**一类场景**、不是一个东西（上班、学习、早起）→ "medium"
       - 主语写了 "-"，这句话是抽象观点 → 必须是 "low"，程序不会用这条素材
-   自检：把 subject 单独念出来，再念 query。如果 query 画的东西和 subject 不是同一个，
-   说明这一步就错了。
-   反面例子：句子在讲「退步」，subject 应该是「枯萎的植物」，query 写 hourglass（沙漏）
-   就错了——沙漏是时间，不是退步。
+   自检：把 query 念出来，想象一张照片。如果这张照片能配上任何一句讲复利的话，
+   说明它太泛了，重写。
+   反面例子：
+   - 句子在讲「退步」，subject 是「枯萎的植物」，query 写 hourglass 就错了——沙漏是时间。
+   - 句子在讲「时间不够」，query 写 "calendar pages flipping" 也错了——那是图库对时间的想象，
+     不是这句话里发生的事。
+   - 句子在讲「每天进步 1%」，query 写 "plant sprout growing time lapse" 还是错的——
+     发芽和 1% 没有关系，它只是"成长"这个概念的图库替代品。
 6. 把"没有画面就废了"的镜头标 "essential": true（大约每 4–5 个镜头一个）。
    essential 和 confidence 是两件事：essential 说"必须有素材"，confidence 说"这条贴不贴"。
 7. **每个镜头都要设 background**（如 "#0B0B0C"），即使你给了 underlay。

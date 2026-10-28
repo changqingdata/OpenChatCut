@@ -62,7 +62,14 @@ const prompt = buildStoryboardPrompt({
   aspect: '9:16',
   language: 'zh',
   catalog,
+  cliches: ['lightbulb', 'calendar'],
 });
+
+// The cliché list is injected, not copied: one file feeds both the prompt's
+// "these words are not pictures" and the scorecard's count of how often the
+// model still uses them. If the plumbing breaks, the guidance silently vanishes.
+assert.ok(prompt.system.includes('lightbulb'), 'the cliché list reaches the system prompt');
+assert.ok(prompt.system.includes('calendar'), 'and it arrives whole');
 
 assert.ok(prompt.user.includes('讲复利'), 'brief reaches the prompt');
 assert.ok(prompt.system.includes('keyword-punch'), 'recipe ids reach the system prompt');
@@ -84,6 +91,7 @@ const secondChunk = buildStoryboardPrompt({
   aspect: '9:16',
   language: 'zh',
   catalog,
+  cliches: ['lightbulb', 'calendar'],
 });
 assert.equal(secondChunk.system, prompt.system, 'system prompt is identical across chunks');
 assert.notEqual(secondChunk.user, prompt.user, 'user prompt carries the chunk');
