@@ -143,6 +143,26 @@ assert.deepEqual(good.storyboard?.shots[0]?.visual, {
   layout: { anchor: 'full', widthRatio: 1 },
 }, 'the author\'s params survive validation untouched');
 
+// The canvas is a request parameter, not the model's choice. A 9:16 storyboard
+// asked for at 16:9 used to be accepted, and then `compile --replace` wrote the
+// storyboard's size onto the timeline — a portrait video that everyone believed
+// was landscape.
+const portraitForLandscape = checkStoryboard(
+  board([shot()], { meta: { ...board([shot()]).meta, width: 1080, height: 1920 } }),
+  catalog,
+  { width: 1920, height: 1080 },
+);
+assert.equal(portraitForLandscape.ok, false, 'a canvas mismatch is rejected');
+assert.ok(
+  portraitForLandscape.errors.some((error) => error.includes('1920x1080')),
+  'the error names the canvas that was asked for',
+);
+assert.equal(
+  checkStoryboard(board([shot()]), catalog, { width: 1080, height: 1920 }).ok,
+  true,
+  'the matching canvas passes',
+);
+
 const unknownRecipe = checkStoryboard(board([shot({
   visual: { kind: 'mg', recipe: 'nope', params: {}, layout: { anchor: 'full', widthRatio: 1 } },
 })]), catalog);

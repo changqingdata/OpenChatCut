@@ -267,6 +267,23 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
 
   // --- footage -------------------------------------------------------------
 
+  // The most expensive failure is not a bad clip, it is no clips: ten cards in
+  // a row is a slide deck, and that is exactly what a brief saying "纯图形"
+  // produces. The pipeline cannot invent a subject, so this has to be a
+  // finding the agent reads and fixes by rewriting the brief or the storyboard.
+  if (shots.length >= 6) {
+    const withFootage = shots.filter((shot) => hasFootage(shot)).length;
+    const ratio = withFootage / shots.length;
+    if (ratio < 0.2) {
+      findings.push({
+        code: 'footage-scarce',
+        severity: 'warn',
+        shotIds: [],
+        message: `only ${Math.round(ratio * 100)}% of shots carry footage — a card-only cut reads as a slide deck`,
+      });
+    }
+  }
+
   for (let i = 1; i < shots.length; i += 1) {
     if (hasFootage(shots[i - 1]!) && hasFootage(shots[i]!)) {
       findings.push({

@@ -24,6 +24,17 @@ export interface Recipe {
   code: string;
   /** Natural design box; placement scales this onto the canvas. */
   box: { width: number; height: number };
+  /**
+   * The recipe *is* the frame — a background plus one idea, nothing to place
+   * beside it. Its design box is therefore the canvas, not a card: forcing it
+   * through `resolveRect` on a landscape canvas turns a portrait box into a
+   * 456×811 stamp floating in the middle of 1920×1080, which is what
+   * `big-word-fill` did on the first 16:9 run.
+   *
+   * Components marked this way must size their internals from `item.width`
+   * rather than from the box they were designed at.
+   */
+  fullFrame?: boolean;
   defaultProps?: Record<string, unknown>;
 }
 
@@ -278,6 +289,10 @@ function buildItem(
       return null;
     }
     const rect = resolveRect(cardLayout(visual.layout, onFootage), width, height, recipe.box.width, recipe.box.height, layoutOptions);
+    // A full-frame recipe is the picture, not a card on it. Hand it the canvas:
+    // its design box is portrait, and any anchor+widthRatio path would squeeze
+    // that portrait box into the middle of a landscape frame.
+    const full = recipe.fullFrame === true;
     return {
       ...base,
       kind: 'motion-graphic',
@@ -290,9 +305,11 @@ function buildItem(
         ...visual.params,
         ...(onFootage ? { muted: OVER_FOOTAGE_MUTED } : {}),
       },
-      width: recipe.box.width,
-      height: recipe.box.height,
-      transform: transformFromRect(rect, width, height, recipe.box),
+      width: full ? width : recipe.box.width,
+      height: full ? height : recipe.box.height,
+      transform: full
+        ? { scale: 1, x: 0, y: 0 }
+        : transformFromRect(rect, width, height, recipe.box),
     };
   }
 

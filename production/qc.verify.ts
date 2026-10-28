@@ -99,6 +99,23 @@ assert.deepEqual(cleanReport.findings.map((f) => f.code), [], 'a clean board rai
 assert.equal(cleanReport.stats.shots, 4, 'stats count the shots');
 assert.equal(cleanReport.stats.distinctRecipes, 4, 'stats count the vocabulary');
 
+// --- footage floor --------------------------------------------------------
+
+// Ten cards and no clips is a slide deck. The pipeline cannot invent a subject,
+// so the only useful thing it can do is say so loudly enough for the agent to
+// go back and fix the brief.
+const allCards = board([
+  { recipe: 'keyword-punch' }, { recipe: 'number-count' }, { recipe: 'list-reveal' },
+  { recipe: 'compare-stack' }, { recipe: 'bar-compare' }, { recipe: 'line-chart' },
+]);
+assert.ok(codes(allCards).includes('footage-scarce'), 'a card-only cut is flagged');
+const someFootage = board([
+  { recipe: 'keyword-punch', footage: 'clock' }, { recipe: 'number-count' },
+  { recipe: 'list-reveal' }, { recipe: 'compare-stack', footage: 'hourglass' },
+  { recipe: 'bar-compare' }, { recipe: 'line-chart' },
+]);
+assert.ok(!codes(someFootage).includes('footage-scarce'), 'two clips in six clears the floor');
+
 // --- coverage -------------------------------------------------------------
 
 // A hole renders as a black frame. It is the only error-level rule.

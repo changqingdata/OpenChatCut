@@ -4,6 +4,7 @@
   "nameEn": "Chapter card",
   "intent": "进入新章节或新话题时的分隔卡，给长视频一个导航感",
   "box": { "width": 1080, "height": 1920 },
+  "fullFrame": true,
   "params": {
     "number": { "type": "string", "required": true, "maxChars": 3 },
     "title": { "type": "string", "required": true, "maxChars": 10 },

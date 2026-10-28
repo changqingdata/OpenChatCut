@@ -36,6 +36,9 @@ const Component = ({ item }) => {
     letterSpacing: '-0.01em',
     color: p.ink,
     whiteSpace: 'pre-wrap',
+    // 20 characters at 58px in an 860px card wraps as 19 + 1, leaving a single
+    // orphan character on the second line. Balance the lines instead.
+    textWrap: 'balance',
     opacity: body,
     transform: 'translateY(' + ((1 - body) * 20) + 'px)',
   };

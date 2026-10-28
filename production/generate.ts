@@ -60,14 +60,15 @@ function recipeCatalog(catalog: ReadonlyMap<string, RecipeSchema>): string {
   return lines.join('\n');
 }
 
-const OUTPUT_SHAPE = `{
+function outputShape(input: PromptInput): string {
+  return `{
   "version": 1,
   "meta": {
     "title": "string",
     "runId": "string (kebab-case, stable)",
-    "aspect": "9:16",
-    "width": 1080, "height": 1920, "fps": 30,
-    "language": "zh"
+    "aspect": "${input.aspect}",
+    "width": ${input.width}, "height": ${input.height}, "fps": ${input.fps},
+    "language": "${input.language}"
   },
   "rhythm": { "avgShotSec": 3.5, "maxShotSec": 6, "grammarChangeEverySec": 6, "maxRepeatRecipe": 2, "hookMaxSec": 3.5 },
   "music": { "category": "分类名，必须来自下方清单" },
@@ -79,7 +80,7 @@ const OUTPUT_SHAPE = `{
       "narration": { "text": "string", "startMs": 0, "endMs": 3500 },
       "intent": "一句话：观众这一镜该记住什么",
       "background": "#0B0B0C",
-      "transitionIn": { "type": "fade", "durationInFrames": 12 },
+      "transitionIn": { "type": "fade", "durationInFrames": 12 } // 只在段落转换处，全片 1-3 次；其余镜头删掉这个字段
       "underlay": { "subject": "这句话里的具体名词", "query": "english search words", "confidence": "high|medium|low", "essential": false },
       "visual": {
         "kind": "mg",
@@ -90,6 +91,7 @@ const OUTPUT_SHAPE = `{
     }
   ]
 }`;
+}
 
 export function buildStoryboardPrompt(input: PromptInput): { system: string; user: string } {
   const durationMs = input.cues.length ? input.cues[input.cues.length - 1]!.endMs : 0;
@@ -119,9 +121,9 @@ export function buildStoryboardPrompt(input: PromptInput): { system: string; use
     '# 输出格式',
     '严格按这个结构输出 JSON：',
     '',
-    OUTPUT_SHAPE,
+    outputShape(input),
     '',
-    rulesBlock(input.fps),
+    rulesBlock(input.fps, input.aspect),
   ].join('\n');
 
   const user = `# 任务
@@ -141,7 +143,19 @@ ${cueLines}
  * The rules never vary within one video, so they live in `system` with the
  * catalogue. `fps` is the only interpolation, and it is fixed per project.
  */
-function rulesBlock(fps: number): string {
+function rulesBlock(fps: number, aspect: string): string {
+  // Landscape and portrait do not share a recipe vocabulary. A vertical stack
+  // (compare-stack, list-reveal, timeline-dots) is capped by frame height on a
+  // 16:9 canvas, so it lands as a narrow column in the middle with half the
+  // frame empty. Recipes that read left-to-right fill the same frame.
+  const landscape = /^(16:9|21:9|4:3|1:1)$/.test(aspect);
+  const wideNote = landscape
+    ? `
+18. **这是横屏**。竖向堆叠的配方（compare-stack、list-reveal、timeline-dots、quote-card）
+    在 16:9 里会缩成中间一根窄柱，两边全空。优先用横向展开的：bar-compare、line-chart、
+    progress-bar、flow-chain、icon-row、stack-share、keyword-punch。竖向配方一条视频里
+    最多用一次。`
+    : '';
   return `# 规则
 1. 镜头必须覆盖整段字幕：第一个从第 0 帧开始，最后一个到总帧数结束，中间不留空洞、不重叠。
 2. 镜头时长**不要平均**，按内容给三档（${fps}fps 换算成帧）：
@@ -153,6 +167,9 @@ function rulesBlock(fps: number): string {
 4. 画面有两种来源，可以同时使用：
    - underlay：真实素材（实拍视频或照片），画满整屏
    - visual：图形配方，叠在素材之上或独占画面
+   **整条视频至少 1/3 的镜头要有 underlay。** 全是图形配方 = 幻灯片，观众一眼就看穿。
+   用户说"不要人物出镜"时，换成物件、场景、空镜（手、窗、路、钟表、植物），
+   不是把素材全部取消。
 5. **每个镜头先找主语，再写检索词**。三步：
    ① 写 underlay.subject：这句话里那个**能被拍到的具体东西**，中文，不超过 6 个字。
       如果这句话只有抽象概念（利率、时间、复利、重要性），写 "-"。
@@ -192,6 +209,8 @@ function rulesBlock(fps: number): string {
     **同一配方再次使用时，换锚点和配色**：同一个 keyword-punch 放在 "tc"、"ml"、"mc"
     在观众眼里是三种版式。换锚点比换配方便宜，而且不会稀释视觉语言。
 12. 布局，按底座分两种：
+    - **整屏配方**（chapter-card、big-word-fill）：anchor 写 "full"。程序会把它们铺满
+      整帧，widthRatio 不起作用。这两个配方自带背景，一条视频里 big-word-fill 最多一次。
     - **纯色卡片**（这一镜没有素材）：锚点只用 "mc"。卡片是画面里唯一的东西，
       靠左或靠右会把另外半屏留空，看起来像没做完；要左右构图就把 widthRatio 提到 0.85 以上。
       也不要用 tc —— 顶部对齐会让中间 70% 全空。
@@ -201,7 +220,9 @@ function rulesBlock(fps: number): string {
 13. 参数必须遵守字数限制。超限会导致整份分镜被拒绝，所以宁可缩短文字。
 14. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
 15. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
-16. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。`;
+16. 卡片上的字是**关键词**，不是字幕的复读。字幕会把整句念出来，卡片再写同一句就是重复。
+    除了 quote-card（它本来就是一整句话），其余配方写 2–8 个字、一个数字或一个短语。
+17. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。${wideNote}`;
 }
 
 /** Pull the JSON object out of a model reply that may be fenced or padded. */
@@ -228,7 +249,11 @@ export interface StoryboardCheck {
  * Validate a candidate storyboard: structure first, then every `mg` shot's
  * params against its recipe schema.
  */
-export function checkStoryboard(value: unknown, catalog: ReadonlyMap<string, RecipeSchema>): StoryboardCheck {
+export function checkStoryboard(
+  value: unknown,
+  catalog: ReadonlyMap<string, RecipeSchema>,
+  expected?: { width: number; height: number },
+): StoryboardCheck {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return { ok: false, errors: ['storyboard must be a JSON object'], warnings: [] };
   }
@@ -236,6 +261,19 @@ export function checkStoryboard(value: unknown, catalog: ReadonlyMap<string, Rec
 
   const structural = validateStoryboard(storyboard);
   const errors = [...structural.errors];
+
+  // The canvas is not the model's to choose. It is a request parameter, and a
+  // mismatch is not cosmetic: the compiler builds every rect against the
+  // storyboard's size, then --replace writes that size onto the timeline, so a
+  // 9:16 storyboard quietly turns a 16:9 project portrait.
+  if (expected) {
+    const meta = storyboard.meta;
+    if (meta?.width !== expected.width || meta?.height !== expected.height) {
+      errors.push(
+        `meta is ${meta?.width}x${meta?.height} but the canvas is ${expected.width}x${expected.height} — copy width/height from the output shape`,
+      );
+    }
+  }
   const warnings = structural.warnings.map((warning) => `${warning.shotId ?? '-'}: ${warning.message}`);
 
   for (const shot of storyboard.shots ?? []) {

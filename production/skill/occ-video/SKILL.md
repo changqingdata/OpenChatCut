@@ -29,8 +29,11 @@ node scripts/step.mjs run --wait 60000 -- make --audio <绝对路径.mp3> --srt 
 ```
 
 - `--generate` 调配置好的模型；不写它只会打印提示词然后退出。
+- **画幅必须显式给**：竖屏 `--size 1080x1920`（默认），横屏 `--size 1920x1080`。
+  分镜的每一处锚点都是按这个尺寸算的，给错了整条片子会变形。
 - 名字里的空格写 `%20`；路径里有空格也写 `%20`。
-- 一条短片约 60–120 秒，长片 7 分钟以上。返回 `status: "running"` 就接 `status latest`：
+- 一条短片约 60–120 秒，长片 7 分钟以上。**有实拍素材时更慢**（要下载几十 MB 的片段），
+  8–10 分钟很正常。返回 `status: "running"` 就接 `status latest`：
 
 ```
 node scripts/step.mjs status latest --wait 90000
@@ -82,7 +85,14 @@ node scripts/step.mjs run --wait 60000 -- make --into 2cbebbac-… --audio … -
 node scripts/step.mjs run -- storyboard --srt <字幕文件> --brief <一句话主题> --generate --out w/storyboard.json
 ```
 
-`--brief` 决定内容走向。想约束得更死，就把要求写进 brief（"讲复利，8 个镜头，不要人物出镜"）。
+`--brief` 决定**内容走向**：讲什么、给谁看、什么调子。把用户的话原样传下去，最多补一句语气。
+
+- 画幅用 `--size` 表达，不要写进 brief。
+- 镜头数由时长和节奏决定，不要写"8 个镜头"。
+- **不要写"纯图形""不要人物出镜"这类话。** 写了模型会把素材全部关掉，成片变成 PPT。
+  想避开人脸就说"用物件、场景、空镜"，这样素材还在。
+
+brief 写得越细，模型越没有余地；而"画面怎么给"正是它该自己决定的部分。
 
 **② 落素材**（可选，纯图形片子跳过）
 
@@ -129,7 +139,7 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 `compile` 输出里带 QC 结果。规则分三级：
 
 - `error`（`frame-gap`）：帧不连续，**必须**修，片子会卡帧。
-- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`footage-low-confidence`、`rhythm-flat`、`solid-offcentre`（纯色背景上的卡片靠左/靠右且宽度不足，另外半屏是空的）。这些是观感问题，值得修。
+- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`footage-low-confidence`、`footage-scarce`（不到 20% 的镜头有素材，成片会像幻灯片——回去改 brief，别改分镜）、`rhythm-flat`、`solid-offcentre`（纯色背景上的卡片靠左/靠右且宽度不足，另外半屏是空的）。这些是观感问题，值得修。
 - `note`：`recipe-variety`、`anchor-under-captions`、`text-near-limit`。知道就行。
 
 **修法只有一条**：把 QC 的具体抱怨写进 `--brief` 重跑第①步。例如"上一版 recipe-repeat 了，换用不同配方，且不要连续三个镜头都用中间锚点"。不要手动删镜头——删完节奏和字幕对位就散了。

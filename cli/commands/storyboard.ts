@@ -112,7 +112,7 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     } catch (error) {
       throw new CliError(`could not parse JSON from ${fromFlag}: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const checked = checkStoryboard(candidate, schemas);
+    const checked = checkStoryboard(candidate, schemas, { width, height });
     if (!checked.ok) {
       throw new CliError(`storyboard rejected:\n  - ${checked.errors.join('\n  - ')}`);
     }
@@ -214,7 +214,7 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
         continue;
       }
 
-      const checked = checkStoryboard(candidate, schemas);
+      const checked = checkStoryboard(candidate, schemas, { width, height });
       if (checked.ok) return checked.storyboard!;
       errors = checked.errors;
     }

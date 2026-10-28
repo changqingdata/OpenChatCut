@@ -30,6 +30,12 @@ export interface RecipeSchema {
   intent?: string;
   box: { width: number; height: number };
   /**
+   * True when the recipe owns the whole frame (a background plus one idea).
+   * The compiler then hands it the canvas instead of a card rect, so it has no
+   * anchor to get wrong and no portrait box to be squeezed into.
+   */
+  fullFrame?: boolean;
+  /**
    * Optional sound effect this recipe earns. Placement is decided by the
    * pipeline, not here — a recipe only says what would suit it.
    */
@@ -121,6 +127,7 @@ export async function loadRecipe(dir: string): Promise<{ recipe: Recipe; schema:
     id: schema.id,
     code,
     box: schema.box,
+    ...(schema.fullFrame ? { fullFrame: true } : {}),
     defaultProps: schemaDefaults(schema),
   };
   return { recipe, schema };
