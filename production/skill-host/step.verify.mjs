@@ -80,6 +80,18 @@ assert.deepEqual(
   { id: '14c1d2e5-8aef-4384-a797-d53ee7e4139a', name: null },
   'a name is optional',
 );
+// `--into` means the project is the one already open: nothing to open, only a
+// reload. The report says something different in that case, so it must be told.
+assert.deepEqual(
+  collectProject('project: 14c1d2e5-8aef-4384-a797-d53ee7e4139a 柔和苔原\nproject-in-place: 14c1d2e5-8aef-4384-a797-d53ee7e4139a\n'),
+  { id: '14c1d2e5-8aef-4384-a797-d53ee7e4139a', name: '柔和苔原', inPlace: true },
+  'an in-place write is marked',
+);
+assert.equal(
+  collectProject('project: 14c1d2e5-8aef-4384-a797-d53ee7e4139a 新工程\n').inPlace,
+  undefined,
+  'a created project is not marked in place',
+);
 assert.equal(collectProject('project: 桌面测试3\n'), null, 'a name without an id is not a project line');
 assert.equal(collectProject(''), null, 'no line, no project');
 

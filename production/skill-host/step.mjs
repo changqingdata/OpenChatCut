@@ -199,7 +199,10 @@ export function collectArtifacts(args, log) {
 export function collectProject(log) {
   const match = /^project:\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*(.*)$/m.exec(log);
   if (!match) return null;
-  return { id: match[1], name: match[2].trim() || null };
+  // `--into` writes into the project the user already has open, so there is
+  // nothing to open afterwards — only a reload.
+  const inPlace = /^project-in-place:/m.test(log);
+  return { id: match[1], name: match[2].trim() || null, ...(inPlace ? { inPlace: true } : {}) };
 }
 
 function readRecord(dir, id) {
@@ -247,8 +250,10 @@ function report(dir, record, waited) {
     project: record.project
       ? {
         ...record.project,
-        opened: false,
-        note: 'Created but not opened: the editor is still on the previous project. Do NOT call target_project for this — it navigates away from this chat and ends the turn. Give the user the project name so they can open it.',
+        opened: Boolean(record.project.inPlace),
+        note: record.project.inPlace
+          ? 'Written in place: this is the project the user already has open. Tell them to reload the editor (Ctrl+R) — it keeps the document in memory and does not watch the store, so the timeline looks stale until then.'
+          : 'Created but not opened: the editor is still on the previous project. Do NOT call target_project for this — it navigates away from this chat and ends the turn. Give the user the project name so they can open it.',
       }
       : null,
     storyboard: record.storyboard ?? null,

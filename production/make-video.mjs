@@ -49,19 +49,43 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-for (const required of ['audio', 'srt', 'brief', 'name']) {
+// --name creates or reuses a project; --into writes into one that already
+// exists (the one the user is looking at) and adopts its canvas.
+if (args.name && args.into) {
+  console.error('--name and --into are alternatives: --name 新建或复用，--into 写进已有工程\n');
+  process.exit(1);
+}
+for (const required of ['audio', 'srt', 'brief']) {
   if (!args[required]) {
     console.error(`missing --${required}\n`);
     console.error('usage: node production/make-video.mjs --audio a.mp3 --srt a.srt --brief "讲什么" --name 工程名');
+    console.error('       …or --into 已有工程名 to write into the project already open');
     console.error('       [--generate | --from reply.json | --storyboard sb.json] [--out out.mp4] [--size 1080x1920]');
     process.exit(1);
   }
 }
+if (!args.name && !args.into) {
+  console.error('missing --name (new project) or --into (existing project)\n');
+  process.exit(1);
+}
 
 const audioPath = resolve(String(args.audio));
 const srtPath = resolve(String(args.srt));
-const projectName = String(args.name);
-const size = String(args.size ?? '1080x1920');
+const intoExisting = Boolean(args.into);
+const requested = String(args.name ?? args.into);
+
+// Resolve the project before anything else. `--into` takes a name OR an id,
+// because the agent's only way to learn "which project am I in" is
+// `read_project`, and that reports an id. The work directory is named after
+// the project, not after whatever the caller typed.
+const listOut = await occ('project', 'list', '--json');
+const listed = jsonOf(listOut);
+const projects = Array.isArray(listed) ? listed : (listed.projects ?? []);
+const target = projects.find((project) => project.name === requested)
+  ?? projects.find((project) => project.id === requested);
+const projectName = target?.name ?? requested;
+let projectId = target?.id;
+let size = String(args.size ?? '1080x1920');
 const workDir = resolve('production/work', projectName);
 const outPath = resolve(String(args.out ?? `${workDir}/out.mp4`));
 
@@ -147,11 +171,32 @@ if (!args['no-timing'] && !args['no-captions']) {
 // --- 2. project -----------------------------------------------------------
 
 step(`project ${projectName}`);
-const listOut = await occ('project', 'list', '--json');
-const listed = jsonOf(listOut);
-const projects = Array.isArray(listed) ? listed : (listed.projects ?? []);
-let projectId = projects.find((project) => project.name === projectName)?.id;
-if (projectId) {
+if (intoExisting) {
+  // The user asked for THIS project. Take its canvas instead of --size: the
+  // storyboard has to be generated for the size the timeline actually has, or
+  // every anchor and the caption band are computed against the wrong frame.
+  if (!projectId) throw new Error(`--into ${projectName}: 工程不存在。要新建请改用 --name`);
+  const shown = jsonOf(await occ('project', 'show', projectName, '--doc', '--json'));
+  const doc = shown.doc ?? shown;
+  const timelines = doc?.timelines ?? [];
+  const timeline = timelines.find((t) => t.id === doc.activeTimelineId) ?? timelines[0];
+  if (!timeline) throw new Error(`--into ${projectName}: 工程里没有时间线`);
+  const items = (timeline.items ?? []).length;
+  if (items > 0 && !args['replace-project']) {
+    throw new Error(
+      `工程「${projectName}」已有 ${items} 个片段，写进去会清空它们。\n`
+      + '  要重做请加 --replace-project；要保留原内容请换一个 --name 新建。',
+    );
+  }
+  if (Number(timeline.fps) !== 30) {
+    throw new Error(`--into ${projectName}: 该工程是 ${timeline.fps}fps，管道固定 30fps。请换一个工程或新建。`);
+  }
+  size = `${timeline.width}x${timeline.height}`;
+  if (args.size && String(args.size) !== size) {
+    console.log(`  note: --size ${args.size} 被忽略，沿用工程的 ${size}`);
+  }
+  console.log(`  into ${projectId} · ${size} · ${items} 个已有片段${items > 0 ? '（将被替换）' : ''}`);
+} else if (projectId) {
   console.log(`  reusing ${projectId}`);
 } else {
   const created = await occ('project', 'new', projectName, '--size', size, '--fps', String(fps));
@@ -163,6 +208,8 @@ if (projectId) {
 // switched to it, and the skill host reports it so the agent does not try to
 // switch by itself (that would end its turn).
 console.log(`project: ${projectId} ${projectName}`);
+// Distinguishes "a new project you have to open" from "the one already open".
+if (intoExisting) console.log(`project-in-place: ${projectId}`);
 
 // --- 3. audio into the pool ----------------------------------------------
 

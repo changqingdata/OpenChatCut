@@ -45,6 +45,31 @@ node scripts/step.mjs status latest --wait 90000
 
 要亲眼看片，只有一个办法：让用户先打开那个工程，然后你再跑 `qc` / `view_timeline_frames`——它们读的是**当前打开**的工程。
 
+### 用户说"在当前项目里"时
+
+`--name` 永远指向**一个工程名**，它不知道用户在编辑器里打开的是哪一个。所以别自己编名字——先 `read_project` 拿 `projectId`，再用 `--into`：
+
+```
+read_project                    → { projectId: "2cbebbac-…", timelines: [{ width, height, itemCount }] }
+node scripts/step.mjs run --wait 60000 -- make --into 2cbebbac-… --audio … --srt … --brief 复利 --generate
+```
+
+`--into` 收工程 id 也收工程名。`read_project` 只给 id，所以直接用 id 最省事。
+
+`--into` 与 `--name` 的区别：
+
+| | `--name 名字` | `--into 名字或id` |
+|---|---|---|
+| 工程不存在 | 新建 | **报错**（要新建就用 `--name`） |
+| 工程已有片段 | 直接覆盖（重跑幂等） | **报错**，除非加 `--replace-project` |
+| 画布尺寸 | 用 `--size` | **用工程自己的**，`--size` 被忽略 |
+
+画布尺寸这条最要紧：分镜是按尺寸算锚点和字幕安全区的，9:16 的分镜写进 16:9 的工程，画面全错。
+
+`--into` 报"已有 N 个片段"时，**先问用户要不要清空重做**，得到同意再加 `--replace-project`。别自己加。
+
+写完之后**不用切工程**——那就是用户正开着的工程。但要提醒他 **Ctrl+R 刷新**：编辑器把文档放在内存里，不监听磁盘，不刷新时间线还是空的。
+
 ## 2. 分步主线（需要精细控制时）
 
 工作目录固定是 `production/work/<工程名>/`，下面用 `w/` 代指。
