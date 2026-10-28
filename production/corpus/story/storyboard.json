@@ -1,0 +1,355 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "从夜班到自己拍视频",
+    "runId": "factory-night-to-filming",
+    "aspect": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "language": "zh"
+  },
+  "rhythm": {
+    "avgShotSec": 3.1,
+    "maxShotSec": 6,
+    "grammarChangeEverySec": 6,
+    "maxRepeatRecipe": 2,
+    "hookMaxSec": 3.5
+  },
+  "music": {
+    "category": "城市生活"
+  },
+  "shots": [
+    {
+      "id": "S01",
+      "startFrame": 0,
+      "endFrame": 84,
+      "narration": {
+        "text": "三年前他还在工厂上夜班",
+        "startMs": 0,
+        "endMs": 2800
+      },
+      "intent": "故事的起点是一个具体的岗位：工厂夜班。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "工厂夜班",
+        "query": "factory night shift machines",
+        "confidence": "medium",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "夜班",
+          "label": "三年前",
+          "tail": "机器不停，人也不停",
+          "fontSize": 150,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "startFrame": 84,
+      "endFrame": 162,
+      "narration": {
+        "text": "每天下班是早上七点",
+        "startMs": 2800,
+        "endMs": 5400
+      },
+      "intent": "把作息钉死在一个数字上：七点下班。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "清晨街道",
+        "query": "empty street sunrise morning",
+        "confidence": "medium",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 7,
+          "from": 0,
+          "decimals": 0,
+          "unit": "点",
+          "label": "下班时间",
+          "note": "出车间时天已经亮",
+          "fontSize": 260,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "startFrame": 162,
+      "endFrame": 258,
+      "narration": {
+        "text": "他用手机会拍下车间里没人注意的细节",
+        "startMs": 5400,
+        "endMs": 8600
+      },
+      "intent": "转变的源头是一个很小的动作：顺手拍下没人看的地方。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "手机拍摄",
+        "query": "hand holding phone filming machine closeup",
+        "confidence": "high",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "annotation",
+        "params": {
+          "x": 0.5,
+          "y": 0.45,
+          "size": 0.32,
+          "shape": "circle",
+          "label": "没人注意的细节",
+          "fontSize": 34,
+          "strokeWidth": 6
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S04",
+      "startFrame": 258,
+      "endFrame": 348,
+      "narration": {
+        "text": "拍了两年 存了四千多条",
+        "startMs": 8600,
+        "endMs": 11600
+      },
+      "intent": "这不是灵感，是两年攒下的四千多条存货。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 4000,
+          "from": 0,
+          "decimals": 0,
+          "unit": "条",
+          "label": "两年素材",
+          "note": "没挑过，全存着",
+          "fontSize": 260,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S05",
+      "startFrame": 348,
+      "endFrame": 444,
+      "narration": {
+        "text": "有一天他把其中一条剪成了三十秒",
+        "startMs": 11600,
+        "endMs": 14800
+      },
+      "intent": "从四千条到一条，中间只做了一件事：剪到三十秒。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "flow-chain",
+        "params": {
+          "steps": [
+            "四千条素材",
+            "挑出一条",
+            "剪成30秒"
+          ],
+          "labels": [
+            "存量",
+            "动作",
+            "成片"
+          ],
+          "title": "一条的诞生",
+          "fontSize": 46
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "startFrame": 444,
+      "endFrame": 528,
+      "narration": {
+        "text": "那条视频有一百万人看过",
+        "startMs": 14800,
+        "endMs": 17600
+      },
+      "intent": "全片唯一的高点，只给两个字：百万。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "big-word-fill",
+        "params": {
+          "text": "百万",
+          "caption": "一条三十秒的视频",
+          "fontSize": 720,
+          "tracking": -8,
+          "captionOffset": 300
+        },
+        "layout": {
+          "anchor": "full",
+          "widthRatio": 1
+        }
+      },
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      }
+    },
+    {
+      "id": "S07",
+      "startFrame": 528,
+      "endFrame": 600,
+      "narration": {
+        "text": "后来他辞了工作",
+        "startMs": 17600,
+        "endMs": 20000
+      },
+      "intent": "辞职是第三步，不是第一步。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "timeline-dots",
+        "params": {
+          "items": [
+            "夜班",
+            "随手拍",
+            "辞职"
+          ],
+          "activeIndex": 2,
+          "title": "顺序是这样的",
+          "fontSize": 40,
+          "trackColor": "#2A2A2D"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S08",
+      "startFrame": 600,
+      "endFrame": 684,
+      "narration": {
+        "text": "现在他拍的就是那些细节",
+        "startMs": 20000,
+        "endMs": 22800
+      },
+      "intent": "题材没换，还是车间里那些没人看的地方。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "拍摄细节",
+        "query": "hand filming machine detail workshop",
+        "confidence": "high",
+        "essential": false,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "细节",
+          "accentText": "没换",
+          "label": "现在",
+          "tail": "镜头对着的还是车间",
+          "fontSize": 150,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S09",
+      "startFrame": 684,
+      "endFrame": 840,
+      "narration": {
+        "text": "工厂还是那个工厂，只是看它的人变了",
+        "startMs": 22800,
+        "endMs": 28000
+      },
+      "intent": "变的是看的人，不是工厂。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "工厂外观",
+        "query": "factory building exterior dusk",
+        "confidence": "high",
+        "essential": true,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "quote-card",
+        "params": {
+          "text": "工厂还是那个工厂，只是看它的人变了。",
+          "fontSize": 62
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      },
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      }
+    }
+  ]
+}

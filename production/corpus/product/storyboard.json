@@ -1,0 +1,334 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "三个问题，一台机器答完",
+    "runId": "coffee-machine-3-points",
+    "aspect": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "language": "zh"
+  },
+  "rhythm": {
+    "avgShotSec": 3.35,
+    "maxShotSec": 6,
+    "grammarChangeEverySec": 6,
+    "maxRepeatRecipe": 2,
+    "hookMaxSec": 3.5
+  },
+  "music": {
+    "category": "城市生活"
+  },
+  "shots": [
+    {
+      "id": "S01",
+      "startFrame": 0,
+      "endFrame": 84,
+      "narration": {
+        "text": "这是我们今年做的一台咖啡机",
+        "startMs": 0,
+        "endMs": 2800
+      },
+      "intent": "这台机器是我们自己做的，不是贴牌。",
+      "background": "#12100E",
+      "underlay": {
+        "subject": "咖啡机",
+        "query": "espresso machine on kitchen counter",
+        "confidence": "high",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "咖啡机",
+          "accentText": "自研",
+          "label": "2024 新品",
+          "tail": "今年我们自己做的",
+          "fontSize": 132,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "startFrame": 84,
+      "endFrame": 150,
+      "narration": {
+        "text": "它解决三个问题",
+        "startMs": 2800,
+        "endMs": 5000
+      },
+      "intent": "这台机器只回答三个具体问题：磨豆、水温、清洗。",
+      "background": "#101012",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "icon-row",
+        "params": {
+          "items": [
+            "磨豆",
+            "水温",
+            "清洗"
+          ],
+          "icons": [
+            "star",
+            "clock",
+            "check"
+          ],
+          "title": "三个问题",
+          "fontSize": 50,
+          "iconSize": 132
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "startFrame": 150,
+      "endFrame": 222,
+      "narration": {
+        "text": "第一是磨豆不飞粉",
+        "startMs": 5000,
+        "endMs": 7400
+      },
+      "intent": "第一点落在磨豆这一环：出粉不四处乱飞。",
+      "background": "#0F0D0B",
+      "underlay": {
+        "subject": "磨豆机",
+        "query": "coffee grinder closeup grounds",
+        "confidence": "high",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "annotation",
+        "params": {
+          "x": 0.5,
+          "y": 0.45,
+          "size": 0.46,
+          "shape": "circle",
+          "label": "零飞粉",
+          "fontSize": 34,
+          "strokeWidth": 6
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S04",
+      "startFrame": 222,
+      "endFrame": 312,
+      "narration": {
+        "text": "第二是水温稳定在九十二度",
+        "startMs": 7400,
+        "endMs": 10400
+      },
+      "intent": "第二点是一个数字：92 度，而且全程不飘。",
+      "background": "#0D0C0B",
+      "underlay": {
+        "subject": "水温表",
+        "query": "thermometer steam espresso closeup",
+        "confidence": "medium",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 92,
+          "from": 0,
+          "decimals": 0,
+          "unit": "°C",
+          "label": "水温",
+          "note": "全程恒定不飘",
+          "fontSize": 260,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S05",
+      "startFrame": 312,
+      "endFrame": 396,
+      "narration": {
+        "text": "第三是清洗只要三十秒",
+        "startMs": 10400,
+        "endMs": 13200
+      },
+      "intent": "第三点把清洗压缩到 30 秒，用条形长度直接感知它有多短。",
+      "background": "#0C0C0D",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "progress-bar",
+        "params": {
+          "label": "清洗耗时",
+          "value": 30,
+          "unit": "秒",
+          "decimals": 0,
+          "note": "全流程三十秒",
+          "thickness": 20,
+          "trackColor": "#232326"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "startFrame": 396,
+      "endFrame": 564,
+      "narration": {
+        "text": "三个问题都不新鲜，但很少有一台机器同时做到",
+        "startMs": 13200,
+        "endMs": 18800
+      },
+      "intent": "难点不在单点技术，而在三件事同时成立——这才是门槛。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "flow-chain",
+        "params": {
+          "steps": [
+            "只改单点",
+            "结构妥协",
+            "难以兼顾"
+          ],
+          "labels": [
+            "原因",
+            "机制",
+            "结果"
+          ],
+          "title": "为什么少见",
+          "fontSize": 52
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      },
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      }
+    },
+    {
+      "id": "S07",
+      "startFrame": 564,
+      "endFrame": 648,
+      "narration": {
+        "text": "我们把结构重新做了一遍",
+        "startMs": 18800,
+        "endMs": 21600
+      },
+      "intent": "区别不是加零件，而是把机器内部结构整个重做。",
+      "background": "#100E0C",
+      "underlay": {
+        "subject": "拆开的机器",
+        "query": "coffee machine exploded parts components",
+        "confidence": "medium",
+        "essential": false,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "compare-stack",
+        "params": {
+          "topLabel": "旧思路",
+          "topText": "零件往上堆",
+          "bottomLabel": "我们",
+          "bottomText": "结构重做一遍",
+          "topColor": "#8A857C",
+          "bottomColor": "#F2EFE9",
+          "fontSize": 62,
+          "gap": 34,
+          "dividerWidth": 120
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.85
+        }
+      }
+    },
+    {
+      "id": "S08",
+      "startFrame": 648,
+      "endFrame": 804,
+      "narration": {
+        "text": "售价一千二百九十九，今天下单送一年咖啡豆",
+        "startMs": 21600,
+        "endMs": 26800
+      },
+      "intent": "价格落在 1299，加一勺即时利益：今天下单送一年咖啡豆。",
+      "background": "#100E0C",
+      "underlay": {
+        "subject": "-",
+        "query": "-",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 1299,
+          "from": 0,
+          "decimals": 0,
+          "prefix": "¥",
+          "label": "首发价",
+          "note": "下单送一年咖啡豆",
+          "fontSize": 240,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      },
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      }
+    }
+  ]
+}

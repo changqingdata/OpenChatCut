@@ -1,0 +1,354 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "推荐渠道的留存与付费价值",
+    "runId": "referral-channel-value",
+    "aspect": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "language": "zh"
+  },
+  "rhythm": {
+    "avgShotSec": 3,
+    "maxShotSec": 5.2,
+    "grammarChangeEverySec": 6,
+    "maxRepeatRecipe": 2,
+    "hookMaxSec": 3.5
+  },
+  "music": {
+    "category": "城市生活"
+  },
+  "shots": [
+    {
+      "id": "S01",
+      "startFrame": 0,
+      "endFrame": 84,
+      "narration": {
+        "text": "我们把两批用户放在一起看",
+        "startMs": 0,
+        "endMs": 2800
+      },
+      "intent": "先让观众接受这是一组对照实验，画面里真的有两拨人。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "两批用户",
+        "query": "two groups of people meeting",
+        "confidence": "medium",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "icon-row",
+        "params": {
+          "items": [
+            "自然注册",
+            "朋友推荐"
+          ],
+          "icons": [
+            "people",
+            "star"
+          ],
+          "title": "两批用户",
+          "fontSize": 50,
+          "iconSize": 120
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.88
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "startFrame": 84,
+      "endFrame": 156,
+      "narration": {
+        "text": "第一批是自然注册",
+        "startMs": 2800,
+        "endMs": 5200
+      },
+      "intent": "记住对照组来源：自己找上门注册的那批人。",
+      "background": "#0D0C0B",
+      "underlay": {
+        "subject": "注册页面",
+        "query": "signup form on smartphone",
+        "confidence": "medium",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "自然注册",
+          "label": "第一批",
+          "tail": "自己找上门来的用户",
+          "fontSize": 132,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.88
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "startFrame": 156,
+      "endFrame": 240,
+      "narration": {
+        "text": "第二批是朋友推荐进来的",
+        "startMs": 5200,
+        "endMs": 8000
+      },
+      "intent": "记住实验组是熟人带进来的用户，来源完全不同。",
+      "background": "#0B0C0E",
+      "underlay": {
+        "subject": "朋友",
+        "query": "two friends talking at cafe",
+        "confidence": "high",
+        "essential": true,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "朋友推荐",
+          "accentText": "进来",
+          "label": "第二批",
+          "fontSize": 124,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "ml",
+          "widthRatio": 0.86
+        }
+      }
+    },
+    {
+      "id": "S04",
+      "startFrame": 240,
+      "endFrame": 330,
+      "narration": {
+        "text": "三十天留存差了将近一倍",
+        "startMs": 8000,
+        "endMs": 11000
+      },
+      "intent": "记住留存差距接近一倍，是量级差别不是零头。",
+      "background": "#0C0B0A",
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      },
+      "underlay": {
+        "subject": "日历",
+        "query": "calendar pages flipping",
+        "confidence": "high",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 1.9,
+          "from": 0,
+          "decimals": 1,
+          "unit": "×",
+          "label": "30天留存倍数",
+          "note": "推荐组是自然组近两倍",
+          "fontSize": 260,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.88
+        }
+      }
+    },
+    {
+      "id": "S05",
+      "startFrame": 330,
+      "endFrame": 414,
+      "narration": {
+        "text": "自然注册是百分之十八",
+        "startMs": 11000,
+        "endMs": 13800
+      },
+      "intent": "把自然注册的 30 天留存钉死在 18%。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "dark abstract texture",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "progress-bar",
+        "params": {
+          "label": "自然注册 30天留存",
+          "value": 18,
+          "unit": "%",
+          "decimals": 0,
+          "note": "对照组基线",
+          "thickness": 18
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "startFrame": 414,
+      "endFrame": 504,
+      "narration": {
+        "text": "推荐进来的是百分之三十四",
+        "startMs": 13800,
+        "endMs": 16800
+      },
+      "intent": "两根条一比，推荐组的 34% 明显高出一截。",
+      "background": "#0A0A0C",
+      "underlay": {
+        "subject": "-",
+        "query": "dark abstract texture",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "bar-compare",
+        "params": {
+          "aLabel": "自然注册",
+          "aValue": 18,
+          "bLabel": "朋友推荐",
+          "bValue": 34,
+          "unit": "%",
+          "title": "30天留存",
+          "aColor": "#8A857C",
+          "bColor": "#E8B04B"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S07",
+      "startFrame": 504,
+      "endFrame": 582,
+      "narration": {
+        "text": "付费转化差得更多",
+        "startMs": 16800,
+        "endMs": 19400
+      },
+      "intent": "把注意力转到钱上：第二个回合的差距更大。",
+      "background": "#0C0B0D",
+      "underlay": {
+        "subject": "手机支付",
+        "query": "mobile payment on phone screen",
+        "confidence": "medium",
+        "essential": false,
+        "selected": true
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "keyword-punch",
+        "params": {
+          "text": "付费转化",
+          "accentText": "更狠",
+          "label": "第二回合",
+          "fontSize": 120,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "tc",
+          "widthRatio": 0.88
+        }
+      }
+    },
+    {
+      "id": "S08",
+      "startFrame": 582,
+      "endFrame": 660,
+      "narration": {
+        "text": "一个是百分之二点一",
+        "startMs": 19400,
+        "endMs": 22000
+      },
+      "intent": "记住自然注册组付费转化只有 2.1%。",
+      "background": "#0B0B0C",
+      "underlay": {
+        "subject": "-",
+        "query": "dark abstract texture",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "number-count",
+        "params": {
+          "value": 2.1,
+          "from": 0,
+          "decimals": 1,
+          "unit": "%",
+          "label": "自然注册付费",
+          "note": "一百个人里两个",
+          "fontSize": 280,
+          "align": "center"
+        },
+        "layout": {
+          "anchor": "mc",
+          "widthRatio": 0.9
+        }
+      }
+    },
+    {
+      "id": "S09",
+      "startFrame": 660,
+      "endFrame": 816,
+      "narration": {
+        "text": "一个是百分之五点七，推荐带来的用户值三倍",
+        "startMs": 22000,
+        "endMs": 27200
+      },
+      "intent": "结论落点：推荐来的用户，价值是自然用户的整整三倍。",
+      "background": "#08080A",
+      "transitionIn": {
+        "type": "fade",
+        "durationInFrames": 12
+      },
+      "underlay": {
+        "subject": "-",
+        "query": "dark abstract texture",
+        "confidence": "low",
+        "essential": false,
+        "selected": false
+      },
+      "visual": {
+        "kind": "mg",
+        "recipe": "big-word-fill",
+        "params": {
+          "text": "三倍",
+          "caption": "5.7% vs 2.1%",
+          "fontSize": 720,
+          "tracking": -6,
+          "captionOffset": 260
+        },
+        "layout": {
+          "anchor": "full",
+          "widthRatio": 1
+        }
+      }
+    }
+  ]
+}

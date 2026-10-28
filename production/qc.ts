@@ -120,6 +120,36 @@ function hasFootage(shot: Shot): boolean {
   return Boolean(shot.underlay?.query) && shot.underlay?.selected !== false;
 }
 
+/** String params a recipe might carry. Colours and fonts are not copy. */
+function copyStrings(params: Record<string, unknown> | undefined): string[] {
+  const out: string[] = [];
+  for (const value of Object.values(params ?? {})) {
+    if (typeof value !== 'string') continue;
+    if (value.startsWith('#') || value.includes('sans') || value.includes('Smiley')) continue;
+    if (value.length < 2) continue;
+    out.push(value);
+  }
+  return out;
+}
+
+/** Longest shared run of characters — short strings, so the simple table is fine. */
+function longestCommonRun(a: string, b: string): number {
+  if (!a || !b) return 0;
+  let best = 0;
+  let previous = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = new Array<number>(b.length + 1).fill(0);
+    for (let j = 1; j <= b.length; j += 1) {
+      if (a[i - 1] === b[j - 1]) {
+        current[j] = previous[j - 1]! + 1;
+        if (current[j]! > best) best = current[j]!;
+      }
+    }
+    previous = current;
+  }
+  return best;
+}
+
 /**
  * What the viewer actually sees as "a layout".
  *
@@ -220,6 +250,17 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
       severity: 'note',
       shotIds: [],
       message: `${shots.length} shots, every cut hard — a fade at section changes gives the eye somewhere to rest`,
+    });
+  }
+  // The opposite failure, and the more common one: a fade on every cut makes
+  // the video a slideshow. Two of six storyboards had exactly that, because the
+  // output shape showed `transitionIn` on the example shot.
+  if (transitions > 3 || (shots.length > 0 && transitions / shots.length > 0.4)) {
+    findings.push({
+      code: 'transition-overuse',
+      severity: 'warn',
+      shotIds: [],
+      message: `${transitions} of ${shots.length} cuts fade — transitions belong at section changes, not on every shot`,
     });
   }
 
@@ -389,6 +430,28 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
       severity: 'warn',
       shotIds: offCentre.map((shot) => shot.id),
       message: `${offCentre.length} card(s) hang left or right on an empty background at widthRatio < 0.7 — centre them ("mc") or widen them`,
+    });
+  }
+
+  // The card and the burned-in caption are two channels showing the same
+  // sentence: the viewer reads it twice at different speeds and the shot feels
+  // like a mistake. A keyword card ("时间") is the intended overlap, so this
+  // only fires on a long shared run.
+  const echoes = shots.filter((shot) => {
+    const narration = String(shot.narration?.text ?? '');
+    const visual = shot.visual;
+    if (!narration || visual?.kind !== 'mg') return false;
+    return copyStrings(visual.params).some((text) => {
+      const shared = longestCommonRun(text, narration);
+      return shared >= 6 && shared / Math.min(text.length, narration.length) >= 0.6;
+    });
+  });
+  if (echoes.length) {
+    findings.push({
+      code: 'text-echoes-caption',
+      severity: 'note',
+      shotIds: echoes.map((shot) => shot.id),
+      message: `${echoes.length} card(s) repeat most of the line being spoken — the card should add a keyword, not read the subtitle again`,
     });
   }
 

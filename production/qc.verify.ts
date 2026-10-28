@@ -32,6 +32,10 @@ interface ShotSpec {
   ratio?: number;
   /** Frames of nothing before this shot. */
   gapBefore?: number;
+  /** What is being said under this shot — the caption's text. */
+  narration?: string;
+  /** Fade this shot in, as a section change. */
+  fade?: boolean;
 }
 
 function shot(index: number, startFrame: number, spec: ShotSpec = {}): Shot {
@@ -43,7 +47,8 @@ function shot(index: number, startFrame: number, spec: ShotSpec = {}): Shot {
     id: `S${String(index + 1).padStart(2, '0')}`,
     startFrame,
     endFrame: startFrame + frames,
-    narration: { text: '', startMs: startFrame * 33, endMs: (startFrame + frames) * 33 },
+    narration: { text: spec.narration ?? '', startMs: startFrame * 33, endMs: (startFrame + frames) * 33 },
+    ...(spec.fade ? { transitionIn: { type: 'fade' as const, durationInFrames: 12 } } : {}),
     intent: 'x',
     ...(footage
       ? {
@@ -293,6 +298,37 @@ const withFade = board(Array.from({ length: 10 }, (_, i) => ({ recipe: `r${i}`, 
 withFade.shots[4] = { ...withFade.shots[4]!, transitionIn: { type: 'fade', durationInFrames: 12 } };
 assert.ok(!codes(withFade).includes('no-transition'), 'one fade clears the note');
 assert.equal(runQc(withFade).stats.transitions, 1, 'transitions are counted');
+
+// A fade on every cut is the other failure, and the one that actually shipped:
+// two of six storyboards had one, because the output shape showed the field on
+// the example shot and the model copied the shape.
+const allFades = board(Array.from({ length: 9 }, (_, i) => ({ recipe: `r${i}`, seconds: 2 + (i % 3), fade: true })));
+assert.ok(codes(allFades).includes('transition-overuse'), 'a fade on every cut is flagged');
+const threeFades = board(Array.from({ length: 9 }, (_, i) => ({ recipe: `r${i}`, seconds: 2 + (i % 3), fade: i < 3 })));
+assert.ok(!codes(threeFades).includes('transition-overuse'), 'three fades in nine shots is fine');
+
+// --- card echoes the caption ----------------------------------------------
+
+// A quote card that repeats the spoken line makes the viewer read the same
+// sentence twice at two speeds. A keyword card is the intended overlap.
+const echoing = board([
+  {
+    recipe: 'quote-card',
+    params: { text: '重要的不是一次做多少，而是能不能坚持去做' },
+    narration: '重要的不是一次做多少，而是能不能坚持去做',
+  },
+  { recipe: 'number-count' },
+  { recipe: 'list-reveal' },
+  { recipe: 'compare-stack' },
+]);
+assert.ok(codes(echoing).includes('text-echoes-caption'), 'a card that repeats the line is noted');
+const keyword = board([
+  { recipe: 'keyword-punch', params: { text: '时间' }, narration: '时间才是真正的燃料' },
+  { recipe: 'number-count' },
+  { recipe: 'list-reveal' },
+  { recipe: 'compare-stack' },
+]);
+assert.ok(!codes(keyword).includes('text-echoes-caption'), 'a two-character keyword is not an echo');
 
 // --- formatting -----------------------------------------------------------
 

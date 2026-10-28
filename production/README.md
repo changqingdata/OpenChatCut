@@ -99,6 +99,9 @@ cannot be reproduced cannot be trusted.
 | `footage-duplicate-query` | note | the same search used twice |
 | `anchor-under-captions` | note | a card asks for a bottom anchor |
 | `text-near-limit` | note | a long text field is within 15% of its limit |
+| `transition-overuse` | warn | more than 3 cuts fade, or over 40% of them |
+| `text-echoes-caption` | note | a card repeats most of the line being spoken |
+| `footage-scarce` | warn | under 20% of a 6+ shot video carries footage |
 
 Severity is a claim about consequence: `error` means the video is broken, `warn`
 means it will look wrong, `note` means worth knowing.
@@ -115,6 +118,43 @@ consecutive repeats, and ten cards anchored under the captions.
 ```
 occ qc --storyboard sb.json [--strict] [--json]
 ```
+
+## Content scorecard
+
+QC answers "is this cut broken". It cannot answer "is this version better than
+the last one" — that needs numbers that move, measured over more than one brief.
+
+```
+node production/corpus/run.mjs           # score what is already generated
+node production/corpus/run.mjs --regen   # call the model first, then score
+```
+
+`production/corpus/` holds four hand-written SRTs, each a different sentence
+shape: numbers climbing, three parallel selling points, two quantities compared,
+and a story with a cause and an effect. No audio — `storyboard --generate` only
+needs subtitles and a brief, so a full content iteration is about three minutes
+rather than a render.
+
+The fourth one matters most. `flow-chain`, `timeline-dots`, `icon-row` and
+`annotation` had never been chosen in six storyboards, and it was tempting to
+conclude they were badly designed. They were never *reachable*: every brief up
+to then was the same compound-interest explainer. One narrative brief and one
+product brief pulled four of them out immediately.
+
+`production/score.mjs` prints the columns:
+
+| Column | Why it is there |
+|---|---|
+| `rec` | distinct recipes — a low number means the video has one visual idea |
+| `anchor` | distinct anchors — same idea in the same place every time |
+| `dur μ/span` | mean and spread — five shots at 3.5s is a metronome |
+| `trans` | fades over shots — a fade on every cut is a slideshow |
+| `foot` / `use` | shots asking for footage, and shots with a subject the pipeline can actually use |
+| `dup` | cards repeating the line being spoken |
+| `top` | the dominant recipe and its share |
+
+No composite score, on purpose. One number invites optimising the number; the
+columns are the argument.
 
 ## Captions
 

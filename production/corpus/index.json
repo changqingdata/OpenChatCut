@@ -1,0 +1,22 @@
+[
+  {
+    "id": "compound",
+    "brief": "讲复利的力量：用通俗例子说明每天 1% 的差距，最后给行动建议",
+    "why": "数字递进。考的是会不会全用数字类配方（number-count / bar-compare / line-chart / progress-bar）。"
+  },
+  {
+    "id": "product",
+    "brief": "介绍这台咖啡机的三个卖点，讲清楚它和别家的区别，结尾带价格",
+    "why": "并列要点。考的是并列结构用得对不对（list-reveal / icon-row / compare-stack / stack-share）。"
+  },
+  {
+    "id": "data",
+    "brief": "用两组用户的留存和付费数据说明推荐渠道的价值",
+    "why": "两个量对比。考的是对比类配方会不会反复用同一个。"
+  },
+  {
+    "id": "story",
+    "brief": "讲一个人从工厂夜班到自己拍视频的转变，不要煽情，讲事实",
+    "why": "起因→经过→结果。这是 flow-chain / timeline-dots / chapter-card 唯一的用武之地，而这几个配方在历史分镜里一次都没出现过。"
+  }
+]

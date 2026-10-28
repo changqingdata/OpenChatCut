@@ -80,7 +80,6 @@ function outputShape(input: PromptInput): string {
       "narration": { "text": "string", "startMs": 0, "endMs": 3500 },
       "intent": "一句话：观众这一镜该记住什么",
       "background": "#0B0B0C",
-      "transitionIn": { "type": "fade", "durationInFrames": 12 } // 只在段落转换处，全片 1-3 次；其余镜头删掉这个字段
       "underlay": { "subject": "这句话里的具体名词", "query": "english search words", "confidence": "high|medium|low", "essential": false },
       "visual": {
         "kind": "mg",
@@ -208,8 +207,9 @@ function rulesBlock(fps: number, aspect: string): string {
     **同一配方再次使用时，换锚点和配色**：同一个 keyword-punch 放在 "tc"、"ml"、"mc"
     在观众眼里是三种版式。换锚点比换配方便宜，而且不会稀释视觉语言。
 12. 布局，按底座分两种：
-    - **整屏配方**（chapter-card、big-word-fill）：anchor 写 "full"。程序会把它们铺满
-      整帧，widthRatio 不起作用。这两个配方自带背景，一条视频里 big-word-fill 最多一次。
+    - **整屏配方**（chapter-card、big-word-fill、annotation）：anchor 写 "full"。程序会把它们
+      铺满整帧，widthRatio 不起作用。annotation 的 x/y/size 是**整帧的百分比**，不是卡片内的。
+      这三个自带背景（annotation 是透明的），一条视频里 big-word-fill 最多一次。
     - **纯色卡片**（这一镜没有素材）：锚点只用 "mc"。卡片是画面里唯一的东西，
       靠左或靠右会把另外半屏留空，看起来像没做完；要左右构图就把 widthRatio 提到 0.85 以上。
       也不要用 tc —— 顶部对齐会让中间 70% 全空。
