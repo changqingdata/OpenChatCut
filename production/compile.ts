@@ -35,6 +35,16 @@ export interface Recipe {
    * rather than from the box they were designed at.
    */
   fullFrame?: boolean;
+  /**
+   * Design box to use when the canvas is wider than tall.
+   *
+   * A recipe's box is its design unit: the layout is authored at that size and
+   * scaled onto the canvas. A vertical stack authored at 960×820 can only ever
+   * be a column — on 1920×1080 the height cap shrinks it to ~950px and half the
+   * frame stays empty. Giving it a wide box and a wide arrangement inside is the
+   * difference between "a portrait card on a landscape screen" and a layout.
+   */
+  landscapeBox?: { width: number; height: number };
   defaultProps?: Record<string, unknown>;
 }
 
@@ -293,6 +303,13 @@ function buildItem(
     // its design box is portrait, and any anchor+widthRatio path would squeeze
     // that portrait box into the middle of a landscape frame.
     const full = recipe.fullFrame === true;
+    // A recipe with a wide box also has a wide arrangement inside. The box is
+    // what tells it which one to draw, so the flag has to travel with the box.
+    const wideBox = !full && width > height && recipe.landscapeBox ? recipe.landscapeBox : null;
+    const box = wideBox ?? recipe.box;
+    const laidOut = wideBox
+      ? resolveRect(cardLayout(visual.layout, onFootage), width, height, box.width, box.height, layoutOptions)
+      : rect;
     return {
       ...base,
       kind: 'motion-graphic',
@@ -303,13 +320,14 @@ function buildItem(
       props: {
         ...recipe.defaultProps,
         ...visual.params,
+        ...(wideBox ? { landscape: true } : {}),
         ...(onFootage ? { muted: OVER_FOOTAGE_MUTED } : {}),
       },
-      width: full ? width : recipe.box.width,
-      height: full ? height : recipe.box.height,
+      width: full ? width : box.width,
+      height: full ? height : box.height,
       transform: full
         ? { scale: 1, x: 0, y: 0 }
-        : transformFromRect(rect, width, height, recipe.box),
+        : transformFromRect(laidOut, width, height, box),
     };
   }
 

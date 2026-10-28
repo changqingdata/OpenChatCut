@@ -309,6 +309,51 @@ move its recipe to a different track.
 absent — footage alone is a legitimate transition shot, and graphics alone is the
 card the first eight recipes were built for.
 
+### Recipes have two design boxes
+
+A recipe's box is its design unit: the layout is authored at that size and the
+compiler scales the whole box onto the canvas. That works while the box and the
+canvas have roughly the same shape. It stops working the moment they don't — a
+vertical stack authored at 960×820 gets height-capped to ~950px on 16:9, so it
+sits as a column with half the frame empty, and no amount of scaling fixes the
+arrangement inside it.
+
+So a recipe can declare a second box:
+
+```json
+"box": { "width": 960, "height": 820 },
+"landscapeBox": { "width": 1500, "height": 560 }
+```
+
+The compiler picks by canvas orientation and passes `props.landscape = true` so
+the component knows which arrangement to draw. Four recipes use it — the ones
+whose portrait form is a vertical stack:
+
+| recipe | portrait | landscape |
+|---|---|---|
+| `compare-stack` | top block over bottom, horizontal rule | two columns, vertical rule |
+| `list-reveal` | numbered rows | numbered columns |
+| `number-count` | label / number / note, centred | number left, words beside it |
+| `quote-card` | left-aligned, wraps | centred, fitted to two lines |
+
+`fullFrame` is the other end of the same idea: `big-word-fill`, `chapter-card`
+and `annotation` own the whole picture, so they get the canvas itself and lay
+themselves out from `item.width`.
+
+The rest are already horizontal at any aspect (`bar-compare`, `line-chart`,
+`progress-bar`, `flow-chain`, `icon-row`, `stack-share`, `timeline-dots`) or
+compose fine centred (`keyword-punch`).
+
+To see all of them at once:
+
+```bash
+node production/recipes/gallery.mjs 1920x1080 > /tmp/gallery.json
+```
+
+It emits a storyboard with one shot per recipe; compile it into a scratch
+project and render. `occ still` is 480px wide on purpose (the agent's vision
+budget), so a real render is the honest review copy.
+
 ## The layout maths was confirmed by rendering `bl` and `tr` placements and checking
 the box edges land at the expected pixel positions. Two corrections came out of
 that pass:

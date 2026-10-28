@@ -151,10 +151,9 @@ function rulesBlock(fps: number, aspect: string): string {
   const landscape = /^(16:9|21:9|4:3|1:1)$/.test(aspect);
   const wideNote = landscape
     ? `
-18. **这是横屏**。竖向堆叠的配方（compare-stack、list-reveal、timeline-dots、quote-card）
-    在 16:9 里会缩成中间一根窄柱，两边全空。优先用横向展开的：bar-compare、line-chart、
-    progress-bar、flow-chain、icon-row、stack-share、keyword-punch。竖向配方一条视频里
-    最多用一次。`
+18. **这是横屏**。横向展开的配方最稳：bar-compare、line-chart、progress-bar、flow-chain、
+    icon-row、stack-share。compare-stack、list-reveal、number-count、quote-card 有横屏版式，
+    也可以用。别连续三个镜头都是居中卡片——横屏的空旷比竖屏更显眼。`
     : '';
   return `# 规则
 1. 镜头必须覆盖整段字幕：第一个从第 0 帧开始，最后一个到总帧数结束，中间不留空洞、不重叠。

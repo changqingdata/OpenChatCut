@@ -35,6 +35,8 @@ export interface RecipeSchema {
    * anchor to get wrong and no portrait box to be squeezed into.
    */
   fullFrame?: boolean;
+  /** Design box for a landscape canvas; the component lays itself out for it. */
+  landscapeBox?: { width: number; height: number };
   /**
    * Optional sound effect this recipe earns. Placement is decided by the
    * pipeline, not here — a recipe only says what would suit it.
@@ -128,6 +130,7 @@ export async function loadRecipe(dir: string): Promise<{ recipe: Recipe; schema:
     code,
     box: schema.box,
     ...(schema.fullFrame ? { fullFrame: true } : {}),
+    ...(schema.landscapeBox ? { landscapeBox: schema.landscapeBox } : {}),
     defaultProps: schemaDefaults(schema),
   };
   return { recipe, schema };

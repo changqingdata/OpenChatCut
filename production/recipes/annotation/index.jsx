@@ -15,7 +15,9 @@ const Component = ({ item }) => {
   const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
   const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
-  const size = width * Math.min(1, Math.max(0.12, num(p.size, 0.4)));
+  // Short side, not width: a ring sized from the width covers 71% of a 16:9
+  // frame's height at the same fraction, which is never what "circle this" means.
+  const size = Math.min(width, height) * Math.min(1, Math.max(0.12, num(p.size, 0.4)));
   const cx = width * clamp01(num(p.x, 0.5));
   const cy = height * clamp01(num(p.y, 0.5));
   const stroke = p.strokeWidth ?? 6;

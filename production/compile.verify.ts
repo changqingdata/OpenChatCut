@@ -149,6 +149,13 @@ const recipes: RecipeRegistry = new Map([
     box: { width: 720, height: 420 },
     defaultProps: { unit: '%', accent: '#ff5a1f' },
   }],
+  ['two-way', {
+    id: 'two-way',
+    code: 'const Component = ({ item }) => <div>{item.props.label}</div>;',
+    box: { width: 960, height: 820 },
+    landscapeBox: { width: 1500, height: 560 },
+    defaultProps: { label: 'x' },
+  }],
 ]);
 
 const withRecipe = board();
@@ -168,8 +175,43 @@ assert.equal(mg.track, 'V3', 'anchored visual lands on the graphics track');
 assert.equal(mg.width, 720, 'natural box width kept on the item');
 assert.equal(mg.transform?.scale, 0.9, 'placement scale derived from the rect and the fitted box');
 
-const missingRecipe = compile(withRecipe);
-assert.equal(missingRecipe.timeline.items.length, 0, 'unknown recipe produces no item');
+// --- landscape boxes ------------------------------------------------------
+
+// A recipe authored as a vertical stack declares a second, wide design box.
+// On a 16:9 canvas the compiler must use it: with the portrait box the height
+// cap shrinks the card to half the frame width and the arrangement never
+// changes. The component is told which box it got, because the box is the only
+// thing that distinguishes the two layouts.
+const boxBoard = board();
+boxBoard.meta = { ...META, aspect: '16:9', width: 1920, height: 1080 };
+boxBoard.shots[0]!.visual = {
+  kind: 'mg',
+  recipe: 'two-way',
+  params: {},
+  layout: { anchor: 'mc', widthRatio: 0.9 },
+};
+const landscapeItem = compile(boxBoard, { recipes }).timeline.items[0]!;
+assert.equal(landscapeItem.width, 1500, 'a landscape canvas uses the wide design box');
+assert.equal(landscapeItem.height, 560, 'the wide box brings its own height');
+assert.equal(landscapeItem.props?.landscape, true, 'the component is told it is laid out wide');
+// What matters is the width it actually occupies: the renderer fits the box to
+// the canvas and then applies the scale, so scale alone says nothing.
+const fitted = Math.min(1920 / landscapeItem.width!, 1080 / landscapeItem.height!);
+const onCanvas = landscapeItem.width! * fitted * (landscapeItem.transform?.scale ?? 0);
+assert.ok(onCanvas > 1920 * 0.85, 'the wide box fills the frame width instead of sitting as a column');
+
+const tallBoxBoard = board();
+tallBoxBoard.shots[0]!.visual = {
+  kind: 'mg',
+  recipe: 'two-way',
+  params: {},
+  layout: { anchor: 'mc', widthRatio: 0.9 },
+};
+const portraitItem = compile(tallBoxBoard, { recipes }).timeline.items[0]!;
+assert.equal(portraitItem.width, 960, 'a portrait canvas keeps the authored box');
+assert.equal(portraitItem.props?.landscape, undefined, 'and no wide flag is set');
+
+const missingRecipe = compile(withRecipe);assert.equal(missingRecipe.timeline.items.length, 0, 'unknown recipe produces no item');
 assert.ok(
   missingRecipe.warnings.some((w) => w.code === 'asset-missing'),
   'unknown recipe warns instead of failing silently',
