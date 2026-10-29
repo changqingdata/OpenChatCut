@@ -117,4 +117,9 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
 }
 
-process.exitCode = await run(process.argv.slice(2));
+// A command that failed *without throwing* — a check with blocking findings, a
+// revise that refused to write — sets `process.exitCode` itself. Assigning the
+// return value unconditionally would overwrite that with 0, and a caller that
+// branches on the exit code would read "ship it" from a refusal.
+const code = await run(process.argv.slice(2));
+process.exitCode = code !== 0 ? code : process.exitCode ?? 0;

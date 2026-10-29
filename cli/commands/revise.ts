@@ -164,17 +164,24 @@ export async function runReviseCommand(commandLine: CommandLine, json: boolean):
   const checked = checkStoryboard(storyboard, schemas);
   const qc = runQc(storyboard, { schemas, captions: true });
 
-  if (!checked.ok) {
+  // QC's `error` findings are "the video is broken", not "the video is ugly" —
+  // a frame gap renders as black. Structural validation alone does not catch a
+  // leading gap (removing the first shot leaves frames 0..n empty and every
+  // remaining shot still contiguous), so both gates have to pass before anything
+  // is written.
+  const blocking = qc.findings.filter((finding) => finding.severity === 'error');
+  if (!checked.ok || blocking.length) {
     // Nothing is written. A revise that half-applies is worse than one that
     // refuses: the next reader cannot tell which ops landed.
-    const payload = { ok: false, written: false, applied, errors: checked.errors, findings: qc.findings };
+    const errors = [...checked.errors, ...blocking.map((finding) => finding.message)];
+    const payload = { ok: false, written: false, applied, errors, findings: qc.findings };
     if (json) {
       printJson(payload);
       process.exitCode = 1;
       return;
     }
-    writeStdout(`rejected — nothing written (${checked.errors.length} error(s))`);
-    for (const error of checked.errors) writeStdout(`  error: ${error}`);
+    writeStdout(`rejected — nothing written (${errors.length} error(s))`);
+    for (const error of errors) writeStdout(`  error: ${error}`);
     process.exitCode = 1;
     return;
   }
