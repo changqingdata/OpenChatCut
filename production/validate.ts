@@ -83,7 +83,10 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
 
     if (underlay) {
       if (!underlay.assetId?.trim() && !underlay.query?.trim()) {
-        errors.push(`${label}: underlay needs assetId or query`);
+        // An underlay with neither is not a record of anything — the field means
+        // "the picture underneath", and a shot with no picture should not have
+        // one. Say so, because the repair loop quotes this verbatim.
+        errors.push(`${label}: underlay needs assetId or query — omit the whole field when this shot has no picture`);
       }
       if (underlay.kind && underlay.kind !== 'video' && underlay.kind !== 'image') {
         errors.push(`${label}: underlay.kind must be "video" or "image"`);

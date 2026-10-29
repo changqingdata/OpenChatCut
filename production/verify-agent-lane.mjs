@@ -108,6 +108,19 @@ check('every recipe has a reference still',
 const detail = occ(['catalog', '--recipe', 'compare-stack', '--json']);
 check('one recipe can be read in full', Object.keys(detail.json?.recipe?.params ?? {}).length > 0);
 
+// The one document a caller has to produce. Without its shape in the payload,
+// "write a storyboard" means "guess the field names and find out three steps
+// later", which is exactly what this file exists to prevent.
+const shape = catalog.json?.storyboard?.shape;
+check('catalog carries the storyboard shape',
+  Boolean(shape?.meta?.width && shape?.shots?.[0]?.visual?.recipe && shape?.shots?.[0]?.narration?.text));
+check('and the rules that fail loudly', (catalog.json?.storyboard?.rules ?? []).length >= 3,
+  `${(catalog.json?.storyboard?.rules ?? []).length} rules`);
+const portrait = occ(['catalog', '--size', '1080x1920', '--json']);
+check('the shape follows the canvas asked about',
+  portrait.json?.storyboard?.shape?.meta?.width === 1080
+  && portrait.json?.storyboard?.shape?.meta?.height === 1920);
+
 // --- 2. the lock -----------------------------------------------------------
 
 console.log('\nstoryboard lock');
@@ -150,18 +163,33 @@ check('and leaves the file untouched', statSync(locked).size === bytesBefore);
 
 if (FULL) {
   if (!existsSync(AUDIO) || !existsSync(SRT)) {
-    console.log(`\nskipped apply/still: fixture audio missing\n  ${AUDIO}`);
+    console.log(`\nskipped start/still: fixture audio missing\n  ${AUDIO}`);
   } else {
-    console.log('\napply');
-    occ(['project', 'show', PROJECT, '--json'], { expectFailure: true })
-      .code === 0 || occ(['project', 'new', PROJECT, '--size', '1920x1080', '--fps', '30']);
-    const applied = occ(['apply', PROJECT, '--storyboard', locked, '--audio', AUDIO, '--srt', SRT,
-      '--replace', '--json']);
-    check('apply writes a timeline', applied.code === 0, applied.json?.steps?.join(' | '));
-    check('with the expected lanes', applied.json?.items === 25, `${applied.json?.items} items`);
-    check('footage is materialised into this project, not inherited',
-      (applied.json?.steps ?? []).some((step) => step.startsWith('footage:')),
-      (applied.json?.steps ?? []).find((step) => step.startsWith('footage:')));
+    // `start` is the whole one-sentence path: project, storyboard, timeline and
+    // a review copy. If this works, the user's first sentence works.
+    console.log('\nstart');
+    const started = occ(['start', '--audio', AUDIO, '--srt', SRT, '--name', PROJECT,
+      '--size', '1920x1080', '--storyboard', locked, '--preview', '2', '--json']);
+    check('start creates the project and the timeline', started.code === 0, started.json?.steps?.join(' | '));
+    check('with the expected lanes', started.json?.items === 25, `${started.json?.items} items`);
+    // The invariant, not the log line: every video item must point at an asset
+    // that exists in *this* project's pool. A second run against the same project
+    // re-resolves nothing, so "did the step say resolved" is not the question.
+    const doc = occ(['project', 'show', PROJECT, '--doc', '--json']).json;
+    const timeline = (doc?.doc ?? doc)?.timelines?.find((entry) => entry.id === started.json?.timelineId)
+      ?? (doc?.doc ?? doc)?.timelines?.[0];
+    const pool = new Set(((doc?.doc ?? doc)?.assets ?? []).map((asset) => asset.id));
+    const videoItems = (timeline?.items ?? []).filter((item) => item.kind === 'video');
+    check('every clip is in this project\'s pool',
+      videoItems.length > 0 && videoItems.every((item) => pool.has(item.sourceAssetId)),
+      `${videoItems.length} video item(s)`);
+    check('and a review copy exists', (started.json?.preview ?? []).length === 2
+      && (started.json?.preview ?? []).every((entry) => existsSync(entry.path)),
+      `${(started.json?.preview ?? []).map((entry) => entry.shot).join(', ')}`);
+    check('the review copy is small enough to look at', (started.json?.preview ?? []).every((entry) => {
+      const width = jpegWidth(entry.path);
+      return width > 0 && width <= 1080;
+    }));
 
     console.log('\nstill');
     const outDir = resolve(WORK, 'stills');

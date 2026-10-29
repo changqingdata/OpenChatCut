@@ -55,7 +55,9 @@ if (args.name && args.into) {
   console.error('--name and --into are alternatives: --name 新建或复用，--into 写进已有工程\n');
   process.exit(1);
 }
-for (const required of ['audio', 'srt', 'brief']) {
+// A brief describes a video that does not exist yet. Reusing a storyboard means
+// the description already happened, so requiring one there would be busywork.
+for (const required of ['audio', 'srt', ...(args.storyboard ? [] : ['brief'])]) {
   if (!args[required]) {
     console.error(`missing --${required}\n`);
     console.error('usage: node production/make-video.mjs --audio a.mp3 --srt a.srt --brief "讲什么" --name 工程名');
@@ -306,7 +308,19 @@ for (const line of applied.steps ?? []) console.log(`  ${line}`);
 if (args['no-render']) {
   step('render: skipped');
   if (jsonMode) {
-    console.log(JSON.stringify({ ok: true, out: null, project: projectName, projectId, storyboard: effectiveStoryboard, steps }, null, 2));
+    console.log(JSON.stringify({
+      ok: true,
+      out: null,
+      project: projectName,
+      projectId,
+      storyboard: effectiveStoryboard,
+      // Same fields as the rendered payload: a caller that stops here is usually
+      // about to look at the result, and "how many items" is the first question.
+      items: applied.items,
+      timelineId: applied.timelineId,
+      seconds: applied.seconds,
+      steps,
+    }, null, 2));
   } else {
     console.log(`\n✓ timeline written to ${projectName} (render skipped)`);
   }
@@ -327,6 +341,11 @@ if (jsonMode) {
     project: projectName,
     projectId,
     storyboard: effectiveStoryboard,
+    // The apply step knows what landed on the timeline; a caller that only gets
+    // the mp4 path has to open the project to find out how much was written.
+    items: applied.items,
+    timelineId: applied.timelineId,
+    seconds: applied.seconds,
     steps,
   }, null, 2));
 } else {

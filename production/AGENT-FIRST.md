@@ -111,19 +111,21 @@ C 的本质：**一条通道、一个契约、一套裁判。** skill 不再是�
 
 前者是创作，后者是编译产物。一旦 agent 开始往轨道上摆片段，"可复现"和"可重编"同时消失。
 
-### 3.2 工具面（7 个）
+### 3.2 工具面（实施后 10 个）
 
 | 工具 | 输入 | 输出 | 为什么需要 |
 |---|---|---|---|
-| `catalog` | — | 配方（id / 用途 / 参数 schema / 字数上限 / **参考帧路径**）、画布预设、策略常量、音乐类目、音效映射 | agent 只会用它认识的配方；不认识就退回三个熟面孔 |
-| `draft` | audio / srt / brief / size | 一份**可编辑的草稿分镜** + 节拍摘要 | 降低起步成本。**明确标注"草稿"，不是终稿** |
+| `start` | audio / srt / brief / name / size / preview | 工程 + 分镜 + 时间线 + **预览帧** + findings + score | 一句话入口。没有它，"给我看一版"要先渲全片 |
+| `catalog` | — / `--recipe` / `--size` | 配方（jobs / 参数 / 参考帧）、**分镜 shape 与 rules**、画布、策略、音乐类目 | agent 只会用它认识的配方；不给 shape 就只能猜字段名 |
 | `check` | storyboard | `{valid, errors, findings, score}` | 裁判必须一次给全，否则 agent 只跑它记得的那个 |
-| `still` | project / frames / **width** | 图片路径列表 | agent 的眼睛。默认 640，允许 1080 看字 |
 | `apply` | storyboard / audio | 时间线（含字幕、A1/A2/A3），**不渲染** | 给"改剧本"和"出片"之间的便宜中点 |
-| `render` | project / out / **from-to** | mp4 | 单镜预览已有能力，只需暴露 |
 | `revise` | storyboard / 编辑操作 | 新分镜 + 重新加锁 | 手改 JSON 容易破坏 `frame-gap`，要等 QC 才暴露 |
+| `still` | project / frames / **width** | 图片路径列表 | agent 的眼睛。默认 640，允许 1080 看字 |
+| `render` | project / out / **from-to** | mp4 | 单镜预览已有能力，只需暴露 |
+| `run` | audio / srt / brief / name | mp4 | 不看直接出片；`start` 去掉预览加上渲染 |
+| `qc` / `config` | — | — | 兼容与排障 |
 
-`draft` 是对上一轮"删掉 generate.ts"的修正：它的 prompt 确实不该是主路径，但作为**草稿器**仍有价值——省 agent 的起步 token，给一个合理基线。默认关闭，agent 明确要求时才用。
+原计划的 `draft` 没有单独做，它变成了 `start` 的前半段：草稿分镜只有在**配上预览帧**时才有用，单独返回一份 JSON 不解决"人没法看"的问题。
 
 ### 3.3 锁的语义要改
 

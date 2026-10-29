@@ -53,7 +53,7 @@ npx tsc -p production                     # type-check this directory only
 | Recipes | 15, with schema validation and param checking |
 | Material | private audio (music, SFX), Pexels, Pixabay |
 | Footage density | policy module — ratio, spacing, essentials; retunable without a model call |
-| CLI | `occ catalog`, `occ check`, `occ apply`, `occ revise`, `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
+| CLI | `occ start`, `occ catalog`, `occ check`, `occ apply`, `occ revise`, `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
 | Storyboard generation | done — chapters, repair, footage intent |
 | QC | `production/qc.ts` — eighteen rules, run by `occ qc` / `occ check` and after every generation |
 

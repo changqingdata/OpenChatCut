@@ -177,8 +177,9 @@ function rulesBlock(fps: number, aspect: string, cliches: readonly string[] = []
    ① 写 underlay.subject：这句话里那个**能被拍到的具体东西**，中文，不超过 6 个字。
       如果这句话只有抽象概念（利率、时间、复利、重要性），写 "-"。
    ② 写 underlay.query：英文 2–6 个词，描述**画面里看得见的东西**——物件 + 动作/场景 + 景别或光线。
-      - subject 写了 "-" 的镜头，**不要写 query**，整条 underlay 只留 confidence: "low"。
-        给抽象句子硬凑一个检索词，只会拿到一张和内容无关的图库图。
+      - subject 写了 "-" 的镜头，**整条 underlay 都不要写**——没有 subject、没有 query、没有
+        confidence。给抽象句子硬凑检索词，只会拿到一张和内容无关的图库图；
+        而写一个空的 underlay（只有 confidence）是不合法的分镜，会被校验器拒收。
       - 不要写这句话的**意思**，写这句话对应的**画面**。句子讲"时间不够"，画面可以是
         「桌上一叠翻开的日历，逆光」，不是 "time passing"。
       - 禁用这些词，它们是概念不是画面：${cliches.join("、") || "无"}。
@@ -186,7 +187,7 @@ function rulesBlock(fps: number, aspect: string, cliches: readonly string[] = []
    ③ 写 underlay.confidence，按主语定，不要凭感觉：
       - 主语是一个**具体的东西**（硬币、沙漏、枯树、时钟、跑步的人）→ "high"
       - 主语是**一类场景**、不是一个东西（上班、学习、早起）→ "medium"
-      - 主语写了 "-"，这句话是抽象观点 → 必须是 "low"，程序不会用这条素材
+      - 主语写了 "-" → 没有 underlay，也就没有 confidence，跳过这一步
    自检：把 query 念出来，想象一张照片。如果这张照片能配上任何一句讲复利的话，
    说明它太泛了，重写。
    反面例子：

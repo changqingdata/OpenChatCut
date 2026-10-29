@@ -1,20 +1,25 @@
 ---
 name: occ-video
-description: 用 OpenChatCut 的确定性管道把「音频 + 字幕 + 一句话主题」做成成片（竖屏 1080x1920 / 横屏 1920x1080，短片或长片）。四步主线：storyboard 生成分镜 → footage 落素材 → compile 编译进时间线 → still 回看 / render 出片。当用户要做视频、口播成片、混剪、批量出片、或想知道某条片子为什么观感不对时使用。
+description: 用 OpenChatCut 的确定性管道把「音频 + 字幕 + 一句话主题」做成视频（竖屏 1080x1920 / 横屏 1920x1080，短片或长片）。默认两步：start 出初稿和预览帧 → 看一眼 → render 出片；某一镜不对就 revise 改那一镜。当用户要做视频、口播成片、混剪、批量出片、或想知道某条片子为什么观感不对时使用。
 ---
 
 # occ-video
 
 这条管道把一个 Storyboard IR（纯数据）编译成时间线再渲染。**分镜是唯一的人工/模型判断点**，编译是纯函数、可复现，QC 是 17 条确定性规则。所以：想改片子，改的是分镜；不要改时间线，也不要改编译结果。
 
-两种用法，先选一个：
+## 一个流程，两个停顿点
 
-| 你要的是 | 用什么 | 说明 |
-|---|---|---|
-| “帮我做条视频” | 本文第 1 节的 `make` | 管道替你写分镜，你只给 brief。快，但你没法逐镜控制 |
-| “把这条视频做成这样” | `DIRECTOR.md` | 你写分镜、看帧、自己改。慢，但每一镜都是你的决定 |
+```
+start ──► 看预览帧 ──► render
+             │
+             └─ 某一镜不对 ──► revise ──► apply ──► still ──► render
+```
 
-本文是**监工**路径。想当导演（逐镜控制、自己改分镜）看同目录的 `DIRECTOR.md`。
+- **默认一路到底**：`start` 建工程、读字幕、写分镜、落时间线、出 4 张预览帧；满意就 `render`。
+- **想停就停**：预览不对，用 `revise` 改那一镜，`apply` 重新落时间线，`still` 再看一眼。
+- **想从零写分镜**：看同目录 `DIRECTOR.md`，那是逐镜控制的完整写法。
+
+不要一上来就手写 8 个镜头的 JSON——除非用户明确要逐镜控制。`start` 已经能给你一个能看的初稿。
 
 所有命令都通过 `run_skill_script` 调用同一个入口 `node scripts/step.mjs`。
 
@@ -29,13 +34,29 @@ node scripts/step.mjs doctor
 - **media-dir 不对** → 素材全 404。默认档案的素材目录是从 `process.cwd()` 推的，所以命令必须在仓库根跑；`OPENCHATCUT_DATA_DIR` 一旦被继承就会把目录指偏。`step.mjs` 已经处理，不要自己绕开。
 - **keys 为空** → `--generate` 会失败。要么让用户配 `.env.local`，要么走 `--prompt` / `--from` 让外部模型写分镜（零 API 成本）。
 
-## 1. 一条命令（首选）
+## 1. 一句话出初稿（首选）
 
-音频 + 字幕 + 一句话主题 → 成片，`make` 会把下面第 2 节的所有步骤串起来，中途 QC 不过会直接停下并告诉你原因。
+音频 + 字幕 + 一句话主题 → **工程 + 分镜 + 时间线 + 预览帧**。不渲成片，因为下一步该由人看一眼。
 
 ```
-node scripts/step.mjs run --wait 60000 -- make --audio <绝对路径.mp3> --srt <绝对路径.srt> --brief 复利 --name 复利v3 --generate --size 1080x1920
+node scripts/step.mjs run --wait 90000 -- start --audio <绝对路径.mp3> --srt <绝对路径.srt> --brief 复利 --name 复利v3 --generate --size 1920x1080 --preview 4
 ```
+
+返回里：
+
+- `preview` 是四张图（默认 640px，`--preview-width 1080` 看字），路径直接给用户看
+- `findings` 是 QC 的判断，`score` 是八列数字
+- `storyboard` 是分镜文件，后面 `revise` 改的就是它
+
+满意就 `render`；不满意就 `revise` 改那一镜，别重跑 `start`。
+
+### 不想看，直接出片
+
+```
+node scripts/step.mjs run --wait 60000 -- make --audio <绝对路径.mp3> --srt <绝对路径.srt> --brief 复利 --name 复利v3 --generate --size 1920x1080
+```
+
+`make` 就是 `start` 去掉预览、加上渲染。用户说"直接给我成片"时用它。
 
 - `--generate` 调配置好的模型；不写它只会打印提示词然后退出。
 - **画幅必须显式给**：竖屏 `--size 1080x1920`（默认），横屏 `--size 1920x1080`。
@@ -161,7 +182,8 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 | 目的 | 命令（`run --` 之后） |
 | --- | --- |
 | 查环境 | `doctor`（不需要 `run`） |
-| 一条命令出片 | `make --audio a.mp3 --srt a.srt --brief 主题 --name 工程名 --generate` |
+| **一句话出初稿** | `start --audio a.mp3 --srt a.srt --brief 主题 --name 工程名 --generate` |
+| 一句话直接出片 | `make --audio a.mp3 --srt a.srt --brief 主题 --name 工程名 --generate` |
 | 只到时间线不出片 | `make … --no-render` |
 | 有哪些工程 | `run -- project list --json` |
 | 新建工程 | `run -- project new <名字> --size 1920x1080` |
@@ -181,9 +203,9 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 ## 5. 一句话流程
 
 ```
-doctor → make --generate → status latest → 看片
+doctor → start --generate → 看预览 → render
 ```
 
-精细控制时：`storyboard --generate → footage resolve → compile --replace --apply → still 看三帧 → render`。
+要改某一镜：`revise → apply → still`。要从零写分镜：`catalog → 写 → check → apply → still`（见 `DIRECTOR.md`）。
 
 任何一步失败，先读 `tail` 里的结构化错误（`{code, step, cause, hint}`），`hint` 通常就是修法。

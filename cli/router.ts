@@ -20,6 +20,7 @@ import { runProjectCommand } from './commands/project.ts';
 import { runQcCommand } from './commands/qc.ts';
 import { runRenderCommand } from './commands/render.ts';
 import { runReviseCommand } from './commands/revise.ts';
+import { runStartCommand } from './commands/start.ts';
 import { runStillCommand } from './commands/still.ts';
 import { runTranscribeCommand } from './commands/transcribe.ts';
 import { runStoryboardCommand } from './commands/storyboard.ts';
@@ -46,6 +47,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runMediaCommand(positionals, commandLine, json);
     case 'render':
       return runRenderCommand(subLine(commandLine, positionals), json);
+    case 'start':
+      return runStartCommand(subLine(commandLine, positionals), json);
     case 'still':
       return runStillCommand(subLine(commandLine, positionals), json);
     case 'compile':

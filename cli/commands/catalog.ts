@@ -18,12 +18,12 @@ import { resolve } from 'node:path';
 import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { CliError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
-import { GLOBAL_FLAGS } from './common.ts';
+import { GLOBAL_FLAGS, parseSize } from './common.ts';
 import { loadRecipeRegistry, type RecipeSchema } from '../../production/recipes/load.ts';
 import { DEFAULT_FOOTAGE_POLICY } from '../../production/footage-policy.ts';
 import { createProviders } from '../../production/assets/registry.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'json', 'recipe', 'full'] as const;
+const FLAGS = [...GLOBAL_FLAGS, 'json', 'recipe', 'full', 'size'] as const;
 
 /**
  * Canvas sizes worth naming. The storyboard carries its own width/height, so
@@ -44,6 +44,59 @@ const CAPTION_MOTION = ['none', 'fade-up', 'pop', 'word-pop', 'karaoke-pulse'] a
 
 /** Reference stills, produced by `production/catalog/build.mjs`. */
 const STILL_DIR = 'production/catalog/stills';
+
+/**
+ * The storyboard shape, as data rather than prose.
+ *
+ * `catalog` used to describe what can be drawn and stop there, which left the
+ * one thing a caller actually has to produce — the storyboard — to be inferred
+ * from an example in a markdown file. An agent that has to guess field names
+ * will guess wrong, and the failure arrives as a validation error several steps
+ * later.
+ *
+ * The values are illustrative; the field names and the nesting are not.
+ */
+function storyboardShape(canvas: { width: number; height: number }) {
+  return {
+    version: 1,
+    meta: {
+      title: '一句话标题',
+      runId: 'kebab-case-id',
+      aspect: canvas.width > canvas.height ? '16:9' : '9:16',
+      width: canvas.width,
+      height: canvas.height,
+      fps: 30,
+      language: 'zh',
+    },
+    shots: [
+      {
+        id: 'S01',
+        startFrame: 0,
+        endFrame: 97,
+        job: 'attention',
+        intent: '这镜要观众记住什么，一句话',
+        narration: { text: '这一镜说的字幕原文', startMs: 0, endMs: 3230 },
+        visual: {
+          kind: 'mg',
+          recipe: 'chapter-card',
+          params: {},
+          layout: { anchor: 'full', widthRatio: 1 },
+        },
+        underlay: { subject: '硬币堆', query: 'stacked coins close up macro', confidence: 'high' },
+        background: '#0B0B0C',
+      },
+    ],
+  };
+}
+
+/** The handful of rules that fail loudly if broken, in the order they bite. */
+const STORYBOARD_RULES = [
+  'startFrame is the cut point: the first shot starts at 0, each shot starts where the previous one ended, and the last ends at the audio length in frames (seconds × 30). endFrame follows the next startFrame — `revise` re-derives it.',
+  'meta.width/height must equal the target project canvas. `apply` refuses a mismatch rather than resizing the timeline.',
+  'job must appear in the chosen recipe\'s `jobs`, or `check` reports job-mismatch. Omit `job` if you have no opinion — it is optional.',
+  'Cards carry keywords, not the subtitle. quote-card may be a whole sentence, but not the sentence the voiceover just said.',
+  'underlay.query describes a picture — object + setting + framing, 2-6 English words. Write no query when subject is "-"; density is decided by the pipeline, not by how many queries you write.',
+];
 
 function stillFor(id: string): string | null {
   const path = `${STILL_DIR}/${id}.jpg`;
@@ -145,10 +198,15 @@ export async function runCatalogCommand(commandLine: CommandLine, json: boolean)
     : list.map(indexEntry);
 
   const categories = await musicCategories();
+  // The shape follows the canvas the caller asked about, because the meta block
+  // has to match the project and a mismatched meta is refused downstream.
+  const sizeFlag = flagText(commandLine, 'size');
+  const [width, height] = sizeFlag ? parseSize(sizeFlag) : [1920, 1080];
   const payload = {
     ok: true,
     canvas: { fps: 30, presets: CANVAS_PRESETS },
     jobs: JOBS,
+    storyboard: { shape: storyboardShape({ width, height }), rules: STORYBOARD_RULES },
     recipes,
     policy: {
       targetRatio: DEFAULT_FOOTAGE_POLICY.targetRatio,
@@ -160,7 +218,7 @@ export async function runCatalogCommand(commandLine: CommandLine, json: boolean)
     music: { categories },
     captions: { pacing: CAPTION_PACING, motion: CAPTION_MOTION },
     notes: [
-      'A shot is visual (a recipe, or none) + underlay (a footage query) + background. compile builds V1/V2/V3 from that.',
+      'storyboard.shape is the document to produce; storyboard.rules are the constraints that fail loudly. Write it, then run `occ check`.',
       'Edit a storyboard with `occ revise` — it validates and re-locks. A hand-edit is refused by compile/qc.',
       'Pick a recipe by its `jobs`: the shot decides what kind of picture it needs, the recipe says whether it can draw it.',
     ],

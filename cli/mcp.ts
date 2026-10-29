@@ -111,6 +111,42 @@ const TOOLS = [
     },
   },
   {
+    name: 'pipeline_start',
+    description: 'One call from "here is my voiceover" to "here is a draft you can look at": creates the project, '
+      + 'transcribes, writes the storyboard (or reuses one you pass), applies it to the timeline, and renders a few '
+      + 'preview frames. Does not render the video. Start here — then look at the previews, and use pipeline_revise '
+      + 'only for the shots that are wrong.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        audio: { type: 'string' as const, description: 'Absolute path to the voiceover audio.' },
+        srt: { type: 'string' as const, description: 'Absolute path to the subtitle file.' },
+        name: { type: 'string' as const, description: 'Project name. Created when it does not exist.' },
+        brief: { type: 'string' as const, description: 'One line: what the video is about. Needed unless you pass a storyboard.' },
+        size: { type: 'string' as const, description: 'WIDTHxHEIGHT, default 1080x1920. Ignored when reusing a project.' },
+        generate: { type: 'boolean' as const, description: 'Let the configured model write the storyboard.' },
+        storyboard: { type: 'string' as const, description: 'Absolute path to a storyboard you wrote; skips generation.' },
+        from: { type: 'string' as const, description: 'Absolute path to a model reply to validate instead of generating.' },
+        preview: { type: 'number' as const, description: 'How many preview frames to render, 0-12. Default 4.' },
+        previewWidth: { type: 'number' as const, description: 'Preview width in px. Default 640.' },
+      },
+      required: ['audio', 'srt', 'name'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['start', '--audio', String(args.audio), '--srt', String(args.srt),
+        '--name', String(args.name), '--json'];
+      if (args.brief) argv.push('--brief', String(args.brief));
+      if (args.size) argv.push('--size', String(args.size));
+      if (args.generate) argv.push('--generate');
+      if (args.storyboard) argv.push('--storyboard', String(args.storyboard));
+      if (args.from) argv.push('--from', String(args.from));
+      if (args.preview !== undefined) argv.push('--preview', String(args.preview));
+      if (args.previewWidth !== undefined) argv.push('--preview-width', String(args.previewWidth));
+      return reply(await runOcc(argv));
+    },
+  },
+  {
     name: 'pipeline_check',
     description: 'One call, three answers: does the storyboard validate, what does QC say about how it will look, '
       + 'and the eight-column scorecard. Run it after every edit — it is the only judge that does not argue back.',
@@ -257,9 +293,9 @@ const TOOLS = [
   },
   {
     name: 'pipeline_run',
-    description: 'The supervised lane: audio + subtitles + one line of brief in, an MP4 out. It writes the '
-      + 'storyboard for you, which means you do not get to direct it. Use this when the request is "make me a video" '
-      + 'rather than "make this video".',
+    description: 'Start and render in one call, with no checkpoint: audio + subtitles + brief in, an MP4 out. '
+      + 'Use it when the user asked for a finished video and does not want to look first; otherwise prefer '
+      + 'pipeline_start, which stops where a human can still change their mind.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -307,11 +343,12 @@ export async function runMcpCommand(): Promise<void> {
     { name: 'openchatcut-pipeline', version: '1.0.0' },
     {
       capabilities: { tools: {} },
-      instructions: 'The OpenChatCut production pipeline. The work is a loop: read pipeline_catalog to learn what can '
-        + 'be drawn, write a storyboard JSON, run pipeline_check, edit it with pipeline_revise, put it on a timeline '
-        + 'with pipeline_apply, look at it with pipeline_still, then pipeline_render. '
-        + 'Edit the storyboard, never the timeline — the timeline is compiled output, and a storyboard is the only '
-        + 'thing that can be re-compiled later. A storyboard edited outside pipeline_revise is refused by compile.',
+      instructions: 'The OpenChatCut production pipeline. The default flow is two calls: pipeline_start with the '
+        + 'voiceover, subtitles and one line of brief gives you a project, a storyboard, a timeline and a few '
+        + 'preview frames; then pipeline_render ships it. Look at the previews before rendering. '
+        + 'When a shot is wrong, pipeline_revise edits the storyboard (never the timeline), and pipeline_apply puts '
+        + 'it back. pipeline_catalog is what to read before writing a storyboard yourself: it carries the document '
+        + 'shape, the recipes, and one reference still per recipe.',
     },
   );
 
