@@ -4,6 +4,7 @@
   "nameEn": "Quote Card",
   "intent": "慢下来的一句话：引用、格言、或视频里最值得被截图的那句。动作小、停留久，用来给长视频留呼吸。",
   "box": { "width": 900, "height": 700 },
+  "jobs": ["quote"],
   "landscapeBox": { "width": 1560, "height": 620 },
   "params": {
     "text": {

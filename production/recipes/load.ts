@@ -38,6 +38,16 @@ export interface RecipeSchema {
   /** Design box for a landscape canvas; the component lays itself out for it. */
   landscapeBox?: { width: number; height: number };
   /**
+   * What kind of shot this recipe can carry: `thing` / `relation` / `number` /
+   * `process` / `quote` / `attention`.
+   *
+   * The director writes a `job` per shot; this is the other half of the
+   * contract. Without it there is no way to tell "this recipe does not do that"
+   * from "this recipe does it badly", which is exactly the mistake that put a
+   * compare-stack on a sentence with nothing to compare.
+   */
+  jobs?: string[];
+  /**
    * Optional sound effect this recipe earns. Placement is decided by the
    * pipeline, not here — a recipe only says what would suit it.
    */

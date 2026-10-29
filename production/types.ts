@@ -134,6 +134,15 @@ export interface UnderlaySpec {
   confidence?: 'high' | 'medium' | 'low';
 }
 
+/**
+ * What kind of picture a shot needs.
+ *
+ * `thing` — show this object. `relation` — show how these relate. `number` —
+ * show this quantity. `process` — show this happening over time. `quote` — let
+ * this sentence sit. `attention` — stop the eye here, content aside.
+ */
+export type ShotJob = 'thing' | 'relation' | 'number' | 'process' | 'quote' | 'attention';
+
 export interface Shot {
   /** Stable across recompiles: "S01", "S02", … Never renumber. */
   id: string;
@@ -150,6 +159,14 @@ export interface Shot {
   };
   /** What the viewer should take away from this shot. Required; drives QC. */
   intent: string;
+  /**
+   * What kind of picture this shot needs.
+   *
+   * This is the director's half of a contract whose other half is the recipe's
+   * `jobs` list. Optional because a hand-written storyboard should not have to
+   * guess; when present, QC checks that the chosen recipe can actually draw it.
+   */
+  job?: ShotJob;
   /** Graphics over the picture. Optional when `underlay` carries the frame alone. */
   visual?: VisualSpec;
   /** Footage or a still underneath the graphics. */

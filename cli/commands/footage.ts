@@ -20,6 +20,7 @@ import { createProviders } from '../../production/assets/registry.ts';
 import { acquireToFile } from '../../production/assets/acquire.ts';
 import { chooseInFrame, findFootage } from '../../production/assets/footage.ts';
 import { materializeUpload } from '../../production/assets/materialize.ts';
+import { writeLock } from '../../production/storyboard-lock.ts';
 import { uploadDir } from '../../server/media-dir.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { GLOBAL_FLAGS, projectReference, subLine } from './common.ts';
@@ -183,6 +184,9 @@ export async function runFootageCommand(commandLine: CommandLine, json: boolean)
   if (!dryRun) {
     await mkdir(dirname(outPath), { recursive: true });
     await writeFile(outPath, `${JSON.stringify(storyboard, null, 2)}\n`, 'utf8');
+    // Resolving rewrites every shot it touched, so the lock has to be renewed or
+    // the next `compile` would call this a hand-edit.
+    writeLock(outPath, { action: 'footage' });
     // Attribution travels beside the storyboard rather than inside it: it is a
     // publishing obligation, not a directing decision, and compile never reads it.
     await writeFile(

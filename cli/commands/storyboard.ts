@@ -18,6 +18,7 @@ import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from '../../production/generate.ts';
 import { DEFAULT_FOOTAGE_POLICY, applyFootagePolicy } from '../../production/footage-policy.ts';
 import { formatFindings, runQc } from '../../production/qc.ts';
+import { writeLock } from '../../production/storyboard-lock.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
 import type { Storyboard } from '../../production/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
@@ -134,6 +135,9 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
     // density: no model call, same shots, different selection.
     const policed = policeFootage(checked.storyboard!, commandLine);
     await writeFile(outPath, `${JSON.stringify(policed.storyboard, null, 2)}\n`, 'utf8');
+    // The lock records that this file came out of the pipeline. It is what lets
+    // `compile` tell an edit from a generation.
+    writeLock(outPath, { action: 'storyboard' });
     const summary = {
       out: outPath,
       shots: policed.storyboard.shots.length,
@@ -252,6 +256,7 @@ export async function runStoryboardCommand(commandLine: CommandLine, json: boole
 
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(storyboard, null, 2)}\n`, 'utf8');
+  writeLock(outPath, { action: 'storyboard' });
   const summary = {
     out: outPath,
     model: config.model,

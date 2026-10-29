@@ -14,10 +14,17 @@
 //   { "mcpServers": { "openchatcut-pipeline": {
 //       "command": "node", "args": ["cli/occ.mjs", "mcp"] } } }
 //
-// Deliberately three tools. A supervisor needs to look at the configuration, to
-// check a storyboard, and to run the chain; anything finer-grained is the CLI's
-// job, and exposing it here would only invite an agent to re-implement the
-// pipeline one call at a time.
+// The tool surface is the IR, not the timeline.
+//
+// An agent may edit a storyboard as finely as it likes — that is the directing
+// work — but it never touches tracks, items or transforms. Those are the
+// compiler's output, and hand-placing an item would cost both determinism and
+// the ability to re-compile the same storyboard later.
+//
+// So the tools are named after the objects in that contract: catalog (what can
+// be drawn), check (is this right), apply (put it on a timeline), revise (edit
+// it), still (look at it), render (ship it). `pipeline_run` remains for the
+// supervised one-command lane; it is not the path a director takes.
 
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
@@ -84,17 +91,159 @@ function reply(result: RunResult) {
 
 const TOOLS = [
   {
-    name: 'pipeline_config',
-    description: 'Where the pipeline reads its keys from, which of them are set, and which model it resolved. '
-      + 'Key names only — values are never returned.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-    handler: async () => reply(await runOcc(['config', '--json'])),
+    name: 'pipeline_catalog',
+    description: 'What the pipeline can render: every recipe with its jobs, parameter names and a reference still, '
+      + 'plus canvas presets, footage-density constants and music moods. Start here — a recipe you do not know '
+      + 'about is a recipe you will not use. Pass recipe for one recipe in full, full for every schema.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        recipe: { type: 'string' as const, description: 'Recipe id, e.g. "compare-stack".' },
+        full: { type: 'boolean' as const, description: 'Include every parameter schema. Large; prefer per-recipe.' },
+      },
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['catalog', '--json'];
+      if (args.recipe) argv.push('--recipe', String(args.recipe));
+      if (args.full) argv.push('--full');
+      return reply(await runOcc(argv));
+    },
+  },
+  {
+    name: 'pipeline_check',
+    description: 'One call, three answers: does the storyboard validate, what does QC say about how it will look, '
+      + 'and the eight-column scorecard. Run it after every edit — it is the only judge that does not argue back.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        storyboard: { type: 'string' as const, description: 'Absolute path to a storyboard JSON file.' },
+        size: { type: 'string' as const, description: 'Expected canvas, WIDTHxHEIGHT. Rejects a mismatched meta.' },
+        allowEdited: { type: 'boolean' as const, description: 'Accept a storyboard that was edited outside revise.' },
+      },
+      required: ['storyboard'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['check', '--storyboard', String(args.storyboard), '--json'];
+      if (args.size) argv.push('--size', String(args.size));
+      if (args.allowEdited) argv.push('--allow-edited');
+      return reply(await runOcc(argv));
+    },
+  },
+  {
+    name: 'pipeline_apply',
+    description: 'Put a storyboard onto a timeline: decide footage density, resolve clips, compile the three lanes, '
+      + 'burn captions, and lay voiceover/music/effects on A1/A2/A3. Does not render — this is the cheap middle '
+      + 'point between editing and shipping.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string' as const, description: 'Project name or id. Must exist at the storyboard canvas.' },
+        storyboard: { type: 'string' as const, description: 'Absolute path to a storyboard JSON file.' },
+        audio: { type: 'string' as const, description: 'Absolute path to the voiceover audio.' },
+        srt: { type: 'string' as const, description: 'Absolute path to the subtitle file, for burned-in captions.' },
+        timing: { type: 'string' as const, description: 'Absolute path to occ transcribe output, for word timing.' },
+        replace: { type: 'boolean' as const, description: 'Replace the timeline if it already has items.' },
+        footageRatio: { type: 'number' as const, description: 'Share of shots with footage, 0..1. Default 0.34.' },
+        musicCategory: { type: 'string' as const, description: 'Mood from the catalog; defaults to the storyboard music.' },
+        noMusic: { type: 'boolean' as const, description: 'Skip the music bed.' },
+        noSfx: { type: 'boolean' as const, description: 'Skip sound effects.' },
+        captionsPacing: { type: 'string' as const, description: 'phrase (default) or word (3x slower to render).' },
+        allowEdited: { type: 'boolean' as const, description: 'Accept a storyboard edited outside revise.' },
+      },
+      required: ['project', 'storyboard', 'audio'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['apply', String(args.project), '--storyboard', String(args.storyboard),
+        '--audio', String(args.audio), '--json'];
+      if (args.srt) argv.push('--srt', String(args.srt));
+      if (args.timing) argv.push('--timing', String(args.timing));
+      if (args.replace) argv.push('--replace');
+      if (args.footageRatio !== undefined) argv.push('--footage-ratio', String(args.footageRatio));
+      if (args.musicCategory) argv.push('--music-category', String(args.musicCategory));
+      if (args.noMusic) argv.push('--no-music');
+      if (args.noSfx) argv.push('--no-sfx');
+      if (args.captionsPacing) argv.push('--captions-pacing', String(args.captionsPacing));
+      if (args.allowEdited) argv.push('--allow-edited');
+      return reply(await runOcc(argv));
+    },
+  },
+  {
+    name: 'pipeline_revise',
+    description: 'Edit a storyboard the sanctioned way: apply ops (or replace the file wholesale), validate, and '
+      + 're-lock. A storyboard edited outside this tool is refused by compile, because the edit never met the '
+      + 'validator. Cut points come from startFrame; endFrame follows the next shot. '
+      + 'Ops: set / recipe / layout / retime / remove.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        storyboard: { type: 'string' as const, description: 'Absolute path to the storyboard to edit in place.' },
+        ops: { type: 'string' as const, description: 'Absolute path to a JSON array of ops.' },
+        replaceWith: { type: 'string' as const, description: 'Absolute path to a new storyboard to adopt instead.' },
+      },
+      required: ['storyboard'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['revise', String(args.storyboard), '--json'];
+      if (args.ops) argv.push('--ops', String(args.ops));
+      if (args.replaceWith) argv.push('--replace-with', String(args.replaceWith));
+      return reply(await runOcc(argv));
+    },
+  },
+  {
+    name: 'pipeline_still',
+    description: 'Render still frames of a compiled timeline to JPEG files and return their paths. This is how you '
+      + 'look at your own work: a caption overlap or a card that is too wide is invisible in the JSON. Pass width '
+      + 'to read the type (480 shows that a layout is wrong, not why).',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string' as const, description: 'Project name or id.' },
+        out: { type: 'string' as const, description: 'Absolute directory for the JPEGs.' },
+        frames: { type: 'string' as const, description: 'Comma-separated frames, e.g. "20,180,400".' },
+        width: { type: 'number' as const, description: 'Output width in px, e.g. 1080. Default 480-640.' },
+      },
+      required: ['project', 'out', 'frames'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['still', String(args.project), '--out', String(args.out),
+        '--frames', String(args.frames), '--json'];
+      if (args.width !== undefined) argv.push('--width', String(args.width));
+      return reply(await runOcc(argv));
+    },
+  },
+  {
+    name: 'pipeline_render',
+    description: 'Render the timeline to MP4. from/to render a range — use it to check one shot without paying '
+      + 'for the whole video.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string' as const, description: 'Project name or id.' },
+        out: { type: 'string' as const, description: 'Absolute path for the MP4. Relative paths break AAC probing.' },
+        from: { type: 'string' as const, description: 'First frame or second, e.g. "168" or "5.6s".' },
+        to: { type: 'string' as const, description: 'Last frame or second.' },
+        resolution: { type: 'string' as const, description: '480p / 720p / 1080p / 4k. Default 1080p.' },
+      },
+      required: ['project', 'out'],
+      additionalProperties: false,
+    },
+    handler: async (args: Record<string, unknown>) => {
+      const argv = ['render', String(args.project), '--out', String(args.out), '--json'];
+      if (args.from) argv.push('--from', String(args.from));
+      if (args.to) argv.push('--to', String(args.to));
+      if (args.resolution) argv.push('--resolution', String(args.resolution));
+      return reply(await runOcc(argv));
+    },
   },
   {
     name: 'pipeline_qc',
-    description: 'Check a storyboard JSON for structural problems (gaps, one recipe dominating, adjacent footage, '
-      + 'text near its limit) without compiling or rendering. Returns findings with error/warn/note severity; '
-      + 'only "error" blocks.',
+    description: 'QC findings only, no validation or scorecard. Kept for callers that only want the list; '
+      + 'prefer pipeline_check, which includes this and tells you whether the storyboard can compile at all.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -108,9 +257,9 @@ const TOOLS = [
   },
   {
     name: 'pipeline_run',
-    description: 'Run the whole chain: storyboard → footage → QC → compile → render. '
-      + 'Provide either `storyboard` (reuse one that already passed) or `generate: true` (call the model). '
-      + 'Rendering a 15-minute video takes several minutes; pass render:false to stop after compiling.',
+    description: 'The supervised lane: audio + subtitles + one line of brief in, an MP4 out. It writes the '
+      + 'storyboard for you, which means you do not get to direct it. Use this when the request is "make me a video" '
+      + 'rather than "make this video".',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -144,6 +293,13 @@ const TOOLS = [
       return reply(await runNode(MAKE_VIDEO, argv));
     },
   },
+  {
+    name: 'pipeline_config',
+    description: 'Where the pipeline reads its keys from, which of them are set, and which model it resolved. '
+      + 'Key names only — values are never returned.',
+    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
+    handler: async () => reply(await runOcc(['config', '--json'])),
+  },
 ];
 
 export async function runMcpCommand(): Promise<void> {
@@ -151,9 +307,11 @@ export async function runMcpCommand(): Promise<void> {
     { name: 'openchatcut-pipeline', version: '1.0.0' },
     {
       capabilities: { tools: {} },
-      instructions: 'The OpenChatCut production pipeline. Storyboard generation, footage resolution, QC, compile '
-        + 'and render, all deterministic except the storyboard call. Prefer pipeline_run over driving the steps by '
-        + 'hand — the order matters and the pipeline enforces it.',
+      instructions: 'The OpenChatCut production pipeline. The work is a loop: read pipeline_catalog to learn what can '
+        + 'be drawn, write a storyboard JSON, run pipeline_check, edit it with pipeline_revise, put it on a timeline '
+        + 'with pipeline_apply, look at it with pipeline_still, then pipeline_render. '
+        + 'Edit the storyboard, never the timeline — the timeline is compiled output, and a storyboard is the only '
+        + 'thing that can be re-compiled later. A storyboard edited outside pipeline_revise is refused by compile.',
     },
   );
 

@@ -4,6 +4,7 @@
   "nameEn": "Timeline Dots",
   "intent": "把一条过程摊成几个阶段并指出当前在哪一步，用于「第一步/第二步」「早期/中期/后期」这类结构。",
   "box": { "width": 960, "height": 420 },
+  "jobs": ["process"],
   "params": {
     "items": {
       "type": "array",

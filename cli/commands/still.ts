@@ -13,7 +13,7 @@ import { setUploadsDirProvider, renderTimelineStills } from '../../server/plugin
 import { uploadDir } from '../../server/media-dir.ts';
 import { GLOBAL_FLAGS, parseFrames, projectReference } from './common.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'out', 'frames', 'seconds', 'timeline', 'json'] as const;
+const FLAGS = [...GLOBAL_FLAGS, 'out', 'frames', 'seconds', 'timeline', 'json', 'width'] as const;
 
 function frameList(commandLine: CommandLine, fps: number): number[] {
   const framesFlag = flagText(commandLine, 'frames');
@@ -56,6 +56,16 @@ export async function runStillCommand(commandLine: CommandLine, json: boolean): 
 
   await mkdir(outDir, { recursive: true });
 
+  // The default is sized for a caller that cannot see images: 480-640px keeps a
+  // batch cheap. An agent that *can* look needs the type to be legible — a
+  // caption overlap is invisible at 480. `--width` is that caller's dial; the
+  // renderer never upscales past the composition.
+  const widthFlag = flagText(commandLine, 'width');
+  const width = widthFlag ? Number(widthFlag) : undefined;
+  if (widthFlag && (!Number.isFinite(width) || (width as number) <= 0)) {
+    throw new UsageError(`--width expects a positive number, got "${widthFlag}"`);
+  }
+
   let stills;
   try {
     stills = await renderTimelineStills({
@@ -63,6 +73,7 @@ export async function runStillCommand(commandLine: CommandLine, json: boolean): 
       project: doc,
       timelineId: timeline.id,
       frames,
+      ...(width ? { width } : {}),
     });
   } catch (error) {
     throw new CliError(`still render failed: ${error instanceof Error ? error.message : String(error)}`);

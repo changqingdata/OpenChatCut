@@ -5,7 +5,16 @@ description: 用 OpenChatCut 的确定性管道把「音频 + 字幕 + 一句话
 
 # occ-video
 
-这条管道把一个 Storyboard IR（纯数据）编译成时间线再渲染。**分镜是唯一的人工/模型判断点**，编译是纯函数、可复现，QC 是 15 条确定性规则。所以：想改片子，改的是分镜；不要改时间线，也不要改编译结果。
+这条管道把一个 Storyboard IR（纯数据）编译成时间线再渲染。**分镜是唯一的人工/模型判断点**，编译是纯函数、可复现，QC 是 17 条确定性规则。所以：想改片子，改的是分镜；不要改时间线，也不要改编译结果。
+
+两种用法，先选一个：
+
+| 你要的是 | 用什么 | 说明 |
+|---|---|---|
+| “帮我做条视频” | 本文第 1 节的 `make` | 管道替你写分镜，你只给 brief。快，但你没法逐镜控制 |
+| “把这条视频做成这样” | `DIRECTOR.md` | 你写分镜、看帧、自己改。慢，但每一镜都是你的决定 |
+
+本文是**监工**路径。想当导演（逐镜控制、自己改分镜）看同目录的 `DIRECTOR.md`。
 
 所有命令都通过 `run_skill_script` 调用同一个入口 `node scripts/step.mjs`。
 
@@ -124,7 +133,7 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 ## 2. 硬规则（违反会静默出错，不报错）
 
 1. **参数里的空格写成 `%20`。** 调用方按空白切分命令，写 `--brief 复利 的力量` 会被切成两个参数。路径不用加引号——引号会被当字面量，`step.mjs` 会剥掉，但别依赖它。
-2. **不要手改 `storyboard.json`。** 生成的分镜带 `.lock.json` 记录哈希，`compile` 发现哈希不符会直接拒绝（`storyboard-edited`）。要改就带着 QC 的抱怨重跑第①步，或确实手写分镜时加 `--allow-edited`。绕过校验器的手改会让 QC 形同虚设——这是整条管道唯一的红线。
+2. **不要手改 `storyboard.json`——要改就用 `occ revise`。** 生成的分镜带 `.lock.json` 记录哈希，`compile`/`qc`/`check` 发现哈希不符会直接拒绝（`storyboard-edited`）。`revise` 会应用你的编辑、重新校验、重新加锁，这才是改分镜的正路；`--allow-edited` 只用于「手写的分镜被误加了锁」。绕过校验器的手改会让 QC 形同虚设——这是整条管道唯一的红线。
 3. **`--out` 一律绝对路径。** 相对路径会让 AAC 编码延迟探测失败，报成"音频错误"。
 4. **长任务不要等。** 每次调用最多 120 秒，15 分钟长片渲染约 7 分钟。`run` 会在 `--wait`（默认 45 秒）内没跑完时返回 `status: "running"`，接着调：
    ```
@@ -139,10 +148,13 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 `compile` 输出里带 QC 结果。规则分三级：
 
 - `error`（`frame-gap`）：帧不连续，**必须**修，片子会卡帧。
-- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`footage-low-confidence`、`footage-scarce`（不到 20% 的镜头有素材，成片会像幻灯片——回去改 brief，别改分镜）、`rhythm-flat`、`solid-offcentre`（纯色背景上的卡片靠左/靠右且宽度不足，另外半屏是空的）。这些是观感问题，值得修。
-- `note`：`recipe-variety`、`anchor-under-captions`、`text-near-limit`。知道就行。
+- `warn`：`shot-too-short`（<24 帧）、`cut-burst`（连续快切）、`recipe-repeat`（同一配方+同一锚点重复）、`recipe-dominance`（单个配方 >45%）、`footage-low-confidence`、`footage-scarce`（不到 20% 的镜头有素材，成片会像幻灯片）、`footage-adjacent`、`footage-duplicate-clip`、`transition-overuse`（淡入超过 3 个或 40%）、`job-mismatch`（镜头要的画面类型，配方画不了）、`rhythm-flat`、`solid-offcentre`。这些是观感问题，值得修。
+- `note`：`recipe-variety`、`anchor-under-captions`、`text-near-limit`、`text-echoes-caption`（卡片复读字幕）、`footage-duplicate-query`。知道就行。
 
-**修法只有一条**：把 QC 的具体抱怨写进 `--brief` 重跑第①步。例如"上一版 recipe-repeat 了，换用不同配方，且不要连续三个镜头都用中间锚点"。不要手动删镜头——删完节奏和字幕对位就散了。
+**修法两条，按你走哪条路选**：
+
+- 监工路径：把 QC 的具体抱怨写进 `--brief` 重跑第①步。例如"上一版 recipe-repeat 了，换用不同配方，且不要连续三个镜头都用中间锚点"。
+- 导演路径：用 `occ revise` 直接改那几镜（换配方、改锚点、改文字），改完 `check` 再看。**不要手动删镜头**——删完节奏和字幕对位就散了，`revise` 的 `retime` 会替你维持覆盖。
 
 ## 4. 命令速查
 
@@ -153,6 +165,11 @@ node scripts/step.mjs run -- render <工程名> --out <绝对路径>/final.mp4
 | 只到时间线不出片 | `make … --no-render` |
 | 有哪些工程 | `run -- project list --json` |
 | 新建工程 | `run -- project new <名字> --size 1920x1080` |
+| 管道能画什么 | `run -- catalog --json`（配方 + 能力 + 参考帧 + 音乐类目） |
+| 单个配方详情 | `run -- catalog --recipe compare-stack` |
+| 三合一检查 | `run -- check --storyboard w/sb.json --json`（校验 + QC + 分数） |
+| 分镜落到时间线 | `run -- apply <工程名> --storyboard w/sb.json --audio a.mp3 --srt a.srt --replace` |
+| 改分镜 | `run -- revise w/sb.json --ops ops.json` |
 | 只出提示词不调模型 | `run -- storyboard --srt f.srt --brief … --prompt --json`（提示词打到 stdout，`tail` 里是完整 `{cues,system,user}`） |
 | 用外部模型的分镜 | `run -- storyboard --srt f.srt --brief … --from w/reply.json --out w/sb.json` |
 | 单查 QC | `run -- qc --storyboard w/sb.json --json` |

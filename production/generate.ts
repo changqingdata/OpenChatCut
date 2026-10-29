@@ -235,7 +235,9 @@ function rulesBlock(fps: number, aspect: string, cliches: readonly string[] = []
 14. 不要输出 beats 字段，也不要输出 beatId —— 只需要 shots。
 15. 输出 music.category，从上面「配乐情绪分类」里选一个最贴合整条视频情绪的。选不出就省略 music 字段。
 16. 卡片上的字是**关键词**，不是字幕的复读。字幕会把整句念出来，卡片再写同一句就是重复。
-    除了 quote-card（它本来就是一整句话），其余配方写 2–8 个字、一个数字或一个短语。
+    除了 quote-card（它可以是一整句话），其余配方写 2–8 个字、一个数字或一个短语。
+    **quote-card 也不要用字幕里那句话**——字幕刚念过一遍。把同一句压缩成更短的金句，
+    或者换一句能概括它的话；逐字相同会被 QC 判成 text-echoes-caption。
 17. 回复必须是一个完整的、能直接解析的 JSON 对象，不要在 JSON 前后加任何文字。${wideNote}`;
 }
 

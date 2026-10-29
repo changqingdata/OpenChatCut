@@ -5,6 +5,9 @@
 import { flagBoolean, type CommandLine } from './args.ts';
 import { UsageError } from './errors.ts';
 import { runAssetsCommand } from './commands/assets.ts';
+import { runApplyCommand } from './commands/apply.ts';
+import { runCatalogCommand } from './commands/catalog.ts';
+import { runCheckCommand } from './commands/check.ts';
 import { runCompileCommand } from './commands/compile.ts';
 import { runConfigCommand } from './commands/config.ts';
 import { runEditCommand } from './commands/edit.ts';
@@ -16,6 +19,7 @@ import { runMediaCommand } from './commands/media.ts';
 import { runProjectCommand } from './commands/project.ts';
 import { runQcCommand } from './commands/qc.ts';
 import { runRenderCommand } from './commands/render.ts';
+import { runReviseCommand } from './commands/revise.ts';
 import { runStillCommand } from './commands/still.ts';
 import { runTranscribeCommand } from './commands/transcribe.ts';
 import { runStoryboardCommand } from './commands/storyboard.ts';
@@ -54,6 +58,14 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runFootageCommand(subLine(commandLine, positionals), json);
     case 'qc':
       return runQcCommand(subLine(commandLine, positionals), json);
+    case 'catalog':
+      return runCatalogCommand(subLine(commandLine, positionals), json);
+    case 'check':
+      return runCheckCommand(subLine(commandLine, positionals), json);
+    case 'apply':
+      return runApplyCommand(subLine(commandLine, positionals), json);
+    case 'revise':
+      return runReviseCommand(subLine(commandLine, positionals), json);
     case 'transcribe':
       return runTranscribeCommand(subLine(commandLine, positionals), json);
     case 'config':

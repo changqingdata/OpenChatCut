@@ -306,6 +306,32 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
     });
   }
 
+  // A shot's `job` says what kind of picture it needs; a recipe declares which
+  // jobs it can carry. The gap between them is the mistake no amount of taste
+  // catches reliably: a compare-stack on a sentence with nothing to compare
+  // compiles fine and reads as filler.
+  const mismatched = shots.filter((shot) => {
+    const job = shot.job;
+    const visual = shot.visual;
+    if (!job || visual?.kind !== 'mg') return false;
+    const schema = cfg.schemas?.get(visual.recipe);
+    const jobs = schema?.jobs;
+    if (!jobs?.length) return false;
+    return !jobs.includes(job);
+  });
+  if (mismatched.length) {
+    findings.push({
+      code: 'job-mismatch',
+      severity: 'warn',
+      shotIds: mismatched.map((shot) => shot.id),
+      message: `${mismatched.length} shot(s) ask for a kind of picture their recipe cannot draw (`
+        + mismatched
+          .map((shot) => `${shot.id}: job=${shot.job} recipe=${shot.visual && shot.visual.kind === 'mg' ? shot.visual.recipe : '?'}`)
+          .join(', ')
+        + ')',
+    });
+  }
+
   // --- footage -------------------------------------------------------------
 
   // The most expensive failure is not a bad clip, it is no clips: ten cards in
@@ -437,6 +463,12 @@ export function runQc(storyboard: Storyboard, options: QcOptions = {}): QcReport
   // sentence: the viewer reads it twice at different speeds and the shot feels
   // like a mistake. A keyword card ("时间") is the intended overlap, so this
   // only fires on a long shared run.
+  //
+  // `quote-card` is not exempt. It may be a whole sentence, but not the same
+  // sentence the voiceover just said — the card's job is to make the line land,
+  // and reading it twice at two speeds does the opposite. Rule 16 in the prompt
+  // says the same thing; before it did, the check and the instructions
+  // disagreed and an author could not satisfy both.
   const echoes = shots.filter((shot) => {
     const narration = String(shot.narration?.text ?? '');
     const visual = shot.visual;

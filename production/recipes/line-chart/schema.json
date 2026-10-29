@@ -4,6 +4,7 @@
   "nameEn": "Line chart",
   "intent": "一条随时间变化的曲线，用来讲趋势、增长或衰减",
   "box": { "width": 900, "height": 560 },
+  "jobs": ["process","number"],
   "params": {
     "points": {
       "type": "array",

@@ -1,8 +1,32 @@
 // Shared plumbing for the command modules: project selection and flag checking.
 import { flagText, GLOBAL_FLAGS, type CommandLine } from '../args.ts';
-import { UsageError } from '../errors.ts';
+import { CliError, UsageError } from '../errors.ts';
+import { inspectLock, type LockInspection } from '../../production/storyboard-lock.ts';
 
 export { GLOBAL_FLAGS };
+
+/**
+ * Refuse a storyboard whose bytes changed after the pipeline wrote it.
+ *
+ * `unlocked` is legal — a hand-authored storyboard was never generated, so
+ * there is nothing to compare against. `edited` is not: a hand-edit skips the
+ * validator and QC, and the timeline it produces has no validator of its own.
+ *
+ * `--allow-edited` stays available for a file that was authored by hand and
+ * locked by accident. It is not a way to skip QC — the validator still runs.
+ */
+export function requireStoryboardLock(file: string, allowEdited: boolean): LockInspection {
+  const inspection = inspectLock(file);
+  if (inspection.state !== 'edited' || allowEdited) return inspection;
+  throw new CliError(
+    `generated storyboard was modified outside the pipeline: ${file}`,
+    {
+      code: 'storyboard-edited',
+      step: 'storyboard-lock',
+      hint: 'edit it with `occ revise` (it validates and re-locks), or pass --allow-edited for a file that was authored by hand',
+    },
+  );
+}
 
 /** A command's own view of the line: positionals after its own name. */
 export function subLine(commandLine: CommandLine, positionals: readonly string[]): CommandLine {

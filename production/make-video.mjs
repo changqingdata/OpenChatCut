@@ -265,31 +265,13 @@ if (args.storyboard) {
 
 const effectiveStoryboard = args.storyboard ? resolve(String(args.storyboard)) : storyboardPath;
 
-// --- 4b. footage ----------------------------------------------------------
+// --- 4b. onto the timeline ------------------------------------------------
 
-// Shots that name something visible carry a search query instead of a clip. The
-// resolver turns those into pool assets and writes the ids back, so compiling
-// stays a pure transformation and re-rendering never re-downloads.
-const preResolve = JSON.parse(await readFile(effectiveStoryboard, 'utf8'));
-// Count only what the resolver will actually fetch: a shot the density policy
-// turned down still carries its query, and reporting it would overstate the work.
-const footageShots = (preResolve.shots ?? []).filter(
-  (shot) => shot.underlay?.query && !shot.underlay?.assetId && shot.underlay?.selected !== false,
-);
-if (footageShots.length && !args['no-footage']) {
-  step(`resolve footage (${footageShots.length} shot(s))`);
-  await occ('footage', 'resolve', projectName,
-    '--storyboard', effectiveStoryboard,
-    '--out', effectiveStoryboard);
-} else if (!args['no-footage']) {
-  step('footage: none requested');
-}
+// `apply` owns everything between "a storyboard" and "a timeline": footage
+// density, clip resolution, the three lanes, captions, and A1/A2/A3. It is the
+// same code an agent reaches through MCP, which is the point — one
+// implementation of the order, not two that drift apart.
 
-// --- 4c. quality control --------------------------------------------------
-
-// Runs before the compile so a broken storyboard fails in a second rather than
-// after a two-minute render. Report-only: the findings are printed here, then the
-// run stops on its own terms.
 step('qc');
 const qc = jsonOf(await occ('qc', '--storyboard', effectiveStoryboard, '--json', '--report-only'));
 const { stats } = qc;
@@ -300,94 +282,22 @@ if (!qc.ok) {
   process.exit(1);
 }
 
-// --- 5. compile -----------------------------------------------------------
-
-step('compile onto the timeline');
-const compiled = jsonOf(await occ(
-  'compile', projectName, '--storyboard', effectiveStoryboard,
-  '--timeline', 'tl-main', '--replace', '--apply', '--json',
-  // Captions come from the subtitle file so the burned-in text matches what is
-  // actually said, not what the storyboard asked for.
+step('apply');
+const applied = jsonOf(await occ('apply', projectName,
+  '--storyboard', effectiveStoryboard,
+  '--audio', audioPath,
   '--srt', srtPath,
   ...(timingPath ? ['--timing', timingPath] : []),
+  ...(args['no-captions'] ? ['--no-captions'] : []),
   ...(args['captions-template'] ? ['--captions-template', String(args['captions-template'])] : []),
   ...(args['captions-motion'] ? ['--captions-motion', String(args['captions-motion'])] : []),
   ...(args['captions-pacing'] ? ['--captions-pacing', String(args['captions-pacing'])] : []),
-  ...(args['no-captions'] ? ['--no-captions'] : []),
-));
-console.log(`  ${compiled.items} items on ${compiled.timelineId}`);
-for (const warning of compiled.warnings ?? []) console.log(`  warning: ${warning.message}`);
-
-// --- 6. voiceover onto A1 -------------------------------------------------
-
-step('place voiceover on A1');
-await occ('tools', 'call', 'edit_item', '--project', projectName, '--args', JSON.stringify({
-  adds: [{ type: 'audio', assetId, track: 'A1', fromFrame: 0, durationInFrames: durationFrames }],
-}), '--apply');
-
-// --- 7. background music --------------------------------------------------
-
-const finalStoryboard = JSON.parse(await readFile(effectiveStoryboard, 'utf8'));
-const musicCategory = finalStoryboard.music?.category;
-if (musicCategory && !args['no-music']) {
-  step(`music: ${musicCategory}`);
-  await occ('assets', 'place', projectName,
-    '--role', 'music',
-    '--category', String(musicCategory),
-    '--min-duration', String(Math.ceil(seconds)),
-    // Cap to the video so the fade-out lands inside the cut rather than 90s later.
-    '--duration-frames', String(durationFrames),
-    // The library is songs, not loops — the longest is around 145s, so anything
-    // past two minutes needs several chained. Harmless on a short cut: one track
-    // already covers it and the loop is a no-op.
-    '--loop',
-    '--volume', String(args['music-volume'] ?? 0.14));
-} else if (!args['no-music']) {
-  step('music: none chosen');
-}
-
-// --- 8. sound effects -----------------------------------------------------
-
-// A recipe can declare the effect it earns, but placement is a pipeline
-// decision: one per recipe, at its first appearance, three at most. A 259-shot
-// video would otherwise fire an effect every four seconds and read as noise.
-const sfxPlan = [];
-const seenRecipes = new Set();
-for (const shot of finalStoryboard.shots ?? []) {
-  const recipeId = shot.visual?.recipe;
-  if (!recipeId || seenRecipes.has(recipeId)) continue;
-  seenRecipes.add(recipeId);
-
-  let schema;
-  try {
-    schema = JSON.parse(await readFile(`production/recipes/${recipeId}/schema.json`, 'utf8'));
-  } catch {
-    continue;
-  }
-  if (!schema.sfx) continue;
-  sfxPlan.push({ recipeId, shot, sfx: schema.sfx });
-  if (sfxPlan.length >= 3) break;
-}
-
-if (sfxPlan.length && !args['no-sfx']) {
-  for (const { recipeId, shot, sfx } of sfxPlan) {
-    step(`sfx: ${recipeId} @ ${shot.startFrame}`);
-    // A missing effect is a polish problem, not a reason to lose the render.
-    try {
-      await occ('assets', 'place', projectName,
-        '--role', 'sound_effect',
-        '--category', String(sfx.category),
-        ...(sfx.query ? ['--query', String(sfx.query)] : []),
-        '--track', 'A3',
-        '--from-frame', String(shot.startFrame),
-        '--volume', String(sfx.volume ?? 0.35));
-    } catch (error) {
-      console.log(`  skipped: ${String(error.message).split('\n').pop()}`);
-    }
-  }
-} else if (!args['no-sfx']) {
-  step('sfx: none declared');
-}
+  ...(args['no-footage'] ? ['--no-footage'] : []),
+  ...(args['no-music'] ? ['--no-music'] : []),
+  ...(args['no-sfx'] ? ['--no-sfx'] : []),
+  '--replace', '--json'));
+console.log(`  ${applied.items} items on ${applied.timelineId}`);
+for (const line of applied.steps ?? []) console.log(`  ${line}`);
 
 // --- 9. render ------------------------------------------------------------
 

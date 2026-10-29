@@ -4,6 +4,7 @@
   "nameEn": "Stacked share",
   "intent": "把总量拆成几块，看每块占多少，用来讲「钱花在哪」「时间用在哪」",
   "box": { "width": 900, "height": 380 },
+  "jobs": ["relation","number"],
   "params": {
     "parts": {
       "type": "array",

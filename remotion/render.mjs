@@ -374,6 +374,24 @@ export async function renderClip({
 /** Cap stills per call (contact-sheet path further compresses into one image). */
 const STILL_MAX_FRAMES = 16;
 
+/**
+ * Output width for one still, as a Remotion `scale` factor.
+ *
+ * No explicit width keeps the old behaviour: a batch of many frames is shrunk
+ * further, because the caller is a vision-less agent shipping thumbnails to a
+ * human. An explicit width is for a caller that can look at the image itself —
+ * clamped to the composition, since upscaling only blurs.
+ * @param {number|undefined} width
+ * @param {number} count
+ * @param {number} compositionWidth
+ */
+function stillScale(width, count, compositionWidth) {
+  const target = Number.isFinite(width) && width > 0
+    ? Math.min(width, compositionWidth)
+    : (count > 6 ? 480 : 640);
+  return target / compositionWidth;
+}
+
 export async function renderTimelineStills({
   state,
   project,
@@ -381,6 +399,7 @@ export async function renderTimelineStills({
   frames,
   puppeteerInstance,
   signal,
+  width,
 }) {
   if (!state || !Array.isArray(state.items)) throw new Error('renderTimelineStills: state.items required');
   if (!Array.isArray(frames) || !frames.length) throw new Error('renderTimelineStills: frames[] required');
@@ -419,8 +438,10 @@ export async function renderTimelineStills({
       const { buffer } = await renderStill({
         serveUrl, composition, inputProps, frame: f,
         imageFormat: 'jpeg', jpegQuality: 72,
-        // Slightly smaller cells when many frames → cheaper vision payload
-        scale: (list.length > 6 ? 480 : 640) / composition.width,
+        // Slightly smaller cells when many frames → cheaper vision payload.
+        // An explicit width is for a caller that can actually look at the image:
+        // 480 is enough to see that a layout is wrong, not enough to see type.
+        scale: stillScale(width, list.length, composition.width),
         chromiumOptions: { gl: resolveRenderGlBackend() },
         browserExecutable: browserExecutable(),
         binariesDirectory: binariesDirectory(),

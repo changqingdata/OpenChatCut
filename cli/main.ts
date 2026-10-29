@@ -23,6 +23,10 @@ Usage
   occ assets place <project> --role music --category c --min-duration s [--track A2] [--volume 0.14]
   occ footage resolve <project> --storyboard <in.json> [--out <out.json>] [--max-clips n] [--dry-run]
   occ qc --storyboard <file.json> [--strict] [--json]
+  occ catalog [--recipe <id>] [--full] [--json]
+  occ check --storyboard <file.json> [--size WxH] [--json]
+  occ apply <project> --storyboard <file.json> --audio <file> [--srt <file>] [--replace] [--json]
+  occ revise <file.json> (--ops <ops.json> | --replace-with <file.json>) [--json]
   occ transcribe --audio <file> [--model base] [--language zh] [--out timing.json] [--json]
   occ config [--json]
   occ mcp                      run the pipeline as an MCP server on stdio

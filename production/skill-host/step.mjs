@@ -120,8 +120,13 @@ function ensureCli(cfg) {
   return bin;
 }
 
-/** A generated storyboard carries a lock; a hand-edited one must not. */
-export function checkStoryboardLock(cfg, args, allowEdited) {
+/**
+ * Report the storyboard's lock state. Enforcement lives in the CLI
+ * (`requireStoryboardLock`), so both lanes share one rule — this function only
+ * records what it saw, so a run's history says whether the file was generated
+ * or edited.
+ */
+export function inspectStoryboardLock(cfg, args) {
   const at = args.indexOf('--storyboard');
   if (at < 0 || at + 1 >= args.length) return null;
   const file = resolve(cfg.repoRoot, decode(args[at + 1]));
@@ -136,12 +141,7 @@ export function checkStoryboardLock(cfg, args, allowEdited) {
     return { file, hash, state: 'unlocked' };
   }
   if (lock.hash === hash) return { file, hash, state: 'match', generatedAt: lock.at };
-  if (allowEdited) return { file, hash, state: 'edited-allowed' };
-  die(
-    'storyboard-edited',
-    `generated storyboard was modified outside the pipeline: ${file}`,
-    'Do not hand-edit a generated storyboard — it bypasses the validator and QC. Re-run the storyboard step with the QC complaint folded into --brief, or pass --allow-edited when the storyboard is hand-authored on purpose.',
-  );
+  return { file, hash, state: 'edited' };
 }
 
 export function parseRunArgs(rest) {
@@ -356,8 +356,14 @@ function cmdRun(rest) {
   // the right verb for "make me a video"; `run` stays the surgical lane.
   const isMake = decoded[0] === 'make';
   const program = isMake ? join(cfg.repoRoot, 'production', 'make-video.mjs') : bin;
-  const args = isMake ? decoded.slice(1) : decoded;
-  const storyboard = isMake ? null : checkStoryboardLock(cfg, decoded, opts.allowEdited);
+  const storyboard = isMake ? null : inspectStoryboardLock(cfg, decoded);
+  // `--allow-edited` is a step-level flag here, so it has to be re-attached to
+  // the child argv — the CLI is the one that enforces it. Only the commands that
+  // declare the flag get it; anything else would fail flag validation.
+  const acceptsAllowEdited = decoded[0] === 'compile' || decoded[0] === 'qc';
+  const args = isMake
+    ? decoded.slice(1)
+    : opts.allowEdited && acceptsAllowEdited ? [...decoded, '--allow-edited'] : decoded;
 
   const dir = runsDir(cfg.repoRoot);
   const id = newRunId();

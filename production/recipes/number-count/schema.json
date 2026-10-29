@@ -7,6 +7,7 @@
     "width": 900,
     "height": 520
   },
+  "jobs": ["number"],
   "landscapeBox": { "width": 1500, "height": 520 },
   "sfx": {
     "category": "转场",

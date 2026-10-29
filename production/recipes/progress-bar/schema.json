@@ -4,6 +4,7 @@
   "nameEn": "Progress Bar",
   "intent": "用长度表示比例：完成度、占比、达成率。数字加条形的组合比单独一个数字更容易被记住。",
   "box": { "width": 900, "height": 420 },
+  "jobs": ["number","process"],
   "params": {
     "label": { "type": "string", "required": true, "maxChars": 12 },
     "value": {

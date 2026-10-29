@@ -7,6 +7,7 @@
     "width": 960,
     "height": 460
   },
+  "jobs": ["process","relation"],
   "params": {
     "steps": {
       "type": "array",

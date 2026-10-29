@@ -4,6 +4,7 @@
   "nameEn": "Annotation",
   "intent": "在画面上圈出某处并加一句说明，用来把观众的注意力指到一个具体位置",
   "box": { "width": 900, "height": 900 },
+  "jobs": ["attention"],
   "fullFrame": true,
   "params": {
     "x": { "type": "number", "default": 0.5, "min": 0, "max": 1, "description": "圈心在盒子里的横向位置，0 最左、1 最右" },

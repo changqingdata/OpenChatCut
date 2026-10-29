@@ -12,9 +12,9 @@ import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { formatFindings, runQc } from '../../production/qc.ts';
 import type { Storyboard } from '../../production/types.ts';
-import { GLOBAL_FLAGS } from './common.ts';
+import { GLOBAL_FLAGS, requireStoryboardLock } from './common.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'json', 'strict', 'captions', 'no-captions', 'report-only'] as const;
+const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'json', 'strict', 'captions', 'no-captions', 'report-only', 'allow-edited'] as const;
 
 async function readStoryboard(path: string): Promise<Storyboard> {
   let raw: string;
@@ -36,7 +36,9 @@ export async function runQcCommand(commandLine: CommandLine, json: boolean): Pro
   const storyboardFlag = flagText(commandLine, 'storyboard');
   if (!storyboardFlag?.trim()) throw new UsageError('qc needs --storyboard <file.json>');
 
-  const storyboard = await readStoryboard(resolve(storyboardFlag));
+  const storyboardFile = resolve(storyboardFlag);
+  requireStoryboardLock(storyboardFile, flagBoolean(commandLine, 'allow-edited'));
+  const storyboard = await readStoryboard(storyboardFile);
   const { schemas } = await loadRecipeRegistry(resolve('production/recipes'));
 
   // Captions are on by default here: the pipeline burns them in unless asked not

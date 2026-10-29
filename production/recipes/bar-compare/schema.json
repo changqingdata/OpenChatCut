@@ -4,6 +4,7 @@
   "nameEn": "Bar compare",
   "intent": "两个量并排比长度，用来讲倍数、落差、A 是 B 的几倍",
   "box": { "width": 900, "height": 520 },
+  "jobs": ["number","relation"],
   "params": {
     "aLabel": { "type": "string", "required": true, "maxChars": 10 },
     "aValue": { "type": "number", "required": true },

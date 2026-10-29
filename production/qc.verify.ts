@@ -36,6 +36,8 @@ interface ShotSpec {
   narration?: string;
   /** Fade this shot in, as a section change. */
   fade?: boolean;
+  /** What kind of picture this shot asks for. */
+  job?: string;
 }
 
 function shot(index: number, startFrame: number, spec: ShotSpec = {}): Shot {
@@ -50,6 +52,7 @@ function shot(index: number, startFrame: number, spec: ShotSpec = {}): Shot {
     narration: { text: spec.narration ?? '', startMs: startFrame * 33, endMs: (startFrame + frames) * 33 },
     ...(spec.fade ? { transitionIn: { type: 'fade' as const, durationInFrames: 12 } } : {}),
     intent: 'x',
+    ...(spec.job ? { job: spec.job as never } : {}),
     ...(footage
       ? {
         underlay: {
@@ -222,6 +225,7 @@ const schemas = new Map<string, RecipeSchema>([[
     id: 'keyword-punch',
     name: 'Keyword',
     box: { width: 900, height: 520 },
+    jobs: ['attention', 'quote'],
     params: { text: { type: 'string', maxChars: 10 }, tail: { type: 'string', maxChars: 18 } },
   },
 ]]);
@@ -243,6 +247,28 @@ const shortLimit = new Map<string, RecipeSchema>([['big-word-fill', {
 }]]);
 assert.ok(!codes(board([{ recipe: 'big-word-fill', params: { text: '复利' } }]), { schemas: shortLimit })
   .includes('text-near-limit'), 'a two-character design is not a text overrun');
+
+// --- job mismatch ---------------------------------------------------------
+
+// A recipe declares which kinds of picture it can draw. A shot that asks for a
+// different kind compiles fine and reads as filler — this is the only check that
+// notices, and it is why the declaration exists at all.
+const matchingJob = board([{ recipe: 'keyword-punch', job: 'attention' }]);
+assert.ok(!codes(matchingJob, { schemas }).includes('job-mismatch'), 'a declared job is accepted');
+
+const wrongJob = board([{ recipe: 'keyword-punch', job: 'process' }]);
+const wrongReport = runQc(wrongJob, { schemas });
+assert.ok(wrongReport.findings.some((f) => f.code === 'job-mismatch'), 'an undeclared job is reported');
+assert.equal(
+  wrongReport.findings.find((f) => f.code === 'job-mismatch')?.severity,
+  'warn',
+  'it is a warning: the shot still renders',
+);
+
+// A storyboard without the field is the old behaviour and must stay quiet — a
+// hand-written storyboard should not have to guess the vocabulary.
+assert.ok(!codes(board([{ recipe: 'keyword-punch' }]), { schemas }).includes('job-mismatch'),
+  'no job means no claim to check');
 
 // --- footage relevance ----------------------------------------------------
 

@@ -20,9 +20,9 @@ import type { SpeechTiming } from '../../production/transcribe.ts';
 import { parseSrtCues } from '../../production/srt.ts';
 import type { ProjectDoc } from '../../src/editor/projectTypes.ts';
 import type { Storyboard } from '../../production/types.ts';
-import { GLOBAL_FLAGS, projectReference } from './common.ts';
+import { GLOBAL_FLAGS, projectReference, requireStoryboardLock } from './common.ts';
 
-const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json',
+const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json', 'allow-edited',
   'srt', 'timing', 'captions-template', 'captions-motion', 'captions-pacing', 'no-captions'] as const;
 
 /**
@@ -77,7 +77,12 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
   const replace = flagBoolean(commandLine, 'replace');
 
   const project = await resolveProject(projectReference(commandLine));
-  const storyboard = await readStoryboard(resolve(storyboardFlag));
+  const storyboardFile = resolve(storyboardFlag);
+  // Before anything is read: a generated storyboard that changed on disk is an
+  // edit that never met the validator. Refusing here is what makes `revise` the
+  // only sanctioned way to touch a storyboard.
+  requireStoryboardLock(storyboardFile, flagBoolean(commandLine, 'allow-edited'));
+  const storyboard = await readStoryboard(storyboardFile);
 
   const { registry, schemas } = await loadRecipeRegistry(resolve('production/recipes'));
 

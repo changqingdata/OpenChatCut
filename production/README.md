@@ -4,6 +4,10 @@ The production layer: everything this fork adds on top of OpenChatCut. Nothing
 here is imported by the upstream app at runtime, and nothing here modifies
 upstream files. That separation is what keeps `git rebase upstream/main` cheap.
 
+`AGENT-FIRST.md` records why the pipeline is shaped this way when an external
+agent is the one directing: what was cut, what was kept, and the numbers behind
+each decision.
+
 ```
 types.ts            Storyboard IR — the only input the pipeline accepts
 validate.ts         pre-compile checks; rejects a bad storyboard before it touches a project
@@ -49,9 +53,9 @@ npx tsc -p production                     # type-check this directory only
 | Recipes | 15, with schema validation and param checking |
 | Material | private audio (music, SFX), Pexels, Pixabay |
 | Footage density | policy module — ratio, spacing, essentials; retunable without a model call |
-| CLI | `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
+| CLI | `occ catalog`, `occ check`, `occ apply`, `occ revise`, `occ storyboard`, `occ footage resolve`, `occ compile`, `occ still`, `occ assets`, `occ render` |
 | Storyboard generation | done — chapters, repair, footage intent |
-| QC | `production/qc.ts` — nine rules, run by `occ qc` and after every generation |
+| QC | `production/qc.ts` — eighteen rules, run by `occ qc` / `occ check` and after every generation |
 
 ## Three lanes
 
@@ -94,6 +98,7 @@ cannot be reproduced cannot be trusted.
 | `recipe-repeat` | warn | 3 consecutive shots share a recipe **and** an anchor |
 | `recipe-dominance` | warn | one recipe is over 45% of a 6+ shot video |
 | `recipe-variety` | note | fewer than 4 recipes across 8+ shots |
+| `job-mismatch` | warn | a shot's `job` is not in its recipe's declared `jobs` |
 | `footage-adjacent` | warn | two footage shots in a row |
 | `footage-duplicate-clip` | warn | the same asset used twice |
 | `footage-duplicate-query` | note | the same search used twice |
@@ -226,9 +231,19 @@ without building command lines:
 
 | Tool | Does |
 |---|---|
+| `pipeline_catalog` | what can be drawn: recipes, jobs, params, reference stills, policy constants |
+| `pipeline_check` | validation + QC + scorecard in one payload |
+| `pipeline_apply` | density → footage → compile → captions → A1/A2/A3, no render |
+| `pipeline_revise` | edit a storyboard, validate, re-lock |
+| `pipeline_still` | stills at a chosen width — the agent's eyes |
+| `pipeline_render` | full render, or a frame range for one shot |
+| `pipeline_qc` | findings only (kept; `check` supersedes it) |
+| `pipeline_run` | the supervised lane: brief in, MP4 out |
 | `pipeline_config` | sources, which keys are set, resolved provider |
-| `pipeline_qc` | run the QC rules on a storyboard, no compile |
-| `pipeline_run` | the whole chain; `render:false` stops after the timeline |
+
+The surface is deliberately the **storyboard**, not the timeline. An agent may
+edit a storyboard as finely as it likes; it never places items on tracks, because
+that would cost both determinism and the ability to re-compile later.
 
 It is a thin adapter, not a second implementation: each tool shells out to the
 same `occ` command a person would type and returns its JSON. A change in the CLI
@@ -236,9 +251,13 @@ reaches every client without touching `cli/mcp.ts`. Shelling out is also what
 keeps stdout clean — MCP uses it for the protocol, so nothing in-process may
 print there.
 
-Deliberately three tools. A supervisor needs to look, to check, and to run;
-anything finer-grained would invite an agent to re-implement the pipeline one
-call at a time, which is the thing the fixed order exists to prevent.
+The tool list started at three, on the theory that a supervisor only needs to
+look, to check and to run. That was right for a supervisor and wrong for a
+director: an agent that cannot stop between "storyboard" and "render" cannot
+direct, and one that cannot see a frame cannot judge its own work. The split is
+now by **object** rather than by step — tools act on the storyboard, never on the
+timeline — which is what keeps the order enforced without making the pipeline a
+black box.
 
 ### The second lane: a skill for the built-in agent
 
@@ -279,9 +298,15 @@ So `step.mjs run` always detaches and writes a run record, and the agent polls
 turns a 6.3s `tsx` start-up into ~0.4s per step.
 
 One rule is enforced in code rather than prose: a generated storyboard gets a
-`.lock.json` hash, and `compile` refuses a storyboard whose hash changed
-(`storyboard-edited`). Hand-editing a generated storyboard would bypass the
-validator and QC — that is the single boundary worth a hard failure.
+`.lock.json` hash, and `compile` / `qc` / `check` refuse a storyboard whose hash
+changed (`storyboard-edited`). Hand-editing a generated storyboard would bypass
+the validator and QC — that is the single boundary worth a hard failure.
+
+The lock is not "you may not edit". It is "an edit that has not been through the
+validator may not be rendered", which is why `occ revise` exists: it applies the
+edit, validates, and re-locks. Before this lived in the CLI it was implemented in
+`skill-host/` only, so the MCP lane — the one an external agent uses — never
+checked it at all. A rule enforced on one of two channels is not a rule.
 
 `SKILL.md` is the agent-facing playbook; keep it a playbook, not documentation.
 
@@ -402,8 +427,13 @@ node production/recipes/gallery.mjs 1920x1080 > /tmp/gallery.json
 ```
 
 It emits a storyboard with one shot per recipe; compile it into a scratch
-project and render. `occ still` is 480px wide on purpose (the agent's vision
-budget), so a real render is the honest review copy.
+project and render. `occ still` defaults to 480–640px wide (the agent's vision
+budget), so a review copy that has to show type needs `--width 1080`.
+
+`node production/catalog/build.mjs` does exactly this and writes one still per
+recipe to `production/catalog/stills/`, which is what `occ catalog` points at.
+Those stills are committed: an agent that has never seen `compare-stack` cannot
+judge whether it suits a three-character headline.
 
 ## The layout maths was confirmed by rendering `bl` and `tr` placements and checking
 the box edges land at the expected pixel positions. Two corrections came out of
