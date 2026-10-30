@@ -28,7 +28,18 @@ for (const template of templates) {
   assert.ok(template.code.includes('=>'), `${template.id}: code is not a component`);
   assert.ok(template.width > 0 && template.height > 0, `${template.id}: no design box`);
   assert.ok(['card', 'scene'].includes(template.kind), `${template.id}: kind must be card or scene`);
-  assert.equal(template.box.width, template.width, `${template.id}: box must equal width`);
+  if (template.kind === 'card') {
+    assert.equal(template.box?.width, template.width, `${template.id}: box must equal width`);
+    assert.equal(template.box?.height, template.height, `${template.id}: box must equal height`);
+  } else {
+    // A scene owns the canvas, so it must be canvas-sized and carry no card box.
+    // A 900×900 "scene" letterboxes to a square on a 16:9 timeline.
+    assert.equal(template.box, undefined, `${template.id}: a scene has no card box`);
+    assert.ok(
+      (template.width === 1920 && template.height === 1080) || (template.width === 1080 && template.height === 1920),
+      `${template.id}: a scene must be a canvas, got ${template.width}x${template.height}`,
+    );
+  }
   assert.ok(Array.isArray(template.jobs) && template.jobs.length > 0, `${template.id}: no jobs — QC cannot judge it`);
 
   // Every declared control must address a real key, and every default must be

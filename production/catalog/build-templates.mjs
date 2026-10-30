@@ -108,6 +108,14 @@ function build() {
       propSchema.push(spec);
     }
 
+    // A full-frame recipe owns the canvas, so that is the canvas it declares.
+    // Its design box is not a card size and must not be published as one —
+    // a 900×900 "scene" would letterbox to a square on a 16:9 timeline.
+    const fullFrame = schema.fullFrame === true;
+    const portrait = schema.box.width === 1080 && schema.box.height === 1920;
+    const width = fullFrame ? (portrait ? 1080 : 1920) : schema.box.width;
+    const height = fullFrame ? (portrait ? 1920 : 1080) : schema.box.height;
+
     templates.push({
       id: schema.id,
       name: schema.name,
@@ -120,14 +128,13 @@ function build() {
         ...(schema.landscapeBox ? ['横屏适配'] : []),
         ...(schema.jobs ?? []),
       ],
-      width: schema.box.width,
-      height: schema.box.height,
+      width,
+      height,
       fps: 30,
       durationInFrames: 90,
-      kind: schema.fullFrame ? 'scene' : 'card',
-      box: { width: schema.box.width, height: schema.box.height },
+      kind: fullFrame ? 'scene' : 'card',
+      ...(fullFrame ? { fullFrame: true } : { box: { width, height } }),
       ...(schema.landscapeBox ? { landscapeBox: schema.landscapeBox } : {}),
-      ...(schema.fullFrame ? { fullFrame: true } : {}),
       ...(schema.jobs ? { jobs: schema.jobs } : {}),
       ...(schema.sfx ? { sfx: schema.sfx } : {}),
       props,

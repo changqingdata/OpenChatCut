@@ -10,15 +10,11 @@
       "整屏",
       "attention"
     ],
-    "width": 900,
-    "height": 900,
+    "width": 1920,
+    "height": 1080,
     "fps": 30,
     "durationInFrames": 90,
     "kind": "scene",
-    "box": {
-      "width": 900,
-      "height": 900
-    },
     "fullFrame": true,
     "jobs": [
       "attention"
@@ -279,10 +275,6 @@
     "fps": 30,
     "durationInFrames": 90,
     "kind": "scene",
-    "box": {
-      "width": 1080,
-      "height": 1920
-    },
     "fullFrame": true,
     "jobs": [
       "attention"
@@ -407,10 +399,6 @@
     "fps": 30,
     "durationInFrames": 90,
     "kind": "scene",
-    "box": {
-      "width": 1080,
-      "height": 1920
-    },
     "fullFrame": true,
     "jobs": [
       "attention"
