@@ -180,6 +180,7 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
       assets: poolAssets(currentDoc),
       ...(captions ? { captions } : {}),
       ...(flagText(commandLine, 'timeline') ? { timelineId: flagText(commandLine, 'timeline')! } : {}),
+      ...(currentDoc.designStyle ? { style: currentDoc.designStyle } : {}),
     });
   } catch (error) {
     if (error instanceof CompileError) {

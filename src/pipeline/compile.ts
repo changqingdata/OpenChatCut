@@ -18,6 +18,8 @@ import { PLATE_CODE, buildScrimItem, scrimStopsFor } from './scrim.ts';
 import { validateStoryboard } from './validate.ts';
 import type { Anchor, CompileWarning, LayoutSpec, Shot, Storyboard, VisualSpec } from './types.ts';
 import type { RecipeRegistry } from './recipes.ts';
+import type { DesignStyle } from '../editor/designTypes.ts';
+import { styleProps, styleWash } from './style.ts';
 // `Recipe` used to be defined here; it moved with the schema helpers. Re-exported
 // so anything that imported the shape from the compiler keeps compiling.
 export type { Recipe, RecipeRegistry } from './recipes.ts';
@@ -50,6 +52,11 @@ export interface CompileOptions {
   timelineId?: string;
   /** Caption overlay. Built from the subtitle file by the caller. */
   captions?: CaptionsData;
+  /**
+   * The project's brand. Only props a recipe declares are filled, and the shot's
+   * own params still win — so a style never overwrites a decision.
+   */
+  style?: DesignStyle;
 }
 
 export interface CompileResult {
@@ -246,6 +253,7 @@ function buildItem(
   recipes: RecipeRegistry,
   warnings: CompileWarning[],
   layoutOptions: ResolveOptions,
+  style?: DesignStyle,
 ): TimelineItem | null {
   const visual = shot.visual;
   if (!visual) return null;
@@ -296,6 +304,7 @@ function buildItem(
       // carries every schema default.
       props: {
         ...recipe.defaultProps,
+        ...styleProps(style, Object.keys(recipe.defaultProps ?? {})),
         ...visual.params,
         ...(wideBox ? { landscape: true } : {}),
         ...(onFootage ? { muted: OVER_FOOTAGE_MUTED } : {}),
@@ -479,7 +488,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
       items.push(footage);
       // Only worth washing when something will be drawn over the footage.
       const needsScrim = Boolean(shot.visual) || Boolean(options.captions?.enabled);
-      if (needsScrim) items.push(buildScrimItem(shot, meta, SCRIM_TRACK, scrimStopsFor(meta)));
+      if (needsScrim) items.push(buildScrimItem(shot, meta, SCRIM_TRACK, scrimStopsFor(meta), styleWash(options.style)));
     }
     // Nothing behind the graphics means the canvas shows through — the render
     // comes out on a transparency checkerboard. A shot needs a card colour or
@@ -497,7 +506,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
     const plate = visual ? buildPlate(shot, visual, storyboard, recipes, layoutOptions) : null;
     if (plate) items.push(plate);
 
-    const item = buildItem(shot, storyboard, recipes, warnings, layoutOptions);
+    const item = buildItem(shot, storyboard, recipes, warnings, layoutOptions, options.style);
     if (item) items.push(item);
   }
 

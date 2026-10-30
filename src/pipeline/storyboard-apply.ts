@@ -135,6 +135,9 @@ export function planApplyStoryboard(options: ApplyStoryboardOptions): ApplyStory
     assets: pool,
     timelineId: timeline.id,
     ...(captions ? { captions } : {}),
+    // The brand belongs to the project, so the compiler reads it from there —
+    // the same way the CLI does. One style, one place.
+    ...(doc.designStyle ? { style: doc.designStyle } : {}),
   });
 
   const actions: AtomicAction[] = [];

@@ -58,7 +58,14 @@ export function scrimStopsFor(canvas: { width: number; height: number }): ScrimS
 export const SCRIM_CODE = [
   'const Component = ({ item }) => {',
   '  const p = item.props;',
-  '  const wash = (v) => "rgba(11,11,12," + v + ")";',
+  '  // The wash follows the brand (compile passes style.background); near-black is',
+  '  // only the default, because a light style with dark type needs a light wash.',
+  '  const hex = String(p.ink || "#0B0B0C").replace("#", "");',
+  '  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;',
+  '  const r = parseInt(full.slice(0, 2), 16) || 11;',
+  '  const g = parseInt(full.slice(2, 4), 16) || 11;',
+  '  const b = parseInt(full.slice(4, 6), 16) || 12;',
+  '  const wash = (v) => "rgba(" + r + "," + g + "," + b + "," + v + ")";',
   '  const background = "linear-gradient(180deg, "',
   '    + wash(p.top) + " 0%, "',
   '    + wash(p.mid) + " 32%, "',
@@ -73,6 +80,7 @@ export function buildScrimItem(
   canvas: { width: number; height: number },
   track: string,
   stops: ScrimStops = SCRIM_STOPS,
+  ink?: string,
 ): TimelineItem {
   return {
     id: `it-scrim-${shot.id}`,
@@ -82,7 +90,7 @@ export function buildScrimItem(
     durationInFrames: shot.endFrame - shot.startFrame,
     name: `${shot.id} scrim`,
     code: SCRIM_CODE,
-    props: { ...stops },
+    props: { ...stops, ...(ink ? { ink } : {}) },
     width: canvas.width,
     height: canvas.height,
   };
