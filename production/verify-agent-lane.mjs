@@ -222,6 +222,18 @@ if (FULL) {
       return width > 0 && width <= 1080;
     }));
 
+    console.log('\naudio');
+    // Loudness and tempo used to need a browser. The maths was pure; only the
+    // decoder was missing, so the voiceover landed at gain 1 no matter how
+    // quiet the recording was.
+    const audio = occ(['audio', 'analyze', AUDIO, '--json']);
+    check('audio analyze decodes and measures',
+      audio.code === 0 && typeof audio.json?.lufs === 'number' && audio.json?.lufs < 0,
+      `${audio.json?.lufs} LUFS`);
+    check('and reports the gain to the target',
+      typeof audio.json?.gain === 'number' && audio.json.gain > 0.1,
+      `×${audio.json?.gain}`);
+
     console.log('\nstill');
     const outDir = resolve(WORK, 'stills');
     const still = occ(['still', PROJECT, '--out', outDir, '--frames', '60', '--width', '1080', '--json']);

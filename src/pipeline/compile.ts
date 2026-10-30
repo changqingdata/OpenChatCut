@@ -419,7 +419,12 @@ function buildPlate(
   storyboard: Storyboard,
   recipes: RecipeRegistry,
   layoutOptions: ResolveOptions,
+  hasFootage: boolean,
 ): TimelineItem | null {
+  // A plate exists to hold a card legible *over a clip*. With no clip there is
+  // nothing to correct, and a wash behind a solid is just a grey smudge — which
+  // is what an unresolved footage query used to leave behind.
+  if (!hasFootage) return null;
   if (!shot.underlay || shot.underlay.selected === false) return null;
   const box = visual.kind === 'mg'
     ? recipes.get(visual.recipe)?.box
@@ -503,7 +508,7 @@ export function compile(storyboard: Storyboard, options: CompileOptions = {}): C
     }
 
     const visual = shot.visual;
-    const plate = visual ? buildPlate(shot, visual, storyboard, recipes, layoutOptions) : null;
+    const plate = visual ? buildPlate(shot, visual, storyboard, recipes, layoutOptions, Boolean(footage)) : null;
     if (plate) items.push(plate);
 
     const item = buildItem(shot, storyboard, recipes, warnings, layoutOptions, options.style);

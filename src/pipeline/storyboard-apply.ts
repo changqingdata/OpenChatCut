@@ -48,6 +48,16 @@ export interface ApplyStoryboardPlan {
   seconds: number;
   captions: number;
   tracks: { created: TrackId[]; reused: TrackId[] };
+  /**
+   * Shots that asked for footage and will not get any, because the clip is not
+   * in this project's pool.
+   *
+   * The CLI resolves these with `footage resolve`; the app cannot fetch on its
+   * own, so it reports them instead of quietly rendering a card where a clip was
+   * meant to be. Each entry carries the query, which is what a caller needs to
+   * search for one.
+   */
+  unresolved: Array<{ id: string; subject: string; query: string }>;
 }
 
 /**
@@ -130,6 +140,17 @@ export function planApplyStoryboard(options: ApplyStoryboardOptions): ApplyStory
     });
   }
 
+  // Before compiling, so the report can name shots whose clip is missing from
+  // *this* project's pool — an id copied from another project is dangling here.
+  const unresolved = (storyboard.shots ?? [])
+    .filter((shot) => shot.underlay?.query && shot.underlay.selected !== false)
+    .filter((shot) => !shot.underlay?.assetId || !pool.has(shot.underlay.assetId))
+    .map((shot) => ({
+      id: shot.id,
+      subject: String(shot.underlay?.subject ?? ''),
+      query: String(shot.underlay?.query ?? ''),
+    }));
+
   const compiled = compile(storyboard, {
     recipes: recipeRegistryFromTemplates(templates),
     assets: pool,
@@ -209,5 +230,6 @@ export function planApplyStoryboard(options: ApplyStoryboardOptions): ApplyStory
     ) / fps).toFixed(2)),
     captions: cues.length,
     tracks: { created, reused },
+    unresolved,
   };
 }

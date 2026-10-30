@@ -6,6 +6,7 @@ import { flagBoolean, type CommandLine } from './args.ts';
 import { UsageError } from './errors.ts';
 import { runAssetsCommand } from './commands/assets.ts';
 import { runApplyCommand } from './commands/apply.ts';
+import { runAudioCommand } from './commands/audio.ts';
 import { runCatalogCommand } from './commands/catalog.ts';
 import { runCheckCommand } from './commands/check.ts';
 import { runCompileCommand } from './commands/compile.ts';
@@ -57,6 +58,8 @@ export async function runCommand(commandLine: CommandLine): Promise<void> {
       return runStoryboardCommand(subLine(commandLine, positionals), json);
     case 'assets':
       return runAssetsCommand(subLine(commandLine, positionals), json);
+    case 'audio':
+      return runAudioCommand(subLine(commandLine, positionals), json);
     case 'footage':
       return runFootageCommand(subLine(commandLine, positionals), json);
     case 'qc':

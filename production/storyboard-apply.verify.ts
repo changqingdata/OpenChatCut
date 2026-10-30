@@ -144,6 +144,26 @@ assert.deepEqual(
   'the storyboard stack sits above the tracks the project already had',
 );
 
+// --- 3b. footage that is not in the pool is reported, not invented -------
+
+const withFootage: Storyboard = {
+  ...storyboard,
+  shots: storyboard.shots.map((shot, index) => (index === 0
+    ? {
+      ...shot,
+      underlay: { subject: '硬币堆', query: 'stacked coins close up', confidence: 'high' as const, selected: true },
+    }
+    : shot)),
+};
+const footagePlan = planApplyStoryboard({ doc: project(), storyboard: withFootage, templates });
+assert.deepEqual(
+  footagePlan.unresolved.map((entry) => entry.id),
+  ['S01'],
+  'a query with no clip in this pool is reported so the caller can fetch it',
+);
+assert.equal(footagePlan.unresolved[0]!.query, 'stacked coins close up', 'and carries the query to search for');
+assert.equal(footagePlan.items, 4, 'the shot still compiles — as a card, not a hole');
+
 // --- 4. the hash identifies the version, so a re-apply is detectable ------
 
 assert.equal(storyboardHash(storyboard), plan.hash, 'the hash is stable');

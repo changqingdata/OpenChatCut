@@ -89,6 +89,10 @@ export async function execStoryboardTool(name: string, args: Args, ctx: AgentCon
     seconds: plan.seconds,
     captions: plan.captions,
     tracks: plan.tracks,
+    // Shots whose clip is not in this project's pool. The caller fetches them
+    // (search_stock_media / download_media / import_asset) and applies again;
+    // this tool never reaches the network on its own.
+    unresolved: plan.unresolved,
     warnings: plan.warnings,
     findings: qc.findings,
   };

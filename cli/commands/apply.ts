@@ -29,6 +29,7 @@ import { CliError, UsageError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { readProjectDoc, resolveProject } from '../store.ts';
 import { GLOBAL_FLAGS, projectReference, requireStoryboardLock } from './common.ts';
+import { analyzeAudioFile } from './audio.ts';
 import { applyFootagePolicy, DEFAULT_FOOTAGE_POLICY } from '../../src/pipeline/footage-policy.ts';
 import { writeLock } from '../../production/storyboard-lock.ts';
 import type { Storyboard } from '../../src/pipeline/types.ts';
@@ -38,7 +39,8 @@ const ffprobe = require('@ffprobe-installer/ffprobe').path as string;
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'audio', 'srt', 'timing', 'timeline', 'replace',
   'no-footage', 'no-music', 'no-sfx', 'no-captions', 'captions-template', 'captions-motion',
-  'captions-pacing', 'footage-ratio', 'music-category', 'music-volume', 'json', 'allow-edited'] as const;
+  'captions-pacing', 'footage-ratio', 'music-category', 'music-volume', 'voice-gain', 'loudness-target',
+  'json', 'allow-edited'] as const;
 
 const OCC = resolve('cli/occ.mjs');
 
@@ -247,10 +249,48 @@ export async function runApplyCommand(commandLine: CommandLine, json: boolean): 
     assetId = (pool.assets ?? []).find((entry) => entry.sourceFilename === base || entry.name === base)?.id;
   }
   if (!assetId) throw new CliError('could not import the voiceover into the project pool');
-  occ(['tools', 'call', 'edit_item', '--project', project.name, '--args', JSON.stringify({
+
+  // Loudness, not a guessed number. The voiceover used to land at gain 1 no
+  // matter how quiet the recording was, which is why some cuts needed the volume
+  // turned up by hand afterwards. `--voice-gain none` keeps the old behaviour.
+  const gainFlag = flagText(commandLine, 'voice-gain');
+  let gain = 1;
+  let gainNote = '';
+  if (gainFlag !== 'none') {
+    const targetFlag = flagText(commandLine, 'loudness-target');
+    const target = targetFlag === undefined ? -16 : Number(targetFlag);
+    if (!Number.isFinite(target) || target > 0) {
+      throw new UsageError(`--loudness-target expects a negative LUFS value, got "${targetFlag}"`);
+    }
+    const explicit = gainFlag === undefined || gainFlag === 'auto' ? null : Number(gainFlag);
+    if (explicit !== null && (!Number.isFinite(explicit) || explicit <= 0)) {
+      throw new UsageError(`--voice-gain expects auto, none, or a positive multiplier, got "${gainFlag}"`);
+    }
+    if (explicit !== null) {
+      gain = explicit;
+      gainNote = ` ×${gain.toFixed(2)}`;
+    } else {
+      const measured = analyzeAudioFile(audioPath, target);
+      gain = measured.gain;
+      gainNote = ` ×${gain.toFixed(2)} → ${target} LUFS (was ${measured.lufs})`;
+    }
+  }
+
+  const placed = occ(['tools', 'call', 'edit_item', '--project', project.name, '--args', JSON.stringify({
     adds: [{ type: 'audio', assetId, track: 'A1', fromFrame: 0, durationInFrames: durationFrames }],
-  }), '--apply']);
-  steps.push(`voiceover: ${durationFrames} frames on A1`);
+  }), '--apply']) as {
+    ops?: Array<{ result?: { results?: Array<{ placed?: { itemId?: string } }> } }>;
+  };
+  const voiceItemId = placed.ops?.[0]?.result?.results?.[0]?.placed?.itemId;
+
+  // `adds` has no volume field, so the gain is a second, explicit update. Two
+  // calls rather than one magic field keeps the tool contract honest.
+  if (gain !== 1 && voiceItemId) {
+    occ(['tools', 'call', 'edit_item', '--project', project.name, '--args', JSON.stringify({
+      updates: [{ type: 'audio', itemId: voiceItemId, volume: gain }],
+    }), '--apply']);
+  }
+  steps.push(`voiceover: ${durationFrames} frames on A1${gainNote}`);
 
   // 5. Music, by the mood the storyboard named. The bed is chained from tracks
   //    in that mood because the library is songs, not loops.

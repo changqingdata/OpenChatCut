@@ -10,7 +10,9 @@ export const STORYBOARD_TOOL_SCHEMAS: AgentToolSchema[] = [
       'undoable step. This is how a shot list becomes a video, and it replaces the timeline rather than appending',
       'unless replace:false. Every shot needs startFrame/endFrame (endFrame = the next shot\'s startFrame), a',
       'visual with a recipe from the template catalog, and narration text for its caption.',
-      'Returns QC findings before anything is rendered, so an overlap or a repeated line is caught here.',
+      'Returns QC findings before anything is rendered, so an overlap or a repeated line is caught here,',
+      'plus `unresolved`: shots that asked for footage but whose clip is not in this project pool. Fetch those',
+      '(search_stock_media → download_media → import_asset) and apply again; this tool does not use the network.',
       'The storyboard is stored on the project, which makes "apply, look, change one shot, apply again" cheap.',
     ].join(' '),
     input_schema: {

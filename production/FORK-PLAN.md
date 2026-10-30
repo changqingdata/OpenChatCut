@@ -1,6 +1,6 @@
 # 分叉方案：从「编辑器遥控器」到「意图编译器」
 
-状态：**P1–P3 已实施**；P4、P5 待做。基线 `2f0a0b93`，备份分支 `snapshot/pre-fork`（本地 + 远端）。
+状态：**P1–P5 已实施**（P5 的 AI 生成镜头一项未做，见 P5 文末）。基线 `2f0a0b93`，备份分支 `snapshot/pre-fork`（本地 + 远端）。
 
 ## 进度
 
@@ -9,8 +9,8 @@
 | P1 核心搬家 | ✅ | `09258bdb` — 7 个模块进 `src/pipeline/`，编译产物逐字节不变 |
 | P2 卡片模板 | ✅ | 15 个模板 + `kind: 'card'` + 检查器 `array` 控件 + `templateId` |
 | P3 `apply_storyboard` | ✅ | `apply_storyboard` / `get_storyboard`，一次 batch = 一次 undo |
-| P4 风格注入 | 待做 | |
-| P5 借能力 / 砍重复 | 待做 | |
+| P4 风格注入 | ✅ | `src/pipeline/style.ts` — 默认 < 风格 < 镜头参数，几何不变 |
+| P5 借能力 / 砍重复 | ✅（除 AI 生成） | 响度与节拍有了 Node 入口、素材缺口上报、字幕合并、衬底修正 |
 
 P3 实施时加了一条原计划没写的：**CLI 编译也把分镜写进工程**（`occ compile --apply`）。两条外壳必须落在同一份文档上，否则「命令行做的片子」在应用里打不开逐镜编辑。
 
@@ -211,6 +211,26 @@ apply_storyboard(project, storyboard)
 | `production/generate.ts` | 上游没有等价物 | **不删**。它是「一句话」的入口 |
 
 **验收**：CLI 与 MCP 全部走 `src/pipeline`；`production/` 里不再有任何「自己实现一遍」的编译器；一条片子能用上 AI 生成镜头；`verify-agent-lane.mjs` 全绿。
+**实际完成情况**
+
+已做：
+
+- **砍重复**：`captions.ts` 进了 `src/pipeline/`，字幕只有一份实现；`production/*.ts` 剩下的全是单行 re-export，没有任何逻辑。
+- **应用侧素材缺口**：`apply_storyboard` 现在返回 `unresolved`（镜头 id + subject + query）。应用不能自己联网抓素材，以前是「静默渲染成卡片」，现在把要抓的查询报出来，交给 `search_stock_media` / `download_media`，落地后重新应用。
+- **一处真 bug**：素材没落地时仍然画衬底（plate），一层灰雾盖在纯色背景上。衬底的意义是「让卡片压在**素材**上可读」，没有素材就不该有衬底。
+
+未做，以及为什么：
+
+**响度与节拍：已落地。** 两者的数学本来就是纯函数（`integratedLoudnessFromSamples`、`analyzeBeats`），缺的只是解码器——而解码器在浏览器里。`production/audio-decode.ts` 用 ffmpeg 解成 16kHz 单声道，于是：
+
+- `occ audio analyze <file>` 一次给出时长、LUFS、到目标的增益、BPM、拍点、强拍；
+- `occ apply` 的人声不再固定 gain 1：按 -16 LUFS 自动算增益（实测这条片子 -19.5 → ×1.49），`--voice-gain none` 保留旧行为，`--loudness-target` 可改目标。
+
+这条改动有真实后果：以前录得轻的人声要手动调音量，现在自动落在交付响度上。
+
+**仍未做：AI 生成镜头。** `submit_image` / `submit_video` 需要运行中的浏览器运行时加模型密钥，本机无法离线验证，而半成品比没有更糟。它在应用里已经可用（agent 可以直接调），缺的是把它接进分镜的 `underlay` 解析——等 P6 用一次真实会话验证。
+
+**节拍的下一步**（有入口、还没用上）：音乐床是同一情绪多首拼接，接缝应该落在强拍上。`occ audio analyze` 已经能给出强拍帧，缺的是 `assets place` 拼接时对齐。这是一次独立的、可离线验证的改动。
 
 ---
 

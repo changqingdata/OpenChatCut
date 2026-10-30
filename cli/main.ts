@@ -20,6 +20,7 @@ Usage
   occ still [<project>] --out <dir> --frames <n,n,…> [--timeline <id>] [--width <px>] [--json]
   occ compile [<project>] --storyboard <file.json> [--timeline <id>] [--replace] [--apply] [--json]
   occ storyboard --srt <file.srt> --brief "<one line>" (--prompt | --from <reply> | --generate) [--out <file.json>]
+  occ audio analyze <file> [--target -16] [--json]
   occ assets search --role <role> [--query q] [--category c] [--limit n] [--json]
   occ assets place <project> --role music --category c --min-duration s [--track A2] [--volume 0.14]
   occ footage resolve <project> --storyboard <in.json> [--out <out.json>] [--max-clips n] [--dry-run]
