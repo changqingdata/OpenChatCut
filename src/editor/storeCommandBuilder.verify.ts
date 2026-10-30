@@ -43,3 +43,29 @@ for (const overwrite of [false, true]) {
   }
 }
 console.log('storeCommandBuilder.verify: overwrite and normal placement retain tracks, order, assets, and single-step undo');
+
+// A card is a design unit, not a scene. The layer fits every clip to the canvas
+// before its own transform applies, so a 900×520 card dropped in unscaled would
+// render at ~1870×1080. `addMotionGraphic` must cancel that fit — and a scene
+// must not, or a 1920×1080 template would be scaled to 0.56 for no reason.
+{
+  let history = { past: [] as ProjectDoc[], present: project('video'), future: [] as ProjectDoc[] };
+  const commands = buildCommands((action) => { history = historyReduce(history, action); }, () => history.present);
+  const tpl = {
+    id: 'card', name: 'card', category: 'test', code: 'return null;', props: {}, fps: 30, propSchema: [], thumb: null,
+    width: 900, height: 520, durationInFrames: 90, kind: 'card' as const,
+  };
+  commands.addMotionGraphic(tpl, {});
+  const card = history.present.timelines[0]!.items[0]!;
+  const fitted = Math.min(1920 / 900, 1080 / 520);
+  assert.ok(card.transform, 'a card carries a transform that cancels the canvas fit');
+  assert.ok(Math.abs((card.transform!.scale ?? 0) * fitted - 1) < 0.002,
+    `card renders at its design size (scale ${card.transform!.scale} × fit ${fitted.toFixed(3)})`);
+
+  let scenes = { past: [] as ProjectDoc[], present: project('video'), future: [] as ProjectDoc[] };
+  const sceneCommands = buildCommands((action) => { scenes = historyReduce(scenes, action); }, () => scenes.present);
+  sceneCommands.addMotionGraphic({ ...tpl, id: 'scene', kind: 'scene', width: 1920, height: 1080 }, {});
+  const scene = scenes.present.timelines[0]!.items[0]!;
+  assert.equal(scene.transform, undefined, 'a scene fills the canvas and needs no transform');
+  console.log('storeCommandBuilder.verify: cards cancel the canvas fit, scenes keep it');
+}
