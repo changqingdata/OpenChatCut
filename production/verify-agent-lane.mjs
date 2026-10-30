@@ -121,6 +121,37 @@ check('the shape follows the canvas asked about',
   portrait.json?.storyboard?.shape?.meta?.width === 1080
   && portrait.json?.storyboard?.shape?.meta?.height === 1920);
 
+// --- 1b. the app's template catalog ---------------------------------------
+
+// The 15 recipes are also assets in the app (`kind: 'card'`). That JSON is
+// generated from `production/recipes/`, and a stale copy is the quiet way to end
+// up with two versions of the same component — one the CLI compiles, one the
+// library drags.
+console.log('\ntemplate catalog');
+let catalogFresh = true;
+let catalogDetail = '';
+try {
+  catalogDetail = execFileSync(process.execPath, ['production/catalog/build-templates.mjs', '--check'],
+    { encoding: 'utf8' }).trim();
+} catch (error) {
+  catalogFresh = false;
+  catalogDetail = String(error.stdout ?? error.message).trim().split('\n')[0];
+}
+check('the app catalog matches the recipe sources', catalogFresh, catalogDetail);
+
+if (FULL) {
+  let templatesOk = true;
+  let templatesDetail = '';
+  try {
+    templatesDetail = execFileSync('npx', ['tsx', 'production/templates.verify.ts'],
+      { encoding: 'utf8', shell: true }).trim().split('\n').at(-1);
+  } catch (error) {
+    templatesOk = false;
+    templatesDetail = String(error.stdout ?? error.message).trim().split('\n').at(-1);
+  }
+  check('every card compiles in the sandbox and has a thumbnail', templatesOk, templatesDetail);
+}
+
 // --- 2. the lock -----------------------------------------------------------
 
 console.log('\nstoryboard lock');

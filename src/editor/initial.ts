@@ -1,6 +1,7 @@
 import templatesJson from '../../assets/templates/openchatcut-templates.json';
 import socialShortsJson from '../../assets/templates/social-shorts-templates.json';
 import kouboScenesJson from '../../assets/templates/koubo-scenes-templates.json';
+import shotsJson from '../../assets/templates/shots-templates.json';
 import type { Tpl } from '../types';
 import type { TimelineState } from './types';
 
@@ -8,11 +9,16 @@ import type { TimelineState } from './types';
 // (fallback when nothing is persisted) and the editor (agent context / library).
 // 211 items (openchatcut-templates.json) + vertical screen self-media social-shorts (9:16)
 // + Oral broadcast scenes koubo-scenes (background + characters through the window, both horizontal and vertical).
+// + 15 shot cards generated from production/recipes — the compiler's own vocabulary.
+//   These are `kind: 'card'`: a design box the compiler places on top of footage,
+//   not a scene that fills the frame. Generated, never hand-edited
+//   (production/catalog/build-templates.mjs --check enforces it).
 // The old koubo-dual preview is too rough and has been removed from the shelves. Please do not merge it again - koubo-scenes is a replacement.
 export const TEMPLATES = [
   ...(templatesJson as Tpl[]),
   ...(socialShortsJson as Tpl[]),
   ...(kouboScenesJson as Tpl[]),
+  ...(shotsJson as Tpl[]),
 ];
 
 const pick = (name: string): Tpl => TEMPLATES.find((t) => t.name.includes(name)) ?? TEMPLATES[0];

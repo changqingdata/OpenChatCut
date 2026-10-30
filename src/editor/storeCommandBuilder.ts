@@ -11,6 +11,7 @@ import {
 import { planSlip } from './slip';
 import { sourceFramesToTimelineFrames } from './sourceLimit';
 import type { EditorCommands } from './storeCommands';
+import type { Tpl } from '../types';
 import {
   activeEditorState,
   activeTimeline,
@@ -37,6 +38,21 @@ const uid = (p: string) => `${p}_${crypto.randomUUID()}`;
 // The editor command set over a project dispatch fn — reused by the live store
 // (real dispatch → history) and by the proposal draft engine (draft dispatch
 // that records + applies to a scratch ProjectDoc without touching the real one).
+/**
+ * The transform that cancels the canvas fit for a card template.
+ *
+ * Every clip is scaled to fit the canvas before its own transform applies
+ * (`ItemLayer`), and `transformFromRect` divides that fit back out so a compiled
+ * card lands at the width its layout asked for. A card dragged from the library
+ * has no layout, so the honest default is its design size — 1/fit — which is the
+ * same convention with a width ratio of exactly one.
+ */
+function cardTransform(tpl: Tpl, doc: ProjectDoc) {
+  const timeline = activeTimeline(doc);
+  const fitted = Math.min((timeline?.width ?? tpl.width) / tpl.width, (timeline?.height ?? tpl.height) / tpl.height);
+  return { scale: Number((1 / (fitted || 1)).toFixed(4)), x: 0, y: 0 };
+}
+
 export function buildCommands(dispatch: ProjectDispatch, getDoc: () => ProjectDoc): EditorCommands {
   // Track creations produced while BUILDING an action (pickTrack runs inside
   // the item literal, before dispatch) are staged here and folded into the same
@@ -203,6 +219,13 @@ export function buildCommands(dispatch: ProjectDispatch, getDoc: () => ProjectDo
           props: { ...tpl.props },
           width: tpl.width,
           height: tpl.height,
+          // A card is a design unit, not a scene. The layer scales every clip to
+          // fit the canvas, so a 900×520 card would land at 1870×1080 — correct
+          // for a scene, absurd for a card. Dividing that fit back out puts it on
+          // the timeline at the size it was designed at; the compiler does the
+          // same arithmetic in `transformFromRect`, so a dragged card and a
+          // compiled one share one convention.
+          ...(tpl.kind === 'card' ? { transform: cardTransform(tpl, getDoc()) } : {}),
         };
         placeItem(item, at);
       },

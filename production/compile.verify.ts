@@ -168,6 +168,7 @@ withRecipe.shots[0]!.visual = {
 
 const mg = compile(withRecipe, { recipes }).timeline.items[0]!;
 assert.equal(mg.kind, 'motion-graphic', 'mg visual becomes a motion-graphic item');
+assert.equal(mg.templateId, 'stat-impact', 'the item names the template it came from, so the inspector can edit it');
 assert.ok(mg.code?.includes('Component'), 'recipe code is inlined into the item');
 assert.equal(mg.props?.unit, '%', 'recipe defaults survive');
 assert.equal(mg.props?.value, 37, 'shot params override defaults');

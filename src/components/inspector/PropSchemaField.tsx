@@ -40,8 +40,56 @@ function PropControl({ spec, value, onChange }: PropSchemaFieldProps): ReactNode
   if (spec.type === 'font') return <FontField spec={spec} value={value} onChange={onChange} />;
   if (spec.type === 'select') return <SelectField spec={spec} value={value} onChange={onChange} />;
   if (spec.type === 'image' || spec.type === 'asset' || spec.type === 'video') return <MediaField spec={spec} value={value} onChange={onChange} />;
+  if (spec.type === 'array') return <ListField spec={spec} value={value} onChange={onChange} />;
   if (spec.type === 'text') return <textarea className="cc-insp-textarea" rows={resolveInspectorTextAreaRows(value)} value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} style={{ ...FIELD_STYLE, resize: 'vertical', fontFamily: 'inherit' }} />;
   return <input type="text" value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} style={FIELD_STYLE} />;
+}
+
+/**
+ * A list of strings — the shape recipes use for `items`, `steps`, `labels`.
+ *
+ * Without a control here the inspector fell through to a text input and handed
+ * the component a string where it expected an array, which fails at render time
+ * with no clue why. Rows are edited in place; the count is bounded by the
+ * schema because a nine-step flow-chain does not fit the card.
+ */
+function ListField({ spec, value, onChange }: PropSchemaFieldProps) {
+  const rows = Array.isArray(value) ? value.map((entry) => String(entry ?? '')) : [];
+  const max = spec.maxItems ?? 12;
+  const limit = spec.itemMaxLength;
+  const update = (next: string[]) => onChange(next);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+      {rows.map((entry, index) => (
+        <div key={index} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={entry}
+            maxLength={limit}
+            onChange={(event) => update(rows.map((row, i) => (i === index ? event.target.value : row)))}
+            style={FIELD_STYLE}
+          />
+          <button
+            type="button"
+            title="删除这一项"
+            onClick={() => update(rows.filter((_, i) => i !== index))}
+            style={{ ...FIELD_STYLE, width: 22, flex: 'none', cursor: 'pointer', color: theme.textDim }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      {rows.length < max && (
+        <button
+          type="button"
+          onClick={() => update([...rows, ''])}
+          style={{ ...FIELD_STYLE, cursor: 'pointer', color: theme.textDim }}
+        >
+          + 添加一项（{rows.length}/{max}）
+        </button>
+      )}
+    </div>
+  );
 }
 
 function NumberField({ spec, value, onChange }: PropSchemaFieldProps) {

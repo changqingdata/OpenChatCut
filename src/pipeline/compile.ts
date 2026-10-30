@@ -286,6 +286,10 @@ function buildItem(
     return {
       ...base,
       kind: 'motion-graphic',
+      // The id, not just the code: the inspector looks propSchema up by
+      // templateId, and without it every compiled shot reports "no editable
+      // properties" even though the template declares fifteen.
+      templateId: recipe.id,
       code: recipe.code,
       // The footage correction comes last: it is a legibility rule, not a
       // preference, and a storyboard that has been through the CLI already

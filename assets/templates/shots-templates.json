@@ -1,0 +1,1963 @@
+[
+  {
+    "id": "annotation",
+    "name": "圈注",
+    "category": "infographics",
+    "description": "在画面上圈出某处并加一句说明，用来把观众的注意力指到一个具体位置",
+    "tags": [
+      "卡片",
+      "Annotation",
+      "整屏",
+      "attention"
+    ],
+    "width": 900,
+    "height": 900,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "scene",
+    "box": {
+      "width": 900,
+      "height": 900
+    },
+    "fullFrame": true,
+    "jobs": [
+      "attention"
+    ],
+    "props": {
+      "landscape": false,
+      "x": 0.5,
+      "y": 0.5,
+      "size": 0.4,
+      "shape": "circle",
+      "label": "",
+      "fontSize": 34,
+      "strokeWidth": 6,
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "x",
+        "label": "圈心在盒子里的横向位置，0 最左、1 最右",
+        "type": "number",
+        "defaultValue": 0.5,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "y",
+        "label": "圈心在盒子里的纵向位置，0 最上、1 最下",
+        "type": "number",
+        "defaultValue": 0.5,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "size",
+        "label": "圈的直径，占盒子宽度的比例",
+        "type": "number",
+        "defaultValue": 0.4,
+        "min": 0.12,
+        "max": 1
+      },
+      {
+        "key": "shape",
+        "label": "shape",
+        "type": "select",
+        "defaultValue": "circle",
+        "options": [
+          "circle",
+          "box"
+        ]
+      },
+      {
+        "key": "label",
+        "label": "圈下方的说明，带深色底衬",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 34,
+        "min": 22,
+        "max": 52
+      },
+      {
+        "key": "strokeWidth",
+        "label": "strokeWidth",
+        "type": "number",
+        "defaultValue": 6,
+        "min": 2,
+        "max": 14
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-annotation.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // The ring draws itself, then the label follows. A ring that simply appears\r\n  // reads as a sticker; one that draws reads as someone pointing.\r\n  const draw = interpolate(frame, [fps * 0.15, fps * 0.7], [0, 1], { extrapolateRight: 'clamp' });\r\n  const labelIn = interpolate(frame, [fps * 0.6, fps * 0.95], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  const width = item.width;\r\n  const height = item.height;\r\n  // `Number(undefined)` is NaN, not nullish, so `?? 0.5` would never fire and the\r\n  // ring would land at NaN — invisible. Check for a finite number instead.\r\n  const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);\r\n  const clamp01 = (value) => Math.min(1, Math.max(0, value));\r\n\r\n  // Short side, not width: a ring sized from the width covers 71% of a 16:9\r\n  // frame's height at the same fraction, which is never what \"circle this\" means.\r\n  const size = Math.min(width, height) * Math.min(1, Math.max(0.12, num(p.size, 0.4)));\r\n  const cx = width * clamp01(num(p.x, 0.5));\r\n  const cy = height * clamp01(num(p.y, 0.5));\r\n  const stroke = p.strokeWidth ?? 6;\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n  };\r\n\r\n  // A rounded box traces its outline; a circle uses the dash trick so both\r\n  // shapes reveal in the same gesture.\r\n  const circumference = 2 * Math.PI * (size / 2);\r\n  const boxLength = size * 4;\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      <svg width={width} height={height} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>\r\n        {p.shape === 'box' ? (\r\n          <rect\r\n            x={cx - size / 2} y={cy - size / 2} width={size} height={size}\r\n            rx={size * 0.08}\r\n            fill=\"none\" stroke={p.accent} strokeWidth={stroke}\r\n            strokeDasharray={boxLength} strokeDashoffset={boxLength * (1 - draw)}\r\n          />\r\n        ) : (\r\n          <circle\r\n            cx={cx} cy={cy} r={size / 2}\r\n            fill=\"none\" stroke={p.accent} strokeWidth={stroke}\r\n            strokeDasharray={circumference} strokeDashoffset={circumference * (1 - draw)}\r\n          />\r\n        )}\r\n      </svg>\r\n      {p.label ? (\r\n        <div\r\n          style={{\r\n            position: 'absolute',\r\n            left: cx,\r\n            top: cy + size / 2 + 26,\r\n            transform: 'translateX(-50%)',\r\n            opacity: labelIn,\r\n            fontFamily: p.bodyFont,\r\n            fontSize: p.fontSize,\r\n            color: p.ink,\r\n            whiteSpace: 'nowrap',\r\n            // A dark pill keeps the label readable over whatever it is pointing at.\r\n            backgroundColor: 'rgba(11,11,12,0.72)',\r\n            padding: '10px 22px',\r\n            borderRadius: 8,\r\n          }}\r\n        >\r\n          {p.label}\r\n        </div>\r\n      ) : null}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "bar-compare",
+    "name": "条形对比",
+    "category": "data-visualization",
+    "description": "两个量并排比长度，用来讲倍数、落差、A 是 B 的几倍",
+    "tags": [
+      "卡片",
+      "Bar compare",
+      "叠加",
+      "number",
+      "relation"
+    ],
+    "width": 900,
+    "height": 520,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 520
+    },
+    "jobs": [
+      "number",
+      "relation"
+    ],
+    "props": {
+      "landscape": false,
+      "aLabel": "",
+      "aValue": 0,
+      "bLabel": "",
+      "bValue": 0,
+      "unit": "",
+      "title": "",
+      "aColor": "#8A857C",
+      "bColor": "#E8B04B",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "aLabel",
+        "label": "aLabel",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 10
+      },
+      {
+        "key": "aValue",
+        "label": "aValue",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "key": "bLabel",
+        "label": "bLabel",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 10
+      },
+      {
+        "key": "bValue",
+        "label": "bValue",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "key": "unit",
+        "label": "单位，如 × 或 %",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 3
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "aColor",
+        "label": "第一条的颜色，默认压暗",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "bColor",
+        "label": "第二条的颜色，默认强调",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-bar-compare.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  const enter = spring({ frame, fps, config: { damping: 20, mass: 0.6, stiffness: 140 } });\r\n\r\n  const a = Number(p.aValue);\r\n  const b = Number(p.bValue);\r\n  const safeA = Number.isFinite(a) ? a : 0;\r\n  const safeB = Number.isFinite(b) ? b : 0;\r\n  // Bars are scaled against the larger value, so the comparison is read as a\r\n  // ratio rather than as two numbers the viewer has to divide in their head.\r\n  const scale = Math.max(Math.abs(safeA), Math.abs(safeB)) || 1;\r\n  const aRatio = Math.abs(safeA) / scale;\r\n  const bRatio = Math.abs(safeB) / scale;\r\n\r\n  const width = item.width;\r\n  const trackW = width - 300;\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 60px',\r\n    boxSizing: 'border-box',\r\n    gap: 54,\r\n  };\r\n  const titleStyle = {\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 32,\r\n    letterSpacing: '0.14em',\r\n    color: p.muted,\r\n    opacity: Math.min(1, enter * 1.6),\r\n    marginBottom: 8,\r\n  };\r\n\r\n  const row = (label, value, ratio, color, delay) => {\r\n    const grow = interpolate(frame, [fps * delay, fps * (delay + 0.7)], [0, 1], {\r\n      extrapolateRight: 'clamp',\r\n    });\r\n    return (\r\n      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>\r\n        <div style={{ display: 'flex', alignItems: 'baseline', gap: 22 }}>\r\n          <span style={{ fontFamily: p.bodyFont, fontSize: 34, color: p.muted }}>{label}</span>\r\n          <span style={{ fontFamily: p.displayFont, fontSize: 62, color }}>{value}</span>\r\n        </div>\r\n        {/* Opacity on the track would dim the bar inside it too — the fill has to\r\n            be an rgba colour so the bar keeps its own weight. */}\r\n        <div style={{ width: trackW, height: 26, backgroundColor: 'rgba(138,133,124,0.18)', borderRadius: 13 }}>\r\n          <div\r\n            style={{\r\n              // A 1000:1 comparison is honest but a 0.5px bar reads as a bug,\r\n              // so the sliver keeps a floor that still looks like a sliver.\r\n              width: Math.max(12, trackW * ratio * grow),\r\n              height: '100%',\r\n              backgroundColor: color,\r\n              borderRadius: 13,\r\n            }}\r\n          />\r\n        </div>\r\n      </div>\r\n    );\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? <div style={titleStyle}>{p.title}</div> : null}\r\n      {row(p.aLabel ?? '', safeA + (p.unit ?? ''), aRatio, p.muted === p.aColor ? p.ink : p.aColor, 0.15)}\r\n      {row(p.bLabel ?? '', safeB + (p.unit ?? ''), bRatio, p.bColor, 0.45)}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "big-word-fill",
+    "name": "单字铺满",
+    "category": "title-cards",
+    "description": "一个字占满整个画面，是全片最强的一次冲击。一条视频最多用一次，用多了就不冲击了。",
+    "tags": [
+      "卡片",
+      "Big Word Fill",
+      "整屏",
+      "attention"
+    ],
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "scene",
+    "box": {
+      "width": 1080,
+      "height": 1920
+    },
+    "fullFrame": true,
+    "jobs": [
+      "attention"
+    ],
+    "sfx": {
+      "category": "转场",
+      "query": "碰撞",
+      "volume": 0.45
+    },
+    "props": {
+      "landscape": false,
+      "text": "",
+      "caption": "",
+      "fontSize": 720,
+      "tracking": -6,
+      "captionOffset": 260,
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "bg": "#0B0B0C",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "text",
+        "label": "一到两个字。超过两个就不是铺满了",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 2
+      },
+      {
+        "key": "caption",
+        "label": "caption",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "fontSize",
+        "label": "字号上限；实际字号会按字数收窄，保证不超出画布",
+        "type": "number",
+        "defaultValue": 720,
+        "min": 320,
+        "max": 900
+      },
+      {
+        "key": "tracking",
+        "label": "tracking",
+        "type": "number",
+        "defaultValue": -6,
+        "min": -40,
+        "max": 20
+      },
+      {
+        "key": "captionOffset",
+        "label": "captionOffset",
+        "type": "number",
+        "defaultValue": 260,
+        "min": 80,
+        "max": 700
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": "#0B0B0C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-big-word-fill.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n  // The recipe is designed at 1080 wide and is handed the whole canvas, so\r\n  // every fixed pixel value below is a design value. Without this factor a\r\n  // 1920-wide landscape frame keeps the 1080 sizes and the word looks small in\r\n  // a frame that is 1.8× bigger.\r\n  const k = item.width / 1080;\r\n\r\n  // A slam: it arrives oversized and settles, rather than growing into place.\r\n  const enter = spring({ frame, fps, config: { damping: 18, mass: 0.7, stiffness: 150 } });\r\n  const scale = 1.24 - 0.24 * enter;\r\n  const opacity = Math.min(1, enter * 2.2);\r\n  const glow = interpolate(frame, [0, fps * 0.8], [0.22, 0], { extrapolateRight: 'clamp' });\r\n\r\n  // Two characters at 620px each is 1240px in a 1080px box: the outer strokes\r\n  // get cropped. So the size is capped by width, and then by height — the\r\n  // frame is 1080 tall in landscape, and a width-only cap let a two-character\r\n  // word grow to 864px and sit on top of the burned-in captions.\r\n  const glyphs = Array.from(String(p.text ?? ''));\r\n  const perGlyph = glyphs.length > 0 ? (item.width / glyphs.length) * 0.9 : p.fontSize;\r\n  // Leave the bottom band alone: burned-in captions occupy the last ~16%, and\r\n  // the recipe's own caption needs a line under the word.\r\n  const roomForWord = item.height * (p.caption ? 0.5 : 0.62);\r\n  const size = Math.min(p.fontSize * k, perGlyph, roomForWord);\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    alignItems: 'center',\r\n    justifyContent: 'center',\r\n    overflow: 'hidden',\r\n  };\r\n  const wordStyle = {\r\n    fontFamily: p.displayFont,\r\n    fontSize: size,\r\n    // 0.86 collided: a 760px em box in a 654px line box overlapped the line above.\r\n    lineHeight: 1.0,\r\n    fontWeight: 400,\r\n    letterSpacing: p.tracking,\r\n    color: p.ink,\r\n    textAlign: 'center',\r\n    transform: 'scale(' + scale + ')',\r\n    opacity: opacity,\r\n    textShadow: '0 0 ' + (60 * k * glow) + 'px ' + p.accent,\r\n  };\r\n  // Flow below the word instead of pinning to a bottom offset: with the word\r\n  // sized from the frame, a fixed offset lands inside the glyphs.\r\n  const captionStyle = {\r\n    marginTop: item.height * 0.035,\r\n    textAlign: 'center',\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 34 * k,\r\n    letterSpacing: '0.3em',\r\n    color: p.muted,\r\n    opacity: interpolate(frame, [fps * 0.4, fps * 1.0], [0, 1], { extrapolateRight: 'clamp' }),\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      <div style={wordStyle}>{p.text}</div>\r\n      {p.caption ? <div style={captionStyle}>{p.caption}</div> : null}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "chapter-card",
+    "name": "章节卡",
+    "category": "title-cards",
+    "description": "进入新章节或新话题时的分隔卡，给长视频一个导航感",
+    "tags": [
+      "卡片",
+      "Chapter card",
+      "整屏",
+      "attention"
+    ],
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "scene",
+    "box": {
+      "width": 1080,
+      "height": 1920
+    },
+    "fullFrame": true,
+    "jobs": [
+      "attention"
+    ],
+    "props": {
+      "landscape": false,
+      "number": "",
+      "title": "",
+      "subtitle": "",
+      "kicker": "CHAPTER",
+      "numberSize": 132,
+      "titleSize": 96,
+      "bg": "#0B0B0C",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "number",
+        "label": "number",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 3
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 10
+      },
+      {
+        "key": "subtitle",
+        "label": "subtitle",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 18
+      },
+      {
+        "key": "kicker",
+        "label": "kicker",
+        "type": "text",
+        "defaultValue": "CHAPTER",
+        "maxLength": 12
+      },
+      {
+        "key": "numberSize",
+        "label": "numberSize",
+        "type": "number",
+        "defaultValue": 132,
+        "min": 72,
+        "max": 200
+      },
+      {
+        "key": "titleSize",
+        "label": "titleSize",
+        "type": "number",
+        "defaultValue": 96,
+        "min": 56,
+        "max": 140
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": "#0B0B0C"
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-chapter-card.jpg",
+    "code": "const Component = ({ item }) => {\n  const frame = useCurrentFrame();\n  const { fps } = useVideoConfig();\n  const p = item.props;\n\n  const enter = spring({ frame, fps, config: { damping: 22, mass: 0.7, stiffness: 130 } });\n  const rule = interpolate(frame, [fps * 0.25, fps * 0.85], [0, 1], { extrapolateRight: 'clamp' });\n\n  const width = item.width;\n  // Designed at 1080 wide and handed the whole canvas (see fullFrame in\n  // compile.ts). Fixed pixel sizes would stay small on a 1920-wide frame.\n  const k = item.width / 1080;\n  const rootStyle = {\n    position: 'absolute',\n    inset: 0,\n    backgroundColor: p.bg || 'transparent',\n    display: 'flex',\n    flexDirection: 'column',\n    justifyContent: 'center',\n    padding: '0 ' + (96 * k) + 'px',\n    boxSizing: 'border-box',\n  };\n\n  return (\n    <div style={rootStyle}>\n      <div style={{ fontFamily: p.bodyFont, fontSize: 30 * k, letterSpacing: '0.32em', color: p.accent,\n        opacity: Math.min(1, enter * 1.5) }}>\n        {p.kicker || 'CHAPTER'}\n      </div>\n      <div style={{ display: 'flex', alignItems: 'baseline', gap: 26 * k, marginTop: 26 * k,\n        opacity: Math.min(1, enter * 1.2), transform: 'translateY(' + ((1 - enter) * 24) + 'px)' }}>\n        <span style={{ fontFamily: p.displayFont, fontSize: p.numberSize * k, lineHeight: 0.9, color: p.accent }}>\n          {p.number}\n        </span>\n        <span style={{ fontFamily: p.displayFont, fontSize: p.titleSize * k, lineHeight: 1.15, color: p.ink }}>\n          {p.title}\n        </span>\n      </div>\n      <div style={{ height: 4 * k, width: width * 0.28 * rule, backgroundColor: p.accent, borderRadius: 2 * k, marginTop: 34 * k }} />\n      {p.subtitle ? (\n        <div style={{ fontFamily: p.bodyFont, fontSize: 34 * k, color: p.muted, marginTop: 28 * k,\n          opacity: interpolate(frame, [fps * 0.5, fps * 1.0], [0, 1], { extrapolateRight: 'clamp' }) }}>\n          {p.subtitle}\n        </div>\n      ) : null}\n    </div>\n  );\n};\n"
+  },
+  {
+    "id": "compare-stack",
+    "name": "上下对比",
+    "category": "infographics",
+    "description": "上下一组对照，用来表现「之前/之后」「错/对」「表面/本质」。竖屏里上下排比左右排更易读。",
+    "tags": [
+      "卡片",
+      "Compare Stack",
+      "叠加",
+      "横屏适配",
+      "relation"
+    ],
+    "width": 960,
+    "height": 820,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 960,
+      "height": 820
+    },
+    "landscapeBox": {
+      "width": 1500,
+      "height": 560
+    },
+    "jobs": [
+      "relation"
+    ],
+    "props": {
+      "landscape": false,
+      "topLabel": "之前",
+      "topText": "",
+      "bottomLabel": "之后",
+      "bottomText": "",
+      "topColor": "",
+      "bottomColor": "#F2EFE9",
+      "fontSize": 62,
+      "gap": 34,
+      "dividerWidth": 120,
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif",
+      "bg": ""
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "topLabel",
+        "label": "topLabel",
+        "type": "text",
+        "defaultValue": "之前",
+        "maxLength": 8
+      },
+      {
+        "key": "topText",
+        "label": "topText",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "bottomLabel",
+        "label": "bottomLabel",
+        "type": "text",
+        "defaultValue": "之后",
+        "maxLength": 8
+      },
+      {
+        "key": "bottomText",
+        "label": "bottomText",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "topColor",
+        "label": "上半段文字色，留空则用 muted（压暗表示「弱」）",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "bottomColor",
+        "label": "bottomColor",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 62,
+        "min": 38,
+        "max": 88
+      },
+      {
+        "key": "gap",
+        "label": "gap",
+        "type": "number",
+        "defaultValue": 34,
+        "min": 16,
+        "max": 72
+      },
+      {
+        "key": "dividerWidth",
+        "label": "dividerWidth",
+        "type": "number",
+        "defaultValue": 120,
+        "min": 40,
+        "max": 480
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bg",
+        "label": "背景色，留空则透明（叠在画面上用）",
+        "type": "color",
+        "defaultValue": ""
+      }
+    ],
+    "thumb": "/thumbnails/shots-compare-stack.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n  // The compiler swaps the design box when the canvas is wide, and says so.\r\n  // Same content, different arrangement: stacked top/bottom reads as a before\r\n  // and after on a phone, but on 16:9 it is a narrow column with the right half\r\n  // of the frame empty. Side by side is the landscape form of the same idea.\r\n  const wide = p.landscape === true;\r\n\r\n  const topIn = interpolate(frame, [0, fps * 0.45], [0, 1], { extrapolateRight: 'clamp' });\r\n  const divider = interpolate(frame, [fps * 0.35, fps * 0.85], [0, 1], { extrapolateRight: 'clamp' });\r\n  const bottomIn = interpolate(frame, [fps * 0.7, fps * 1.2], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: wide ? 'row' : 'column',\r\n    justifyContent: 'center',\r\n    alignItems: wide ? 'center' : 'stretch',\r\n    padding: wide ? '0 40px' : '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const blockStyle = {\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    ...(wide ? { flex: '1 1 0', minWidth: 0 } : {}),\r\n  };\r\n  // In a row, the two blocks slide in from opposite sides; the vertical\r\n  // translate that suits a stack reads as a wobble.\r\n  const topBlockStyle = {\r\n    ...blockStyle,\r\n    opacity: topIn,\r\n    transform: wide\r\n      ? 'translateX(' + ((1 - topIn) * -30) + 'px)'\r\n      : 'translateY(' + ((1 - topIn) * -20) + 'px)',\r\n  };\r\n  const bottomBlockStyle = {\r\n    ...blockStyle,\r\n    opacity: bottomIn,\r\n    transform: wide\r\n      ? 'translateX(' + ((1 - bottomIn) * 30) + 'px)'\r\n      : 'translateY(' + ((1 - bottomIn) * 24) + 'px)',\r\n  };\r\n  const labelStyle = (color) => ({\r\n    fontFamily: p.bodyFont,\r\n    fontSize: wide ? 38 : 32,\r\n    fontWeight: 500,\r\n    letterSpacing: '0.28em',\r\n    color: color,\r\n    marginBottom: wide ? 20 : 16,\r\n  });\r\n  // A fixed size has to fit the longest line it might ever get, so short lines\r\n  // come out timid. Fit to the actual text instead, capped so a three-character\r\n  // line does not turn into a poster.\r\n  const gutter = wide ? p.gap * 2 + 3 : 120;\r\n  const fitSize = (text) => {\r\n    const chars = Array.from(String(text ?? '')).length || 1;\r\n    const inner = (item.width - gutter) / (wide ? 2 : 1);\r\n    return Math.min(Math.round(p.fontSize * 1.7), Math.floor((inner / chars) * 0.92));\r\n  };\r\n  const bodySize = Math.min(fitSize(p.topText), fitSize(p.bottomText));\r\n\r\n  const textStyle = (color) => ({\r\n    fontFamily: p.displayFont,\r\n    fontSize: bodySize,\r\n    lineHeight: 1.28,\r\n    fontWeight: 400,\r\n    letterSpacing: '-0.01em',\r\n    color: color,\r\n    whiteSpace: 'pre-wrap',\r\n  });\r\n  // A short horizontal rule is the stacked form of \"these two are the same\r\n  // kind of thing\"; the row form is a vertical one between the columns.\r\n  const dividerStyle = wide\r\n    ? {\r\n      width: 3,\r\n      alignSelf: 'stretch',\r\n      margin: '6% ' + p.gap + 'px',\r\n      backgroundColor: p.muted,\r\n      opacity: 0.45 * divider,\r\n    }\r\n    : {\r\n      height: 3,\r\n      width: (p.dividerWidth * divider) + 'px',\r\n      backgroundColor: p.muted,\r\n      opacity: 0.45,\r\n      margin: p.gap + 'px 0',\r\n    };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      <div style={topBlockStyle}>\r\n        <div style={labelStyle(p.muted)}>{p.topLabel}</div>\r\n        {/* Empty topColor means \"derive from muted\": that way the compiler's\r\n             over-footage correction reaches the dimmed line too. */}\r\n        <div style={textStyle(p.topColor || p.muted)}>{p.topText}</div>\r\n      </div>\r\n      <div style={dividerStyle} />\r\n      <div style={bottomBlockStyle}>\r\n        <div style={labelStyle(p.accent)}>{p.bottomLabel}</div>\r\n        <div style={textStyle(p.bottomColor)}>{p.bottomText}</div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "flow-chain",
+    "name": "因果链",
+    "category": "infographics",
+    "description": "把原因、机制、结果串成一条带箭头的链，用来讲「为什么会这样」",
+    "tags": [
+      "卡片",
+      "Flow chain",
+      "叠加",
+      "process",
+      "relation"
+    ],
+    "width": 960,
+    "height": 460,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 960,
+      "height": 460
+    },
+    "jobs": [
+      "process",
+      "relation"
+    ],
+    "props": {
+      "landscape": false,
+      "steps": [],
+      "labels": [],
+      "title": "",
+      "fontSize": 52,
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "steps",
+        "label": "2–4 个环节，按因果顺序",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 10
+      },
+      {
+        "key": "labels",
+        "label": "每个环节上方的小标签，可选（如「原因」「机制」「结果」）",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 6
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 52,
+        "min": 26,
+        "max": 60
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-flow-chain.jpg",
+    "code": "const Component = ({ item }) => {\n  const frame = useCurrentFrame();\n  const { fps } = useVideoConfig();\n  const p = item.props;\n\n  const steps = (Array.isArray(p.steps) ? p.steps : []).slice(0, 4);\n  const labels = Array.isArray(p.labels) ? p.labels : [];\n  if (steps.length < 2) return null;\n\n  const width = item.width;\n  const gap = 74;\n  const boxW = (width - 120 - gap * (steps.length - 1)) / steps.length;\n\n  const rootStyle = {\n    position: 'absolute',\n    inset: 0,\n    backgroundColor: p.bg || 'transparent',\n    display: 'flex',\n    flexDirection: 'column',\n    justifyContent: 'center',\n    padding: '0 60px',\n    boxSizing: 'border-box',\n    gap: 40,\n  };\n\n  return (\n    <div style={rootStyle}>\n      {p.title ? (\n        <div style={{ fontFamily: p.bodyFont, fontSize: 30, letterSpacing: '0.14em', color: p.muted }}>\n          {p.title}\n        </div>\n      ) : null}\n      <div style={{ display: 'flex', alignItems: 'center' }}>\n        {steps.map((step, index) => {\n          const enter = spring({\n            frame: frame - Math.round(index * fps * 0.18),\n            fps,\n            config: { damping: 18, mass: 0.6, stiffness: 150 },\n          });\n          // Arrows draw left to right, so the chain reads as a sequence rather\n          // than as three boxes that happen to be next to each other.\n          const arrow = interpolate(\n            frame,\n            [fps * (0.25 + index * 0.18), fps * (0.55 + index * 0.18)],\n            [0, 1],\n            { extrapolateRight: 'clamp' },\n          );\n          return (\n            <div key={index} style={{ display: 'flex', alignItems: 'center' }}>\n              <div\n                style={{\n                  width: boxW,\n                  display: 'flex',\n                  flexDirection: 'column',\n                  alignItems: 'center',\n                  gap: 16,\n                  opacity: Math.min(1, enter * 1.4),\n                  transform: 'translateY(' + ((1 - enter) * 20) + 'px)',\n                }}\n              >\n                {labels[index] ? (\n                  <div style={{ fontFamily: p.bodyFont, fontSize: 24, letterSpacing: '0.2em', color: p.accent }}>\n                    {labels[index]}\n                  </div>\n                ) : null}\n                <div\n                  style={{\n                    fontFamily: p.displayFont,\n                    fontSize: p.fontSize,\n                    lineHeight: 1.25,\n                    color: p.ink,\n                    textAlign: 'center',\n                  }}\n                >\n                  {step}\n                </div>\n              </div>\n              {index < steps.length - 1 ? (\n                <svg width={gap} height={40} viewBox={`0 0 ${gap} 40`} style={{ flex: '0 0 auto' }}>\n                  <line\n                    x1={6} y1={20} x2={6 + (gap - 22) * arrow} y2={20}\n                    stroke={p.accent} strokeWidth={5} strokeLinecap=\"round\"\n                  />\n                  {arrow > 0.85 ? (\n                    <path\n                      d={`M${gap - 22} 10 L${gap - 6} 20 L${gap - 22} 30`}\n                      fill=\"none\" stroke={p.accent} strokeWidth={5}\n                      strokeLinecap=\"round\" strokeLinejoin=\"round\"\n                    />\n                  ) : null}\n                </svg>\n              ) : null}\n            </div>\n          );\n        })}\n      </div>\n    </div>\n  );\n};\n"
+  },
+  {
+    "id": "icon-row",
+    "name": "图标横排",
+    "category": "infographics",
+    "description": "三到四个并列项，每项配一个图标，比纯文字列表更有形",
+    "tags": [
+      "卡片",
+      "Icon row",
+      "叠加",
+      "relation",
+      "thing"
+    ],
+    "width": 960,
+    "height": 520,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 960,
+      "height": 520
+    },
+    "jobs": [
+      "relation",
+      "thing"
+    ],
+    "props": {
+      "landscape": false,
+      "items": [],
+      "icons": [],
+      "title": "",
+      "fontSize": 50,
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC",
+      "iconSize": 132
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "items",
+        "label": "2–4 项，每项不超过 8 字",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 8
+      },
+      {
+        "key": "icons",
+        "label": "与 items 一一对应的图标名，可选：clock / growth / people / coin / check / arrow / star / shield",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 10
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 50,
+        "min": 24,
+        "max": 56
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      },
+      {
+        "key": "iconSize",
+        "label": "图标边长（设计像素）",
+        "type": "number",
+        "defaultValue": 132,
+        "min": 72,
+        "max": 200
+      }
+    ],
+    "thumb": "/thumbnails/shots-icon-row.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // A small inline set, drawn as paths so the recipe stays one file and needs no\r\n  // asset lookup. `icons` picks from these by name; an unknown name falls back to\r\n  // a dot, which still reads as \"an item\" rather than as a hole.\r\n  const PATHS = {\r\n    clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 4v5l3.5 2',\r\n    growth: 'M3 17l5-5 4 3 6-8M14 7h5v5',\r\n    people: 'M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 6 2 6 5',\r\n    coin: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z',\r\n    check: 'M4 12l5 5L20 6',\r\n    arrow: 'M4 12h15M13 6l6 6-6 6',\r\n    star: 'M12 3l2.7 5.6 6.3.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.3-.9z',\r\n    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',\r\n  };\r\n\r\n  const items = (Array.isArray(p.items) ? p.items : []).slice(0, 4);\r\n  const icons = Array.isArray(p.icons) ? p.icons : [];\r\n  if (!items.length) return null;\r\n\r\n  const width = item.width;\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 60px',\r\n    boxSizing: 'border-box',\r\n    gap: 46,\r\n  };\r\n  const rowStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? (\r\n        <div style={{ fontFamily: p.bodyFont, fontSize: 32, letterSpacing: '0.14em', color: p.muted }}>\r\n          {p.title}\r\n        </div>\r\n      ) : null}\r\n      <div style={rowStyle}>\r\n        {items.map((label, index) => {\r\n          const enter = spring({\r\n            frame: frame - Math.round(index * fps * 0.14),\r\n            fps,\r\n            config: { damping: 18, mass: 0.6, stiffness: 150 },\r\n          });\r\n          const path = PATHS[icons[index]] ?? null;\r\n          return (\r\n            <div\r\n              key={index}\r\n              style={{\r\n                width: (width - 120) / items.length - 18,\r\n                display: 'flex',\r\n                flexDirection: 'column',\r\n                alignItems: 'center',\r\n                gap: 22,\r\n                opacity: Math.min(1, enter * 1.4),\r\n                transform: 'translateY(' + ((1 - enter) * 26) + 'px)',\r\n              }}\r\n            >\r\n              <svg width={92} height={92} viewBox=\"0 0 24 24\" fill=\"none\"\r\n                stroke={p.accent} strokeWidth={1.6} strokeLinecap=\"round\" strokeLinejoin=\"round\">\r\n                {path\r\n                  ? <path d={path} />\r\n                  : <circle cx=\"12\" cy=\"12\" r=\"6\" fill={p.accent} stroke=\"none\" />}\r\n              </svg>\r\n              <div\r\n                style={{\r\n                  fontFamily: p.displayFont,\r\n                  fontSize: p.fontSize,\r\n                  color: p.ink,\r\n                  textAlign: 'center',\r\n                  lineHeight: 1.25,\r\n                }}\r\n              >\r\n                {label}\r\n              </div>\r\n            </div>\r\n          );\r\n        })}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "keyword-punch",
+    "name": "关键词冲击",
+    "category": "text-effects",
+    "description": "把一句话里的关键词单独拎出来砸在画面上，用于观点转折或结论落点。",
+    "tags": [
+      "卡片",
+      "Keyword Punch",
+      "叠加",
+      "attention",
+      "quote"
+    ],
+    "width": 900,
+    "height": 520,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 520
+    },
+    "jobs": [
+      "attention",
+      "quote"
+    ],
+    "sfx": {
+      "category": "转场",
+      "query": "刷子",
+      "volume": 0.3
+    },
+    "props": {
+      "landscape": false,
+      "text": "",
+      "accentText": "",
+      "label": "",
+      "tail": "",
+      "fontSize": 132,
+      "align": "center",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "text",
+        "label": "主关键词，一到两个词，超过 6 字就失去冲击力",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 6
+      },
+      {
+        "key": "accentText",
+        "label": "跟在主词后面、用强调色显示的部分",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 4
+      },
+      {
+        "key": "label",
+        "label": "上方小标签，用于归类，如「关键点」",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 10
+      },
+      {
+        "key": "tail",
+        "label": "下方补充一行，解释关键词",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 18
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 132,
+        "min": 72,
+        "max": 180
+      },
+      {
+        "key": "align",
+        "label": "align",
+        "type": "select",
+        "defaultValue": "center",
+        "options": [
+          "center",
+          "left"
+        ]
+      },
+      {
+        "key": "bg",
+        "label": "背景色，留空则透明（叠在画面上用）",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-keyword-punch.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // The punch: a low-damping spring so the word overshoots slightly and settles.\r\n  const enter = spring({ frame, fps, config: { damping: 13, mass: 0.55, stiffness: 130 } });\r\n  const bar = interpolate(frame, [fps * 0.1, fps * 0.6], [0, 1], { extrapolateRight: 'clamp' });\r\n  const label = interpolate(frame, [fps * 0.3, fps * 0.85], [0, 1], { extrapolateRight: 'clamp' });\r\n  const tail = interpolate(frame, [fps * 0.5, fps * 1.1], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  const aligned = p.align === 'left';\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    alignItems: aligned ? 'flex-start' : 'center',\r\n    padding: '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const barStyle = {\r\n    width: 104 * bar,\r\n    height: 9,\r\n    borderRadius: 5,\r\n    backgroundColor: p.accent,\r\n    marginBottom: 26,\r\n  };\r\n  const labelStyle = {\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 34,\r\n    fontWeight: 500,\r\n    letterSpacing: '0.3em',\r\n    color: p.muted,\r\n    marginBottom: 18,\r\n    opacity: label,\r\n  };\r\n  const wordStyle = {\r\n    fontFamily: p.displayFont,\r\n    fontSize: p.fontSize,\r\n    lineHeight: 1.04,\r\n    fontWeight: 400,\r\n    letterSpacing: '-0.03em',\r\n    color: p.ink,\r\n    textAlign: p.align,\r\n    whiteSpace: 'pre-wrap',\r\n    transform: 'scale(' + (0.84 + 0.16 * enter) + ')',\r\n    transformOrigin: aligned ? 'left center' : 'center center',\r\n    opacity: Math.min(1, enter * 1.8),\r\n  };\r\n  const accentWordStyle = { color: p.accent };\r\n  const tailStyle = {\r\n    marginTop: 26,\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 38,\r\n    lineHeight: 1.45,\r\n    color: p.muted,\r\n    textAlign: p.align,\r\n    opacity: tail,\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      <div style={barStyle} />\r\n      {p.label ? <div style={labelStyle}>{p.label}</div> : null}\r\n      <div style={wordStyle}>\r\n        {p.text}\r\n        {p.accentText ? <span style={accentWordStyle}>{p.accentText}</span> : null}\r\n      </div>\r\n      {p.tail ? <div style={tailStyle}>{p.tail}</div> : null}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "line-chart",
+    "name": "折线图",
+    "category": "data-visualization",
+    "description": "一条随时间变化的曲线，用来讲趋势、增长或衰减",
+    "tags": [
+      "卡片",
+      "Line chart",
+      "叠加",
+      "process",
+      "number"
+    ],
+    "width": 900,
+    "height": 560,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 560
+    },
+    "jobs": [
+      "process",
+      "number"
+    ],
+    "props": {
+      "landscape": false,
+      "points": [],
+      "labels": [],
+      "title": "",
+      "unit": "",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "points",
+        "label": "纵轴数值，2–8 个，按时间顺序；只写数字，例如 [\"1\",\"2\",\"4\",\"8\",\"16\",\"37\"]",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 8,
+        "itemMaxLength": 6
+      },
+      {
+        "key": "labels",
+        "label": "每个点下方的标签，可省略",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 8,
+        "itemMaxLength": 6
+      },
+      {
+        "key": "title",
+        "label": "图上方的小标题",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "unit",
+        "label": "单位，如 × 或 %",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 3
+      },
+      {
+        "key": "bg",
+        "label": "背景色，留空则透明",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-line-chart.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // The line draws itself: the path is revealed by animating the dash offset,\r\n  // which keeps the motion tied to the data rather than to a generic fade.\r\n  const draw = interpolate(frame, [fps * 0.15, fps * 1.15], [0, 1], {\r\n    extrapolateRight: 'clamp',\r\n  });\r\n  const dotIn = (index) => interpolate(frame, [fps * (0.5 + index * 0.08), fps * (0.75 + index * 0.08)], [0, 1], {\r\n    extrapolateRight: 'clamp',\r\n  });\r\n\r\n  const points = (Array.isArray(p.points) ? p.points : [])\r\n    .map((value) => Number(value))\r\n    .filter((value) => Number.isFinite(value));\r\n  const labels = Array.isArray(p.labels) ? p.labels : [];\r\n  if (points.length < 2) return null;\r\n\r\n  const width = item.width;\r\n  const height = item.height;\r\n  const padX = 70;\r\n  const padTop = p.title ? 130 : 60;\r\n  const padBottom = 90;\r\n  const plotW = width - padX * 2;\r\n  const plotH = height - padTop - padBottom;\r\n\r\n  const min = Math.min(...points);\r\n  const max = Math.max(...points);\r\n  const span = max - min || 1;\r\n\r\n  const coords = points.map((value, index) => ({\r\n    x: padX + (plotW * index) / (points.length - 1),\r\n    // A flat series would sit on the baseline; give it breathing room.\r\n    y: padTop + plotH - ((value - min) / span) * plotH,\r\n    value,\r\n  }));\r\n\r\n  const path = coords\r\n    .map((point, index) => (index === 0 ? 'M' : 'L') + point.x.toFixed(1) + ' ' + point.y.toFixed(1))\r\n    .join(' ');\r\n\r\n  // The reveal length has to match the real path, or the line appears to finish\r\n  // early or late depending on how far the data travels.\r\n  let length = 0;\r\n  for (let i = 1; i < coords.length; i += 1) {\r\n    length += Math.hypot(coords[i].x - coords[i - 1].x, coords[i].y - coords[i - 1].y);\r\n  }\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    padding: '0 0 0 0',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const titleStyle = {\r\n    position: 'absolute',\r\n    left: padX,\r\n    top: 54,\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 34,\r\n    letterSpacing: '0.14em',\r\n    color: p.muted,\r\n    opacity: interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: 'clamp' }),\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? <div style={titleStyle}>{p.title}</div> : null}\r\n      <svg width={width} height={height} style={{ position: 'absolute', inset: 0 }}>\r\n        <line\r\n          x1={padX} y1={padTop + plotH} x2={width - padX} y2={padTop + plotH}\r\n          stroke={p.muted} strokeWidth={2} opacity={0.35}\r\n        />\r\n        <path\r\n          d={path}\r\n          fill=\"none\"\r\n          stroke={p.accent}\r\n          strokeWidth={7}\r\n          strokeLinecap=\"round\"\r\n          strokeLinejoin=\"round\"\r\n          strokeDasharray={length}\r\n          strokeDashoffset={length * (1 - draw)}\r\n        />\r\n        {coords.map((point, index) => (\r\n          <circle\r\n            key={index}\r\n            cx={point.x}\r\n            cy={point.y}\r\n            r={index === coords.length - 1 ? 13 : 8}\r\n            fill={index === coords.length - 1 ? p.accent : p.ink}\r\n            opacity={dotIn(index)}\r\n          />\r\n        ))}\r\n      </svg>\r\n      {coords.map((point, index) => (\r\n        <div\r\n          key={'label' + index}\r\n          style={{\r\n            position: 'absolute',\r\n            left: point.x,\r\n            top: padTop + plotH + 22,\r\n            transform: 'translateX(-50%)',\r\n            fontFamily: p.bodyFont,\r\n            fontSize: 26,\r\n            color: p.muted,\r\n            opacity: dotIn(index),\r\n            whiteSpace: 'nowrap',\r\n          }}\r\n        >\r\n          {labels[index] ?? ''}\r\n        </div>\r\n      ))}\r\n      <div\r\n        style={{\r\n          position: 'absolute',\r\n          // Keep the end value inside the canvas: the last point sits at the right\r\n          // edge, so a centred label would hang off it.\r\n          left: Math.min(coords[coords.length - 1].x, width - 110),\r\n          top: coords[coords.length - 1].y - 78,\r\n          transform: 'translateX(-50%)',\r\n          fontFamily: p.displayFont,\r\n          fontSize: 64,\r\n          color: p.ink,\r\n          opacity: dotIn(coords.length - 1),\r\n          whiteSpace: 'nowrap',\r\n        }}\r\n      >\r\n        {p.unit === '%' ? points[points.length - 1] + '%' : (p.unit || '') + points[points.length - 1]}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "list-reveal",
+    "name": "清单逐条",
+    "category": "infographics",
+    "description": "把两到四个要点逐条推出来，用于步骤、理由、并列观点。条目越多节奏越慢，超过四条就会挤。",
+    "tags": [
+      "卡片",
+      "List Reveal",
+      "叠加",
+      "横屏适配",
+      "relation"
+    ],
+    "width": 900,
+    "height": 760,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 760
+    },
+    "landscapeBox": {
+      "width": 1500,
+      "height": 520
+    },
+    "jobs": [
+      "relation"
+    ],
+    "props": {
+      "landscape": false,
+      "items": [],
+      "title": "",
+      "fontSize": 54,
+      "gap": 34,
+      "markWidth": 84,
+      "align": "left",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "items",
+        "label": "2–4 条，每条一行说完",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 16
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 54,
+        "min": 34,
+        "max": 72
+      },
+      {
+        "key": "gap",
+        "label": "gap",
+        "type": "number",
+        "defaultValue": 34,
+        "min": 12,
+        "max": 64
+      },
+      {
+        "key": "markWidth",
+        "label": "markWidth",
+        "type": "number",
+        "defaultValue": 84,
+        "min": 48,
+        "max": 140
+      },
+      {
+        "key": "align",
+        "label": "align",
+        "type": "select",
+        "defaultValue": "left",
+        "options": [
+          "left",
+          "center"
+        ]
+      },
+      {
+        "key": "bg",
+        "label": "背景色，留空则透明（叠在画面上用）",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-list-reveal.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n  // Wide canvas: the same items become columns. A numbered column reads\r\n  // left-to-right the way the list reads top-to-bottom, and it fills a 16:9\r\n  // frame instead of leaving two thirds of it black.\r\n  const wide = p.landscape === true;\r\n\r\n  const items = Array.isArray(p.items) ? p.items : [];\r\n  const titleIn = interpolate(frame, [0, fps * 0.45], [0, 1], { extrapolateRight: 'clamp' });\r\n  const stagger = fps * 0.3;\r\n  const rowDur = fps * 0.55;\r\n\r\n  const aligned = p.align === 'left';\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    alignItems: wide ? 'center' : aligned ? 'flex-start' : 'stretch',\r\n    padding: wide ? '0 40px' : '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const titleStyle = {\r\n    fontFamily: p.bodyFont,\r\n    fontSize: wide ? 40 : 34,\r\n    fontWeight: 500,\r\n    letterSpacing: '0.24em',\r\n    color: p.muted,\r\n    marginBottom: wide ? 46 : 34,\r\n    opacity: titleIn,\r\n  };\r\n  const listStyle = {\r\n    display: 'flex',\r\n    flexDirection: wide ? 'row' : 'column',\r\n    gap: wide ? p.gap * 2 : p.gap,\r\n    width: wide ? '100%' : undefined,\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? <div style={titleStyle}>{p.title}</div> : null}\r\n      <div style={listStyle}>\r\n        {items.map((text, index) => {\r\n          const local = frame - fps * 0.25 - index * stagger;\r\n          const t = interpolate(local, [0, rowDur], [0, 1], {\r\n            extrapolateLeft: 'clamp',\r\n            extrapolateRight: 'clamp',\r\n          });\r\n          const rowStyle = wide\r\n            ? {\r\n              display: 'flex',\r\n              flexDirection: 'column',\r\n              flex: '1 1 0',\r\n              minWidth: 0,\r\n              alignItems: 'center',\r\n              textAlign: 'center',\r\n              opacity: t,\r\n              transform: 'translateY(' + ((1 - t) * 28) + 'px)',\r\n            }\r\n            : {\r\n              display: 'flex',\r\n              alignItems: 'flex-start',\r\n              opacity: t,\r\n              transform: 'translateX(' + ((1 - t) * -34) + 'px)',\r\n            };\r\n          const markStyle = {\r\n            flexShrink: 0,\r\n            width: wide ? undefined : p.markWidth,\r\n            fontFamily: p.displayFont,\r\n            fontSize: wide ? 40 : 46,\r\n            lineHeight: 1.35,\r\n            color: p.accent,\r\n          };\r\n          const textStyle = {\r\n            fontFamily: p.displayFont,\r\n            fontSize: p.fontSize,\r\n            lineHeight: 1.32,\r\n            fontWeight: 400,\r\n            letterSpacing: '-0.01em',\r\n            color: p.ink,\r\n          };\r\n          return (\r\n            <div key={index} style={rowStyle}>\r\n              <div style={markStyle}>{String(index + 1).padStart(2, '0')}</div>\r\n              <div style={textStyle}>{text}</div>\r\n            </div>\r\n          );\r\n        })}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "number-count",
+    "name": "数字滚动",
+    "category": "data-visualization",
+    "description": "让一个数字从起点滚到终点，用于比例、倍数、金额这类需要「落地感」的数据。",
+    "tags": [
+      "卡片",
+      "Number Count",
+      "叠加",
+      "横屏适配",
+      "number"
+    ],
+    "width": 900,
+    "height": 520,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 520
+    },
+    "landscapeBox": {
+      "width": 1500,
+      "height": 520
+    },
+    "jobs": [
+      "number"
+    ],
+    "sfx": {
+      "category": "转场",
+      "query": "上升",
+      "volume": 0.32
+    },
+    "props": {
+      "landscape": false,
+      "value": 0,
+      "from": 0,
+      "decimals": 0,
+      "unit": "",
+      "prefix": "",
+      "label": "",
+      "note": "",
+      "fontSize": 260,
+      "align": "center",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "value",
+        "label": "滚动到终点值",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "key": "from",
+        "label": "起始值，通常用 0 制造从无到有",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "key": "decimals",
+        "label": "decimals",
+        "type": "number",
+        "defaultValue": 0,
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "unit",
+        "label": "单位，如 %、×、万",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 3
+      },
+      {
+        "key": "prefix",
+        "label": "数字前缀，如 ¥",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 2
+      },
+      {
+        "key": "label",
+        "label": "label",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 10
+      },
+      {
+        "key": "note",
+        "label": "note",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 18
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 260,
+        "min": 120,
+        "max": 340
+      },
+      {
+        "key": "align",
+        "label": "align",
+        "type": "select",
+        "defaultValue": "center",
+        "options": [
+          "center",
+          "left"
+        ]
+      },
+      {
+        "key": "bg",
+        "label": "背景色，留空则透明（叠在画面上用）",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-number-count.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n  // Wide canvas: the number moves left and the words sit beside it. Centred,\r\n  // a number card is a narrow column — correct on a phone, and on 16:9 it reads\r\n  // as a slide someone forgot to lay out.\r\n  const wide = p.landscape === true;\r\n\r\n  const enter = spring({ frame, fps, config: { damping: 16, mass: 0.6, stiffness: 120 } });\r\n  // Count over the first ~1.4s, ease-out so the number decelerates into place.\r\n  const progress = interpolate(frame, [fps * 0.2, fps * 1.5], [0, 1], { extrapolateRight: 'clamp' });\r\n  const eased = 1 - Math.pow(1 - progress, 3);\r\n  const current = p.from + (p.value - p.from) * eased;\r\n  const shown = p.decimals > 0 ? current.toFixed(p.decimals) : Math.round(current).toString();\r\n\r\n  const labelIn = interpolate(frame, [fps * 0.45, fps * 1.0], [0, 1], { extrapolateRight: 'clamp' });\r\n  const noteIn = interpolate(frame, [fps * 0.8, fps * 1.4], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  const aligned = p.align === 'left';\r\n  const numSize = wide ? Math.round(p.fontSize * 1.12) : p.fontSize;\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: wide ? 'row' : 'column',\r\n    justifyContent: 'center',\r\n    alignItems: wide ? 'center' : aligned ? 'flex-start' : 'center',\r\n    gap: wide ? 64 : 0,\r\n    padding: wide ? '0 60px' : '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const labelStyle = {\r\n    fontFamily: p.bodyFont,\r\n    fontSize: wide ? 42 : 36,\r\n    fontWeight: 500,\r\n    letterSpacing: '0.22em',\r\n    color: p.muted,\r\n    marginBottom: 18,\r\n    opacity: labelIn,\r\n  };\r\n  const rowStyle = {\r\n    display: 'flex',\r\n    alignItems: 'baseline',\r\n    flexShrink: 0,\r\n    opacity: Math.min(1, enter * 1.7),\r\n    transform: 'scale(' + (0.92 + 0.08 * enter) + ')',\r\n    transformOrigin: wide || aligned ? 'left center' : 'center center',\r\n  };\r\n  const prefixStyle = {\r\n    fontFamily: p.displayFont,\r\n    fontSize: numSize * 0.42,\r\n    color: p.accent,\r\n    marginRight: 8,\r\n  };\r\n  const valueStyle = {\r\n    fontFamily: p.displayFont,\r\n    fontSize: numSize,\r\n    lineHeight: 0.94,\r\n    fontWeight: 400,\r\n    letterSpacing: '-0.04em',\r\n    color: p.ink,\r\n    fontVariantNumeric: 'tabular-nums',\r\n  };\r\n  const unitStyle = {\r\n    fontFamily: p.displayFont,\r\n    fontSize: numSize * 0.46,\r\n    color: p.accent,\r\n    marginLeft: 10,\r\n  };\r\n  const noteStyle = {\r\n    marginTop: 28,\r\n    fontFamily: p.bodyFont,\r\n    fontSize: wide ? 42 : 38,\r\n    lineHeight: 1.45,\r\n    color: p.muted,\r\n    textAlign: p.align,\r\n    opacity: noteIn,\r\n  };\r\n\r\n  const numberRow = (\r\n    <div style={rowStyle}>\r\n      {p.prefix ? <span style={prefixStyle}>{p.prefix}</span> : null}\r\n      <span style={valueStyle}>{shown}</span>\r\n      {p.unit ? <span style={unitStyle}>{p.unit}</span> : null}\r\n    </div>\r\n  );\r\n\r\n  if (wide) {\r\n    return (\r\n      <div style={rootStyle}>\r\n        {numberRow}\r\n        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>\r\n          {p.label ? <div style={labelStyle}>{p.label}</div> : null}\r\n          {p.note ? <div style={{ ...noteStyle, marginTop: 0, textAlign: 'left' }}>{p.note}</div> : null}\r\n        </div>\r\n      </div>\r\n    );\r\n  }\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.label ? <div style={labelStyle}>{p.label}</div> : null}\r\n      {numberRow}\r\n      {p.note ? <div style={noteStyle}>{p.note}</div> : null}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "progress-bar",
+    "name": "进度条",
+    "category": "data-visualization",
+    "description": "用长度表示比例：完成度、占比、达成率。数字加条形的组合比单独一个数字更容易被记住。",
+    "tags": [
+      "卡片",
+      "Progress Bar",
+      "叠加",
+      "number",
+      "process"
+    ],
+    "width": 900,
+    "height": 420,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 420
+    },
+    "jobs": [
+      "number",
+      "process"
+    ],
+    "props": {
+      "landscape": false,
+      "label": "",
+      "value": 0,
+      "unit": "%",
+      "decimals": 0,
+      "note": "",
+      "thickness": 18,
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "trackColor": "#232326",
+      "bg": "",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "label",
+        "label": "label",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "value",
+        "label": "百分比数值，0–100",
+        "type": "number",
+        "defaultValue": 0,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "key": "unit",
+        "label": "unit",
+        "type": "text",
+        "defaultValue": "%",
+        "maxLength": 2
+      },
+      {
+        "key": "decimals",
+        "label": "decimals",
+        "type": "number",
+        "defaultValue": 0,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "note",
+        "label": "note",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 18
+      },
+      {
+        "key": "thickness",
+        "label": "thickness",
+        "type": "number",
+        "defaultValue": 18,
+        "min": 8,
+        "max": 40
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "trackColor",
+        "label": "条形底色",
+        "type": "color",
+        "defaultValue": "#232326"
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-progress-bar.jpg",
+    "code": "const Component = ({ item }) => {\n  const frame = useCurrentFrame();\n  const { fps } = useVideoConfig();\n  const p = item.props;\n\n  // The bar fills over ~1.2s and the number counts with it, so the length and\n  // the figure agree at every moment — a bar that finishes early reads as wrong.\n  const enter = interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: 'clamp' });\n  const progress = interpolate(frame, [fps * 0.25, fps * 1.45], [0, 1], { extrapolateRight: 'clamp' });\n  const eased = 1 - Math.pow(1 - progress, 3);\n  const shown = eased * p.value;\n  const digits = p.decimals > 0 ? shown.toFixed(p.decimals) : Math.round(shown).toString();\n\n  const rootStyle = {\n    position: 'absolute',\n    inset: 0,\n    backgroundColor: p.bg || 'transparent',\n    display: 'flex',\n    flexDirection: 'column',\n    justifyContent: 'center',\n    padding: '0 20px',\n    boxSizing: 'border-box',\n    opacity: enter,\n  };\n  const headStyle = {\n    display: 'flex',\n    alignItems: 'baseline',\n    justifyContent: 'space-between',\n    marginBottom: 22,\n  };\n  const labelStyle = {\n    fontFamily: p.bodyFont,\n    fontSize: 34,\n    fontWeight: 500,\n    letterSpacing: '0.1em',\n    color: p.muted,\n  };\n  const valueStyle = {\n    fontFamily: p.displayFont,\n    fontSize: 74,\n    lineHeight: 1,\n    color: p.ink,\n    fontVariantNumeric: 'tabular-nums',\n  };\n  const unitStyle = { fontSize: 40, color: p.accent, marginLeft: 4 };\n  const trackStyle = {\n    position: 'relative',\n    height: p.thickness,\n    borderRadius: p.thickness / 2,\n    backgroundColor: p.trackColor,\n    overflow: 'hidden',\n  };\n  const fillStyle = {\n    position: 'absolute',\n    left: 0,\n    top: 0,\n    bottom: 0,\n    width: (eased * 100) + '%',\n    borderRadius: p.thickness / 2,\n    backgroundColor: p.accent,\n  };\n  const noteStyle = {\n    marginTop: 22,\n    fontFamily: p.bodyFont,\n    fontSize: 30,\n    color: p.muted,\n  };\n\n  return (\n    <div style={rootStyle}>\n      <div style={headStyle}>\n        <div style={labelStyle}>{p.label}</div>\n        <div style={valueStyle}>\n          {digits}\n          <span style={unitStyle}>{p.unit}</span>\n        </div>\n      </div>\n      <div style={trackStyle}>\n        <div style={fillStyle} />\n      </div>\n      {p.note ? <div style={noteStyle}>{p.note}</div> : null}\n    </div>\n  );\n};\n"
+  },
+  {
+    "id": "quote-card",
+    "name": "金句卡",
+    "category": "quote-cards",
+    "description": "慢下来的一句话：引用、格言、或视频里最值得被截图的那句。动作小、停留久，用来给长视频留呼吸。",
+    "tags": [
+      "卡片",
+      "Quote Card",
+      "叠加",
+      "横屏适配",
+      "quote"
+    ],
+    "width": 900,
+    "height": 700,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 700
+    },
+    "landscapeBox": {
+      "width": 1560,
+      "height": 620
+    },
+    "jobs": [
+      "quote"
+    ],
+    "props": {
+      "landscape": false,
+      "text": "",
+      "author": "",
+      "source": "",
+      "fontSize": 58,
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "bg": "",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "text",
+        "label": "引文本身，可以两行",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 32
+      },
+      {
+        "key": "author",
+        "label": "author",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "source",
+        "label": "source",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 16
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 58,
+        "min": 34,
+        "max": 82
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-quote-card.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n  // Wide canvas: centred and larger. A left-aligned measure that is right for a\r\n  // 900px card leaves two thirds of a 1920px frame empty, and at the portrait\r\n  // size the line breaks wherever it runs out of width rather than where the\r\n  // sentence wants to pause.\r\n  const wide = p.landscape === true;\r\n\r\n  // A quote is a place to breathe: the reveal is slow and the motion is small.\r\n  const mark = interpolate(frame, [0, fps * 0.5], [0, 1], { extrapolateRight: 'clamp' });\r\n  const body = interpolate(frame, [fps * 0.3, fps * 1.1], [0, 1], { extrapolateRight: 'clamp' });\r\n  const credit = interpolate(frame, [fps * 1.0, fps * 1.7], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  // Fit the type to the sentence instead of fixing it: a 12-character line and a\r\n  // 32-character line should both fill the card. Two lines is the target on a\r\n  // wide canvas — one long line reads as a ticker, four reads as a paragraph.\r\n  const chars = Array.from(String(p.text ?? '')).length || 1;\r\n  const perLine = chars <= 12 ? chars : Math.ceil(chars / 2);\r\n  const inner = item.width * 0.86;\r\n  const fit = Math.floor((inner / perLine) * 0.95);\r\n  // Portrait keeps its authored size and simply wraps; the fit is what makes a\r\n  // wide card use its width instead of breaking the sentence in half.\r\n  const size = wide ? Math.min(Math.round(p.fontSize * 1.6), fit) : p.fontSize;\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    alignItems: wide ? 'center' : 'stretch',\r\n    textAlign: wide ? 'center' : 'left',\r\n    padding: wide ? '0 7%' : '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  // A rule rather than a “ glyph: the CJK quotation mark renders as two small\r\n  // slashes in this face and reads as a typo.\r\n  const markStyle = {\r\n    width: (wide ? 120 : 96) * mark,\r\n    height: 6,\r\n    borderRadius: 3,\r\n    backgroundColor: p.accent,\r\n    marginBottom: wide ? 44 : 34,\r\n  };\r\n  const bodyStyle = {\r\n    marginTop: 18,\r\n    fontFamily: p.displayFont,\r\n    fontSize: size,\r\n    lineHeight: wide ? 1.34 : 1.42,\r\n    fontWeight: 400,\r\n    letterSpacing: '-0.01em',\r\n    color: p.ink,\r\n    whiteSpace: 'pre-wrap',\r\n    // 20 characters at 58px in an 860px card wraps as 19 + 1, leaving a single\r\n    // orphan character on the second line. Balance the lines instead.\r\n    textWrap: 'balance',\r\n    opacity: body,\r\n    transform: 'translateY(' + ((1 - body) * 20) + 'px)',\r\n  };\r\n  const creditStyle = {\r\n    marginTop: wide ? 42 : 34,\r\n    fontFamily: p.bodyFont,\r\n    fontSize: wide ? 34 : 30,\r\n    letterSpacing: '0.16em',\r\n    color: p.muted,\r\n    opacity: credit,\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      <div style={markStyle} />\r\n      <div style={bodyStyle}>{p.text}</div>\r\n      {p.author ? <div style={creditStyle}>{p.author}{p.source ? ' · ' + p.source : ''}</div> : null}\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "stack-share",
+    "name": "构成条",
+    "category": "data-visualization",
+    "description": "把总量拆成几块，看每块占多少，用来讲「钱花在哪」「时间用在哪」",
+    "tags": [
+      "卡片",
+      "Stacked share",
+      "叠加",
+      "relation",
+      "number"
+    ],
+    "width": 900,
+    "height": 380,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 900,
+      "height": 380
+    },
+    "jobs": [
+      "relation",
+      "number"
+    ],
+    "props": {
+      "landscape": false,
+      "parts": [],
+      "values": [],
+      "title": "",
+      "unit": "%",
+      "bg": "",
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "displayFont": "Smiley Sans",
+      "bodyFont": "Noto Sans SC"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "parts",
+        "label": "2–4 个构成项",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 8
+      },
+      {
+        "key": "values",
+        "label": "与 parts 一一对应的数值，只写数字；不必加起来等于 100",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 6
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 14
+      },
+      {
+        "key": "unit",
+        "label": "unit",
+        "type": "text",
+        "defaultValue": "%",
+        "maxLength": 2
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "Smiley Sans"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "Noto Sans SC"
+      }
+    ],
+    "thumb": "/thumbnails/shots-stack-share.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  const parts = (Array.isArray(p.parts) ? p.parts : []).slice(0, 4);\r\n  const values = (Array.isArray(p.values) ? p.values : [])\r\n    .map((value) => Number(value))\r\n    .filter((value) => Number.isFinite(value) && value >= 0)\r\n    .slice(0, parts.length);\r\n  if (parts.length < 2 || values.length !== parts.length) return null;\r\n\r\n  const total = values.reduce((sum, value) => sum + value, 0) || 1;\r\n  const shares = values.map((value) => value / total);\r\n\r\n  // Each segment grows into place in turn, so the bar reads as parts adding up\r\n  // rather than as a finished chart that faded in.\r\n  const grow = (index) => interpolate(\r\n    frame,\r\n    [fps * (0.15 + index * 0.14), fps * (0.6 + index * 0.14)],\r\n    [0, 1],\r\n    { extrapolateRight: 'clamp' },\r\n  );\r\n\r\n  const width = item.width;\r\n  const trackW = width - 120;\r\n  // One accent, one ink, and muted greys for the rest: four saturated colours\r\n  // would fight each other and none of them would read as \"the important one\".\r\n  // The fourth colour has to survive on a near-black card: a dark grey at low\r\n  // alpha disappears into the background and the segment looks like a gap.\r\n  const fills = [p.accent, p.ink, p.muted, 'rgba(242,239,233,0.32)'];\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 60px',\r\n    boxSizing: 'border-box',\r\n    gap: 50,\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? (\r\n        <div style={{ fontFamily: p.bodyFont, fontSize: 30, letterSpacing: '0.14em', color: p.muted }}>\r\n          {p.title}\r\n        </div>\r\n      ) : null}\r\n      <div style={{ display: 'flex', width: trackW, height: 76, borderRadius: 10, overflow: 'hidden' }}>\r\n        {shares.map((share, index) => (\r\n          <div\r\n            key={index}\r\n            style={{\r\n              width: trackW * share * grow(index),\r\n              height: '100%',\r\n              backgroundColor: fills[index % fills.length],\r\n            }}\r\n          />\r\n        ))}\r\n      </div>\r\n      <div style={{ display: 'flex', width: trackW, gap: 28, flexWrap: 'wrap' }}>\r\n        {parts.map((part, index) => (\r\n          <div\r\n            key={index}\r\n            style={{\r\n              display: 'flex',\r\n              alignItems: 'center',\r\n              gap: 12,\r\n              opacity: grow(index),\r\n            }}\r\n          >\r\n            <span\r\n              style={{\r\n                width: 20,\r\n                height: 20,\r\n                borderRadius: 4,\r\n                backgroundColor: fills[index % fills.length],\r\n                flex: '0 0 auto',\r\n              }}\r\n            />\r\n            <span style={{ fontFamily: p.bodyFont, fontSize: 34, color: p.muted }}>{part}</span>\r\n            <span style={{ fontFamily: p.displayFont, fontSize: 38, color: p.ink }}>\r\n              {values[index] + (p.unit ?? '')}\r\n            </span>\r\n          </div>\r\n        ))}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  },
+  {
+    "id": "timeline-dots",
+    "name": "阶段轴",
+    "category": "infographics",
+    "description": "把一条过程摊成几个阶段并指出当前在哪一步，用于「第一步/第二步」「早期/中期/后期」这类结构。",
+    "tags": [
+      "卡片",
+      "Timeline Dots",
+      "叠加",
+      "process"
+    ],
+    "width": 960,
+    "height": 420,
+    "fps": 30,
+    "durationInFrames": 90,
+    "kind": "card",
+    "box": {
+      "width": 960,
+      "height": 420
+    },
+    "jobs": [
+      "process"
+    ],
+    "props": {
+      "landscape": false,
+      "items": [],
+      "activeIndex": 0,
+      "title": "",
+      "fontSize": 40,
+      "ink": "#F2EFE9",
+      "accent": "#E8B04B",
+      "muted": "#8A857C",
+      "trackColor": "#2A2A2D",
+      "bg": "",
+      "displayFont": "'Smiley Sans', 'Noto Sans SC', sans-serif",
+      "bodyFont": "'Noto Sans SC', sans-serif"
+    },
+    "propSchema": [
+      {
+        "key": "landscape",
+        "type": "boolean",
+        "defaultValue": false,
+        "label": "横屏排布"
+      },
+      {
+        "key": "items",
+        "label": "2–4 个阶段名",
+        "type": "array",
+        "defaultValue": [],
+        "maxItems": 4,
+        "itemMaxLength": 8
+      },
+      {
+        "key": "activeIndex",
+        "label": "当前阶段的下标，0 起",
+        "type": "number",
+        "defaultValue": 0,
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "title",
+        "label": "title",
+        "type": "text",
+        "defaultValue": "",
+        "maxLength": 12
+      },
+      {
+        "key": "fontSize",
+        "label": "fontSize",
+        "type": "number",
+        "defaultValue": 40,
+        "min": 26,
+        "max": 56
+      },
+      {
+        "key": "ink",
+        "label": "ink",
+        "type": "color",
+        "defaultValue": "#F2EFE9"
+      },
+      {
+        "key": "accent",
+        "label": "accent",
+        "type": "color",
+        "defaultValue": "#E8B04B"
+      },
+      {
+        "key": "muted",
+        "label": "muted",
+        "type": "color",
+        "defaultValue": "#8A857C"
+      },
+      {
+        "key": "trackColor",
+        "label": "trackColor",
+        "type": "color",
+        "defaultValue": "#2A2A2D"
+      },
+      {
+        "key": "bg",
+        "label": "bg",
+        "type": "color",
+        "defaultValue": ""
+      },
+      {
+        "key": "displayFont",
+        "label": "displayFont",
+        "type": "font",
+        "defaultValue": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+      },
+      {
+        "key": "bodyFont",
+        "label": "bodyFont",
+        "type": "font",
+        "defaultValue": "'Noto Sans SC', sans-serif"
+      }
+    ],
+    "thumb": "/thumbnails/shots-timeline-dots.jpg",
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  const items = Array.isArray(p.items) ? p.items : [];\r\n  const line = interpolate(frame, [fps * 0.1, fps * 0.9], [0, 1], { extrapolateRight: 'clamp' });\r\n  const stagger = fps * 0.24;\r\n\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 20px',\r\n    boxSizing: 'border-box',\r\n  };\r\n  const titleStyle = {\r\n    fontFamily: p.bodyFont,\r\n    fontSize: 32,\r\n    fontWeight: 500,\r\n    letterSpacing: '0.22em',\r\n    color: p.muted,\r\n    marginBottom: 46,\r\n    opacity: interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: 'clamp' }),\r\n  };\r\n  const trackStyle = {\r\n    position: 'relative',\r\n    height: 3,\r\n    backgroundColor: p.trackColor,\r\n    marginBottom: 40,\r\n  };\r\n  const lineStyle = {\r\n    position: 'absolute',\r\n    left: 0,\r\n    top: 0,\r\n    bottom: 0,\r\n    width: (line * 100) + '%',\r\n    backgroundColor: p.accent,\r\n  };\r\n  const rowStyle = {\r\n    display: 'flex',\r\n    justifyContent: 'space-between',\r\n    alignItems: 'flex-start',\r\n  };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? <div style={titleStyle}>{p.title}</div> : null}\r\n      <div style={trackStyle}>\r\n        <div style={lineStyle} />\r\n      </div>\r\n      <div style={rowStyle}>\r\n        {items.map((label, index) => {\r\n          const local = frame - fps * 0.5 - index * stagger;\r\n          const t = interpolate(local, [0, fps * 0.45], [0, 1], {\r\n            extrapolateLeft: 'clamp',\r\n            extrapolateRight: 'clamp',\r\n          });\r\n          const isActive = index === p.activeIndex;\r\n          const dotStyle = {\r\n            width: isActive ? 20 : 12,\r\n            height: isActive ? 20 : 12,\r\n            borderRadius: 10,\r\n            backgroundColor: isActive ? p.accent : p.muted,\r\n            marginBottom: 18,\r\n            opacity: t,\r\n          };\r\n          // `flex: 1` plus nowrap: a percentage maxWidth made Chinese wrap one\r\n          // character per line, which stacked the labels vertically.\r\n          const textStyle = {\r\n            fontFamily: p.displayFont,\r\n            fontSize: p.fontSize,\r\n            lineHeight: 1.3,\r\n            color: isActive ? p.ink : p.muted,\r\n            opacity: t,\r\n            whiteSpace: 'nowrap',\r\n          };\r\n          const cellStyle = {\r\n            flex: 1,\r\n            display: 'flex',\r\n            flexDirection: 'column',\r\n            alignItems: 'flex-start',\r\n            minWidth: 0,\r\n          };\r\n          return (\r\n            <div key={index} style={cellStyle}>\r\n              <div style={dotStyle} />\r\n              <div style={textStyle}>{label}</div>\r\n            </div>\r\n          );\r\n        })}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+  }
+]
