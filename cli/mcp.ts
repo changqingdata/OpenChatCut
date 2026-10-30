@@ -27,6 +27,7 @@
 // supervised one-command lane; it is not the path a director takes.
 
 import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -224,12 +225,18 @@ const TOOLS = [
     description: 'Edit a storyboard the sanctioned way: apply ops (or replace the file wholesale), validate, and '
       + 're-lock. A storyboard edited outside this tool is refused by compile, because the edit never met the '
       + 'validator. Cut points come from startFrame; endFrame follows the next shot. '
-      + 'Ops: set / recipe / layout / retime / remove.',
+      + 'Ops: set / recipe / layout / retime / remove. Pass `ops` inline as an array if you have no filesystem.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         storyboard: { type: 'string' as const, description: 'Absolute path to the storyboard to edit in place.' },
-        ops: { type: 'string' as const, description: 'Absolute path to a JSON array of ops.' },
+        ops: {
+          description: 'Either an absolute path to a JSON array of ops, or the array itself.',
+          oneOf: [
+            { type: 'string' as const },
+            { type: 'array' as const, items: { type: 'object' as const } },
+          ],
+        },
         replaceWith: { type: 'string' as const, description: 'Absolute path to a new storyboard to adopt instead.' },
       },
       required: ['storyboard'],
@@ -237,7 +244,17 @@ const TOOLS = [
     },
     handler: async (args: Record<string, unknown>) => {
       const argv = ['revise', String(args.storyboard), '--json'];
-      if (args.ops) argv.push('--ops', String(args.ops));
+      if (Array.isArray(args.ops)) {
+        // A tool-only client has nowhere to put a file. Accepting the ops inline
+        // is the difference between "an external agent can direct" and "an
+        // external agent can direct if it happens to have a shell".
+        const path = resolve(REPO_ROOT, 'production/work/.tmp', `mcp-ops-${Date.now()}.json`);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, `${JSON.stringify(args.ops, null, 2)}\n`, 'utf8');
+        argv.push('--ops', path);
+      } else if (args.ops) {
+        argv.push('--ops', String(args.ops));
+      }
       if (args.replaceWith) argv.push('--replace-with', String(args.replaceWith));
       return reply(await runOcc(argv));
     },
