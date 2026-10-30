@@ -17,7 +17,10 @@ import { recountAssetDuration, recountDuration, withProjectFrameRate } from './t
 
 // ── project reducer (routes per-timeline actions to the active timeline) ───
 export const maxOrder = (p: ProjectDoc) => p.timelines.reduce((m, t) => Math.max(m, t.order), -1);
-const isProjectAction = (a: { type: string }): a is ProjectAction => a.type.startsWith('tl.') || a.type.startsWith('pool.') || a.type.startsWith('design.');
+const isProjectAction = (a: { type: string }): a is ProjectAction => a.type.startsWith('tl.')
+  || a.type.startsWith('pool.')
+  || a.type.startsWith('design.')
+  || a.type.startsWith('storyboard.');
 
 // stamp a per-timeline reducer result back onto its identity (setFullState
 // returns a bare TimelineState, so id/name/order must be re-applied).
@@ -260,6 +263,14 @@ export function projectReduce(p: ProjectDoc, a: AnyAction): ProjectDoc {
         return { ...p, designStyle: a.style ?? undefined };
       case 'design.patch':
         return { ...p, designStyle: { colors: [], fonts: [], ...p.designStyle, ...a.patch } };
+      // The storyboard travels with the project. Null clears it — an applied
+      // board that no longer matches the timeline is worse than none.
+      case 'storyboard.set':
+        return {
+          ...p,
+          ...(a.storyboard ? { storyboard: a.storyboard } : { storyboard: undefined }),
+          ...(a.appliedHash ? { storyboardAppliedHash: a.appliedHash } : {}),
+        };
       default:
         return p;
     }

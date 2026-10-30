@@ -7,6 +7,7 @@ import {
   dedupeAssets,
   isDesignStyle,
   isProjectShape,
+  isStoryboardDoc,
   isTimelineState,
   normalizeFolders,
   normalizeTimelineTracks,
@@ -68,6 +69,16 @@ function finalize(value: unknown): ProjectDoc | null {
       ? value.activeTimelineId
       : timelines[0].id,
     ...(isDesignStyle(value.designStyle) ? { designStyle: value.designStyle } : {}),
+    // A board that cannot compile is dropped, not repaired: a half-valid one
+    // produces a timeline nobody can explain.
+    ...(isStoryboardDoc(value.storyboard)
+      ? {
+        storyboard: value.storyboard,
+        ...(typeof value.storyboardAppliedHash === 'string'
+          ? { storyboardAppliedHash: value.storyboardAppliedHash }
+          : {}),
+      }
+      : {}),
   } as ProjectDoc;
   const enriched = backfillProjectCaptionIdentity(doc);
   return sequenceGraphError(enriched) ? null : enriched;

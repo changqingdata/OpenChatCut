@@ -13,6 +13,7 @@ import { resolveProject } from '../store.ts';
 import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-store.ts';
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
 import { compile, CompileError, OVER_FOOTAGE_MUTED } from '../../src/pipeline/compile.ts';
+import { storyboardHash } from '../../src/pipeline/storyboard-apply.ts';
 import type { CompileAsset } from '../../src/pipeline/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildCaptions } from '../../production/captions.ts';
@@ -233,7 +234,16 @@ export async function runCompileCommand(commandLine: CommandLine, json: boolean)
     ? current.timelines.map((candidate) => (candidate.id === timeline.id ? timeline : candidate))
     : [...current.timelines, { ...timeline, order: current.timelines.length }];
 
-  const next = { ...current, timelines, activeTimelineId: timeline.id };
+  // The storyboard travels with the project, exactly as the app's
+  // `apply_storyboard` does. A project that cannot answer "which board produced
+  // this timeline" cannot be edited shot by shot later.
+  const next = {
+    ...current,
+    timelines,
+    activeTimelineId: timeline.id,
+    storyboard,
+    storyboardAppliedHash: storyboardHash(storyboard),
+  };
   await setStoredEntry(key, next);
   const result = { replaced: Boolean(existing), timelineCount: timelines.length };
 

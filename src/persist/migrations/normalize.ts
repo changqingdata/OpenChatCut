@@ -1,3 +1,4 @@
+import type { StoryboardDoc } from '../../pipeline/types.js';
 import {
   timelineTrackIds,
   trackKind,
@@ -25,6 +26,8 @@ export type LooseProjectShape = {
   timelines: Timeline[];
   activeTimelineId: string;
   designStyle?: unknown;
+  storyboard?: unknown;
+  storyboardAppliedHash?: unknown;
 };
 
 const ITEM_KINDS: Record<TimelineItem['kind'], true> = {
@@ -175,6 +178,30 @@ export function isDesignStyle(value: unknown): value is DesignStyle {
   if (!value || typeof value !== 'object') return false;
   const style = value as { colors?: unknown; fonts?: unknown };
   return Array.isArray(style.colors) && Array.isArray(style.fonts);
+}
+
+/**
+ * A stored storyboard is untrusted input like anything else on disk.
+ *
+ * The compiler needs `shots` with numeric frames and a `meta` carrying the
+ * canvas; anything else is dropped rather than repaired, because a half-valid
+ * board compiles into a half-broken timeline and the user cannot tell which
+ * shot was invented.
+ */
+export function isStoryboardDoc(value: unknown): value is StoryboardDoc {
+  if (!value || typeof value !== 'object') return false;
+  const board = value as { version?: unknown; shots?: unknown; meta?: unknown };
+  if (typeof board.version !== 'number' || !Array.isArray(board.shots)) return false;
+  const meta = board.meta as { width?: unknown; height?: unknown; fps?: unknown } | undefined;
+  if (!meta || typeof meta.width !== 'number' || typeof meta.height !== 'number') return false;
+  return board.shots.every((shot) => {
+    if (!shot || typeof shot !== 'object') return false;
+    const entry = shot as { id?: unknown; startFrame?: unknown; endFrame?: unknown };
+    return typeof entry.id === 'string'
+      && typeof entry.startFrame === 'number'
+      && typeof entry.endFrame === 'number'
+      && entry.endFrame > entry.startFrame;
+  });
 }
 
 export function isMediaAsset(value: unknown): value is MediaAsset {

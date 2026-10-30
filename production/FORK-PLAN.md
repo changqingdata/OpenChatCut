@@ -1,6 +1,6 @@
 # 分叉方案：从「编辑器遥控器」到「意图编译器」
 
-状态：**P1、P2 已实施**；P3 起待做。基线 `2f0a0b93`，备份分支 `snapshot/pre-fork`（本地 + 远端）。
+状态：**P1–P3 已实施**；P4、P5 待做。基线 `2f0a0b93`，备份分支 `snapshot/pre-fork`（本地 + 远端）。
 
 ## 进度
 
@@ -8,9 +8,11 @@
 |---|---|---|
 | P1 核心搬家 | ✅ | `09258bdb` — 7 个模块进 `src/pipeline/`，编译产物逐字节不变 |
 | P2 卡片模板 | ✅ | 15 个模板 + `kind: 'card'` + 检查器 `array` 控件 + `templateId` |
-| P3 `apply_storyboard` | 待做 | |
+| P3 `apply_storyboard` | ✅ | `apply_storyboard` / `get_storyboard`，一次 batch = 一次 undo |
 | P4 风格注入 | 待做 | |
 | P5 借能力 / 砍重复 | 待做 | |
+
+P3 实施时加了一条原计划没写的：**CLI 编译也把分镜写进工程**（`occ compile --apply`）。两条外壳必须落在同一份文档上，否则「命令行做的片子」在应用里打不开逐镜编辑。
 
 P2 实施时有三处和原计划不同，都是被测试逼出来的：
 

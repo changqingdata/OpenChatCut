@@ -87,6 +87,10 @@ export function applyTrackAction(
       return reconcileTimelineCaptionReferences({
         ...s,
         items: [],
+        // A transition is a pair of item ids. Leaving them behind after clearing
+        // gives the renderer transitions whose clips do not exist — and the next
+        // `add` can accidentally satisfy one of those ids.
+        transitions: [],
         selectedId: null,
         selectedIds: [],
         linkGroups: undefined,

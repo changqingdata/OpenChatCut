@@ -56,6 +56,7 @@ import { SILENCE_TOOL_NAMES, SILENCE_TOOL_SCHEMAS } from './tools/schemas/silenc
 import { COLOR_SCOPE_TOOL_NAMES, COLOR_SCOPE_TOOL_SCHEMAS } from './tools/schemas/color-scope-tools';
 import { AUTO_GRADE_TOOL_NAMES, AUTO_GRADE_TOOL_SCHEMAS } from './tools/schemas/auto-grade-tools';
 import { BEAT_TOOL_NAMES, BEAT_TOOL_SCHEMAS } from './tools/schemas/beat-tools';
+import { STORYBOARD_TOOL_NAMES, STORYBOARD_TOOL_SCHEMAS } from './tools/schemas/storyboard-tools';
 import {
   MUSIC_INTELLIGENCE_TOOL_NAMES,
   MUSIC_INTELLIGENCE_TOOL_SCHEMAS,
@@ -184,6 +185,9 @@ export const TOOL_SCHEMAS: AgentToolSchema[] = [
   ...AUTO_GRADE_TOOL_SCHEMAS,
   // Beat detection: local DSP reports BPM, beats, and downbeats and can add timeline markers for beat cuts.
   ...BEAT_TOOL_SCHEMAS,
+  // The storyboard is the object the app edits: apply it as one undoable batch,
+  // read it back with its applied hash.
+  ...STORYBOARD_TOOL_SCHEMAS,
   // Cached Beat This + CLAP inspection, deterministic rhythm edit planning, and one-batch video splitting.
   ...MUSIC_INTELLIGENCE_TOOL_SCHEMAS,
   ...AGENT_PATH_IMPORT_SCHEMAS,
@@ -277,6 +281,7 @@ const EXECUTOR_GROUPS: ReadonlyArray<readonly [ReadonlySet<string>, ToolExecutor
   [COLOR_SCOPE_TOOL_NAMES, async () => (await import('./tools/color-scope-tools')).execColorScopeTool],
   [AUTO_GRADE_TOOL_NAMES, async () => (await import('./tools/auto-grade-tools')).execAutoGradeTool],
   [BEAT_TOOL_NAMES, async () => (await import('./tools/beat-tools')).execBeatTool],
+  [STORYBOARD_TOOL_NAMES, async () => (await import('./tools/storyboard-tools')).execStoryboardTool],
   [MUSIC_INTELLIGENCE_TOOL_NAMES, async () => (
     await import('./tools/music-intelligence-tools')
   ).execMusicIntelligenceTool],

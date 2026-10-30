@@ -190,6 +190,14 @@ export interface Shot {
   transitionIn?: { type: 'fade' | 'none'; durationInFrames: number };
 }
 
+/**
+ * A storyboard as it is stored on a project (`doc.storyboard`).
+ *
+ * Same shape as the file the CLI writes — one type, because a project copy that
+ * drifted from the file copy would be a second source of truth.
+ */
+export type StoryboardDoc = Storyboard;
+
 export interface Storyboard {
   version: 1;
   meta: StoryboardMeta;

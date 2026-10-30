@@ -26,6 +26,7 @@ import type {
 import type { CaptionsData } from '../captions/types';
 import type { SerializableFxDef } from '../gl/fx/uniforms';
 import type { TranscriptWord, TranscriptVariant } from '../transcript/types';
+import type { StoryboardDoc } from '../pipeline/types';
 
 // ── command actions (these map 1:1 to the future agent tools) ─────────────
 export type Action =
@@ -130,7 +131,15 @@ export type ProjectAction =
   | { type: 'pool.canonicalizeAsset'; duplicateId: string; canonicalId: string }
   | { type: 'pool.removeAsset'; id: string }
   | { type: 'design.set'; style: DesignStyle | null }
-  | { type: 'design.patch'; patch: Partial<DesignStyle> };
+  | { type: 'design.patch'; patch: Partial<DesignStyle> }
+  /**
+   * The storyboard this project was last built from.
+   *
+   * Kept in the document, not in a file path: a project has to survive being
+   * copied to another machine, and the history stack already snapshots the whole
+   * document — so editing a shot is undoable without a second history.
+   */
+  | { type: 'storyboard.set'; storyboard: StoryboardDoc | null; appliedHash?: string };
 
 /** One reducer operation before history grouping. */
 export type AtomicAction = Action | ProjectAction;
@@ -165,4 +174,4 @@ export type ProjectDispatch = (a: AnyAction | HistoryControlAction) => void;
 export const MUTATING = new Set(['add', 'updateProps', 'relinkTimelineItem', 'move', 'retime', 'slip', 'setVolume', 'setFade', 'setTransform', 'setFilters', 'setZoom', 'setEffects', 'setSpeed', 'replaceMedia', 'reframeKeyframe', 'removeReframeKeyframe', 'setKeyframe', 'removeKeyframe', 'clearKeyframes', 'addTransition', 'setTransition', 'removeTransition', 'addMarker', 'updateMarker', 'removeMarker', 'duplicate', 'remove', 'split', 'clear', 'addAsset', 'setCanvas', 'toggleTrack', 'track.create', 'track.update', 'track.delete', 'track.tighten', 'setCaptions', 'updateCaptions', 'setCaptionsHidden', 'updateWatermark', 'setItemTranscript', 'setItemVariants', 'toggleWord', 'deleteWords', 'cleanScript', 'setGapCap', 'setTranscriptPlayOrder', 'reorderTrackItems', 'clearEdits', 'fixTranscriptWord', 'renameSpeaker', 'setItemDenoise', 'setFullState',
   // project-level (tl.switch is navigation → deliberately NOT here, so it makes no history step)
   'tl.create', 'tl.duplicate', 'tl.delete', 'tl.rename', 'tl.retarget', 'tl.setFps', 'tl.setHidden', 'tl.setDoc',
-  'pool.createFolder', 'pool.renameFolder', 'pool.deleteFolder', 'pool.moveAssets', 'pool.updateAsset', 'pool.setTranscription', 'pool.relinkAsset', 'pool.canonicalizeAsset', 'pool.removeAsset', 'design.set', 'design.patch', 'setBackgroundFill'])
+  'pool.createFolder', 'pool.renameFolder', 'pool.deleteFolder', 'pool.moveAssets', 'pool.updateAsset', 'pool.setTranscription', 'pool.relinkAsset', 'pool.canonicalizeAsset', 'pool.removeAsset', 'design.set', 'design.patch', 'storyboard.set', 'setBackgroundFill'])

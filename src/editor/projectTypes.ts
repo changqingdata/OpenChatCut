@@ -2,6 +2,7 @@ import type { CURRENT_PROJECT_VERSION } from '../../shared/project-version.js';
 import type { DesignStyle } from './designTypes.js';
 import type { MediaAsset, MediaFolder } from './mediaTypes.js';
 import type { Timeline } from './timelineTypes.js';
+import type { StoryboardDoc } from '../pipeline/types.js';
 
 /** a project = shared media + ordered timelines + which one is active
  * (manage_timelines). `version` makes persisted-document migrations explicit. */
@@ -14,6 +15,16 @@ export interface ProjectDoc {
   activeTimelineId: string;
   /** applied brand identity (manage_design_style); absent = no style set */
   designStyle?: DesignStyle;
+  /**
+   * The storyboard this project was built from (see `apply_storyboard`).
+   *
+   * Inline rather than a path: an 8-shot board is ~8KB, the document has to stay
+   * portable, and history already snapshots the document — so a shot edit is one
+   * undo with no extra machinery.
+   */
+  storyboard?: StoryboardDoc;
+  /** Identity of the storyboard version currently on the timeline. */
+  storyboardAppliedHash?: string;
 }
 
 /** the active timeline of a project (falls back to the first if the id is stale). */
