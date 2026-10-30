@@ -26,10 +26,10 @@ import { CliError, UsageError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { GLOBAL_FLAGS, requireStoryboardLock } from './common.ts';
 import { checkStoryboard } from '../../production/generate.ts';
-import { formatFindings, runQc } from '../../production/qc.ts';
+import { formatFindings, runQc } from '../../src/pipeline/qc.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { writeLock } from '../../production/storyboard-lock.ts';
-import type { Shot, Storyboard } from '../../production/types.ts';
+import type { Shot, Storyboard } from '../../src/pipeline/types.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'ops', 'replace-with', 'json', 'allow-edited'] as const;
 

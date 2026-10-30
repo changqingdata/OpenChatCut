@@ -12,14 +12,14 @@ import { printJson, writeStdout } from '../output.ts';
 import { resolveProject } from '../store.ts';
 import { getStoredEntry, setStoredEntry } from '../../server/plugins/project-store.ts';
 import { runProjectMigrations } from '../../src/persist/migrations/index.ts';
-import { compile, CompileError, OVER_FOOTAGE_MUTED } from '../../production/compile.ts';
-import type { CompileAsset } from '../../production/compile.ts';
+import { compile, CompileError, OVER_FOOTAGE_MUTED } from '../../src/pipeline/compile.ts';
+import type { CompileAsset } from '../../src/pipeline/compile.ts';
 import { checkParams, loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildCaptions } from '../../production/captions.ts';
 import type { SpeechTiming } from '../../production/transcribe.ts';
 import { parseSrtCues } from '../../production/srt.ts';
 import type { ProjectDoc } from '../../src/editor/projectTypes.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 import { GLOBAL_FLAGS, projectReference, requireStoryboardLock } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'timeline', 'replace', 'apply', 'json', 'allow-edited',

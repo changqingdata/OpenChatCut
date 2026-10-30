@@ -21,7 +21,7 @@ import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../
 import { CliError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { GLOBAL_FLAGS } from './common.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'audio', 'srt', 'brief', 'name', 'size', 'generate', 'from',
   'storyboard', 'preview', 'preview-width', 'json'] as const;

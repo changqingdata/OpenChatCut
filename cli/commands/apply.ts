@@ -29,9 +29,9 @@ import { CliError, UsageError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { readProjectDoc, resolveProject } from '../store.ts';
 import { GLOBAL_FLAGS, projectReference, requireStoryboardLock } from './common.ts';
-import { applyFootagePolicy, DEFAULT_FOOTAGE_POLICY } from '../../production/footage-policy.ts';
+import { applyFootagePolicy, DEFAULT_FOOTAGE_POLICY } from '../../src/pipeline/footage-policy.ts';
 import { writeLock } from '../../production/storyboard-lock.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 
 const require = createRequire(import.meta.url);
 const ffprobe = require('@ffprobe-installer/ffprobe').path as string;

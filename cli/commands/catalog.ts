@@ -20,7 +20,7 @@ import { CliError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { GLOBAL_FLAGS, parseSize } from './common.ts';
 import { loadRecipeRegistry, type RecipeSchema } from '../../production/recipes/load.ts';
-import { DEFAULT_FOOTAGE_POLICY } from '../../production/footage-policy.ts';
+import { DEFAULT_FOOTAGE_POLICY } from '../../src/pipeline/footage-policy.ts';
 import { createProviders } from '../../production/assets/registry.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'json', 'recipe', 'full', 'size'] as const;

@@ -16,11 +16,11 @@ import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../
 import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
 import { buildStoryboardPrompt, checkStoryboard, extractJson, mergeChunkStoryboards, planChunks, rebaseCues, repairPrompt } from '../../production/generate.ts';
-import { DEFAULT_FOOTAGE_POLICY, applyFootagePolicy } from '../../production/footage-policy.ts';
-import { formatFindings, runQc } from '../../production/qc.ts';
+import { DEFAULT_FOOTAGE_POLICY, applyFootagePolicy } from '../../src/pipeline/footage-policy.ts';
+import { formatFindings, runQc } from '../../src/pipeline/qc.ts';
 import { writeLock } from '../../production/storyboard-lock.ts';
 import { completeText, readLlmConfig } from '../../production/llm.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 import { parseSrtCues } from '../../production/srt.ts';
 import { createProviders } from '../../production/assets/registry.ts';
 import { musicCategories } from '../../production/assets/music.ts';

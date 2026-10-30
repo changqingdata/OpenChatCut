@@ -22,7 +22,7 @@ import { chooseInFrame, findFootage } from '../../production/assets/footage.ts';
 import { materializeUpload } from '../../production/assets/materialize.ts';
 import { writeLock } from '../../production/storyboard-lock.ts';
 import { uploadDir } from '../../server/media-dir.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 import { GLOBAL_FLAGS, projectReference, subLine } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'out', 'json', 'max-clips', 'dry-run'] as const;

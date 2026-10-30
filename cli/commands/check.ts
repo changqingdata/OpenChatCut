@@ -18,9 +18,9 @@ import { CliError, UsageError } from '../errors.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { GLOBAL_FLAGS, parseSize, requireStoryboardLock } from './common.ts';
 import { checkStoryboard } from '../../production/generate.ts';
-import { formatFindings, runQc } from '../../production/qc.ts';
+import { formatFindings, runQc } from '../../src/pipeline/qc.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
-import type { Storyboard } from '../../production/types.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'json', 'size', 'captions', 'no-captions', 'allow-edited'] as const;
 

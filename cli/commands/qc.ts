@@ -10,8 +10,8 @@ import { CliError, UsageError } from '../errors.ts';
 import { flagBoolean, flagText, rejectUnknownFlags, type CommandLine } from '../args.ts';
 import { printJson, writeStdout } from '../output.ts';
 import { loadRecipeRegistry } from '../../production/recipes/load.ts';
-import { formatFindings, runQc } from '../../production/qc.ts';
-import type { Storyboard } from '../../production/types.ts';
+import { formatFindings, runQc } from '../../src/pipeline/qc.ts';
+import type { Storyboard } from '../../src/pipeline/types.ts';
 import { GLOBAL_FLAGS, requireStoryboardLock } from './common.ts';
 
 const FLAGS = [...GLOBAL_FLAGS, 'storyboard', 'json', 'strict', 'captions', 'no-captions', 'report-only', 'allow-edited'] as const;
