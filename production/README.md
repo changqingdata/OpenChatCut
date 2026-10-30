@@ -226,8 +226,20 @@ without building command lines:
 
 ```json
 { "mcpServers": { "openchatcut-pipeline": {
-    "command": "node", "args": ["cli/occ.mjs", "mcp"] } } }
+    "command": "node",
+    "args": ["E:/Anacondapj/OpenChatCut/cli/occ.mjs", "mcp"] } } }
 ```
+
+Use an absolute path. MCP clients choose the server's working directory, and
+nothing in the config can promise it will be this repository — `cli/occ.mjs`
+resolves its TypeScript loader against its own location for exactly that reason.
+Every tool then runs its subcommand with the repository as the cwd, so relative
+paths inside the pipeline stay correct regardless of where the host started it.
+
+Ten tools, and the order to reach for them is `start` → look → `render`, with
+`revise` only for the shots that are wrong. `catalog` is what to read before
+writing a storyboard by hand: it carries the document shape, the recipes, and one
+reference still each.
 
 | Tool | Does |
 |---|---|
