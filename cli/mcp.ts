@@ -40,6 +40,7 @@ const MAKE_VIDEO = resolve(REPO_ROOT, 'production', 'make-video.mjs');
 interface RunResult {
   ok: boolean;
   data?: unknown;
+  stdout: string;
   stderr: string;
   code: number;
 }
@@ -70,7 +71,7 @@ function runNode(script: string, args: string[]): Promise<RunResult> {
           data = undefined;
         }
       }
-      resolvePromise({ ok: code === 0, data, stderr: stderr.trim(), code: code ?? 1 });
+      resolvePromise({ ok: code === 0, data, stdout, stderr: stderr.trim(), code: code ?? 1 });
     });
   });
 }
@@ -79,9 +80,21 @@ function runOcc(args: string[]): Promise<RunResult> {
   return runNode(OCC, args);
 }
 
-/** MCP replies carry both a readable text block and a structured object. */
+/**
+ * MCP replies carry both a readable text block and a structured object.
+ *
+ * A failed command that printed no JSON used to reach the caller as
+ * `{ ok: false }` and nothing else — the agent learned that something broke and
+ * nothing about what. The tail of stdout is where a render says how far it got
+ * before it died, so it travels with the failure.
+ */
 function reply(result: RunResult) {
-  const payload = result.data ?? { ok: result.ok, stderr: result.stderr };
+  const payload = result.data ?? {
+    ok: result.ok,
+    ...(result.ok ? {} : { code: result.code }),
+    ...(result.stderr ? { stderr: result.stderr.slice(-2000) } : {}),
+    ...(result.ok ? {} : { tail: result.stdout.trim().split('\n').slice(-15).join('\n').slice(-1500) }),
+  };
   return {
     ...(result.ok ? {} : { isError: true }),
     content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }],

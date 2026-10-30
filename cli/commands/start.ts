@@ -52,24 +52,44 @@ function occ(args: string[]): Record<string, unknown> {
 }
 
 /**
- * Frames worth looking at: one per shot, evenly spread, at the midpoint.
+ * Frames worth looking at.
  *
- * The midpoint is where the animation has landed and the layout is at its most
- * legible — a frame at the start of a shot shows an empty card mid-transition
- * and teaches the reviewer nothing.
+ * The midpoint of a shot is where the animation has landed and the layout is at
+ * its most legible — a frame at the start shows an empty card mid-transition and
+ * teaches the reviewer nothing.
+ *
+ * Which shots, though, is not a spacing problem. The first real run of this
+ * command picked four evenly spaced shots and hit four card-only ones, so the
+ * draft looked like a slide deck while a third of the timeline was footage. The
+ * review copy has to contain at least one clip and one card, because that is the
+ * question a reviewer is actually asking: is this a video or a deck?
  */
 function previewFrames(shots: Storyboard['shots'], wanted: number): Array<{ id: string; frame: number }> {
   const ordered = [...(shots ?? [])].sort((a, b) => a.startFrame - b.startFrame);
   if (!ordered.length || wanted <= 0) return [];
-  const picks: Array<{ id: string; frame: number }> = [];
   const count = Math.min(wanted, ordered.length);
-  for (let i = 0; i < count; i += 1) {
-    // Even spacing across the whole cut, always including the first and last.
-    const index = count === 1 ? 0 : Math.round((i * (ordered.length - 1)) / (count - 1));
-    const shot = ordered[index]!;
-    picks.push({ id: shot.id, frame: Math.round((shot.startFrame + shot.endFrame) / 2) });
+  const picks = new Set<number>();
+  const add = (index: number) => {
+    if (index >= 0 && index < ordered.length && picks.size < count) picks.add(index);
+  };
+
+  add(0);
+  if (count > 1) add(ordered.length - 1);
+  if (count > 2) add(ordered.findIndex((shot) => shot.underlay?.selected === true));
+  if (count > 3) add(ordered.findIndex((shot) => shot.underlay?.selected !== true));
+
+  // Whatever is left, spread across the cut so the copy is not all from one end.
+  for (let i = 0; i < count && picks.size < count; i += 1) {
+    add(Math.round((i * (ordered.length - 1)) / Math.max(1, count - 1)));
   }
-  return picks;
+  for (let index = 0; index < ordered.length && picks.size < count; index += 1) add(index);
+
+  return [...picks]
+    .sort((a, b) => a - b)
+    .map((index) => {
+      const shot = ordered[index]!;
+      return { id: shot.id, frame: Math.round((shot.startFrame + shot.endFrame) / 2) };
+    });
 }
 
 export async function runStartCommand(commandLine: CommandLine, json: boolean): Promise<void> {
