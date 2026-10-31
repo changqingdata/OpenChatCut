@@ -3,10 +3,24 @@
   "name": "进度条",
   "nameEn": "Progress Bar",
   "intent": "用长度表示比例：完成度、占比、达成率。数字加条形的组合比单独一个数字更容易被记住。",
-  "box": { "width": 900, "height": 420 },
-  "jobs": ["number","process"],
+  "box": {
+    "width": 900,
+    "height": 420
+  },
+  "landscapeBox": {
+    "width": 1560,
+    "height": 420
+  },
+  "jobs": [
+    "number",
+    "process"
+  ],
   "params": {
-    "label": { "type": "string", "required": true, "maxChars": 12 },
+    "label": {
+      "type": "string",
+      "required": true,
+      "maxChars": 12
+    },
     "value": {
       "type": "number",
       "required": true,
@@ -14,16 +28,56 @@
       "max": 100,
       "description": "百分比数值，0–100"
     },
-    "unit": { "type": "string", "maxChars": 2, "default": "%" },
-    "decimals": { "type": "number", "default": 0, "min": 0, "max": 1 },
-    "note": { "type": "string", "maxChars": 18, "default": "" },
-    "thickness": { "type": "number", "default": 18, "min": 8, "max": 40 },
-    "ink": { "type": "color", "default": "#F2EFE9" },
-    "accent": { "type": "color", "default": "#E8B04B" },
-    "muted": { "type": "color", "default": "#8A857C" },
-    "trackColor": { "type": "color", "default": "#232326", "description": "条形底色" },
-    "bg": { "type": "color", "default": "" },
-    "displayFont": { "type": "font", "default": "'Smiley Sans', 'Noto Sans SC', sans-serif" },
-    "bodyFont": { "type": "font", "default": "'Noto Sans SC', sans-serif" }
+    "unit": {
+      "type": "string",
+      "maxChars": 2,
+      "default": "%"
+    },
+    "decimals": {
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 1
+    },
+    "note": {
+      "type": "string",
+      "maxChars": 18,
+      "default": ""
+    },
+    "thickness": {
+      "type": "number",
+      "default": 18,
+      "min": 8,
+      "max": 40
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "trackColor": {
+      "type": "color",
+      "default": "#232326",
+      "description": "条形底色"
+    },
+    "bg": {
+      "type": "color",
+      "default": ""
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "'Noto Sans SC', sans-serif"
+    }
   }
 }

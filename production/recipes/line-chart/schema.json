@@ -3,8 +3,18 @@
   "name": "折线图",
   "nameEn": "Line chart",
   "intent": "一条随时间变化的曲线，用来讲趋势、增长或衰减",
-  "box": { "width": 900, "height": 560 },
-  "jobs": ["process","number"],
+  "box": {
+    "width": 900,
+    "height": 560
+  },
+  "landscapeBox": {
+    "width": 1560,
+    "height": 620
+  },
+  "jobs": [
+    "process",
+    "number"
+  ],
   "params": {
     "points": {
       "type": "array",
@@ -19,13 +29,40 @@
       "itemMaxChars": 6,
       "description": "每个点下方的标签，可省略"
     },
-    "title": { "type": "string", "maxChars": 12, "description": "图上方的小标题" },
-    "unit": { "type": "string", "maxChars": 3, "description": "单位，如 × 或 %" },
-    "bg": { "type": "color", "default": "", "description": "背景色，留空则透明" },
-    "ink": { "type": "color", "default": "#F2EFE9" },
-    "accent": { "type": "color", "default": "#E8B04B" },
-    "muted": { "type": "color", "default": "#8A857C" },
-    "displayFont": { "type": "font", "default": "Smiley Sans" },
-    "bodyFont": { "type": "font", "default": "Noto Sans SC" }
+    "title": {
+      "type": "string",
+      "maxChars": 12,
+      "description": "图上方的小标题"
+    },
+    "unit": {
+      "type": "string",
+      "maxChars": 3,
+      "description": "单位，如 × 或 %"
+    },
+    "bg": {
+      "type": "color",
+      "default": "",
+      "description": "背景色，留空则透明"
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "Smiley Sans"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "Noto Sans SC"
+    }
   }
 }

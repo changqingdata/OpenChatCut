@@ -31,6 +31,19 @@ for (const template of templates) {
   if (template.kind === 'card') {
     assert.equal(template.box?.width, template.width, `${template.id}: box must equal width`);
     assert.equal(template.box?.height, template.height, `${template.id}: box must equal height`);
+    // A landscape box that is not actually wider than the portrait one would
+    // silently do nothing: the compiler only uses it when canvasW > canvasH, and
+    // a narrow "landscape" box then gets height-capped like the original.
+    if (template.landscapeBox) {
+      assert.ok(
+        template.landscapeBox.width > template.landscapeBox.height,
+        `${template.id}: landscapeBox must be landscape (${template.landscapeBox.width}×${template.landscapeBox.height})`,
+      );
+      assert.ok(
+        template.landscapeBox.width > template.width,
+        `${template.id}: landscapeBox must be wider than the card box`,
+      );
+    }
   } else {
     // A scene owns the canvas, so it must be canvas-sized and carry no card box.
     // A 900×900 "scene" letterboxes to a square on a 16:9 timeline.

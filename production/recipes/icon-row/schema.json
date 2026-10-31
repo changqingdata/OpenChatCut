@@ -7,7 +7,14 @@
     "width": 960,
     "height": 520
   },
-  "jobs": ["relation","thing"],
+  "landscapeBox": {
+    "width": 1600,
+    "height": 520
+  },
+  "jobs": [
+    "relation",
+    "thing"
+  ],
   "params": {
     "items": {
       "type": "array",

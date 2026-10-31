@@ -22,6 +22,11 @@ const Component = ({ item }) => {
   if (!items.length) return null;
 
   const width = item.width;
+  // On a wide card the three icons are the whole story: stretched item boxes push
+  // the last icon to 80% and leave a dead strip on the right, which reads as a
+  // layout that ran out rather than one that ended. Wide mode centres a fixed
+  // row instead, so the gaps are the spacing rather than leftover width.
+  const wide = p.landscape === true;
   const rootStyle = {
     position: 'absolute',
     inset: 0,
@@ -33,7 +38,9 @@ const Component = ({ item }) => {
     boxSizing: 'border-box',
     gap: 46,
   };
-  const rowStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' };
+  const rowStyle = wide
+    ? { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 132 }
+    : { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' };
 
   return (
     <div style={rootStyle}>
@@ -54,7 +61,7 @@ const Component = ({ item }) => {
             <div
               key={index}
               style={{
-                width: (width - 120) / items.length - 18,
+                width: wide ? 220 : (width - 120) / items.length - 18,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',

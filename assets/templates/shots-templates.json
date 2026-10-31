@@ -134,6 +134,7 @@
       "卡片",
       "Bar compare",
       "叠加",
+      "横屏适配",
       "number",
       "relation"
     ],
@@ -145,6 +146,10 @@
     "box": {
       "width": 900,
       "height": 520
+    },
+    "landscapeBox": {
+      "width": 1500,
+      "height": 560
     },
     "jobs": [
       "number",
@@ -668,6 +673,7 @@
       "卡片",
       "Flow chain",
       "叠加",
+      "横屏适配",
       "process",
       "relation"
     ],
@@ -678,6 +684,10 @@
     "kind": "card",
     "box": {
       "width": 960,
+      "height": 460
+    },
+    "landscapeBox": {
+      "width": 1600,
       "height": 460
     },
     "jobs": [
@@ -784,6 +794,7 @@
       "卡片",
       "Icon row",
       "叠加",
+      "横屏适配",
       "relation",
       "thing"
     ],
@@ -794,6 +805,10 @@
     "kind": "card",
     "box": {
       "width": 960,
+      "height": 520
+    },
+    "landscapeBox": {
+      "width": 1600,
       "height": 520
     },
     "jobs": [
@@ -898,7 +913,7 @@
       }
     ],
     "thumb": "/thumbnails/shots-icon-row.jpg",
-    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // A small inline set, drawn as paths so the recipe stays one file and needs no\r\n  // asset lookup. `icons` picks from these by name; an unknown name falls back to\r\n  // a dot, which still reads as \"an item\" rather than as a hole.\r\n  const PATHS = {\r\n    clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 4v5l3.5 2',\r\n    growth: 'M3 17l5-5 4 3 6-8M14 7h5v5',\r\n    people: 'M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 6 2 6 5',\r\n    coin: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z',\r\n    check: 'M4 12l5 5L20 6',\r\n    arrow: 'M4 12h15M13 6l6 6-6 6',\r\n    star: 'M12 3l2.7 5.6 6.3.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.3-.9z',\r\n    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',\r\n  };\r\n\r\n  const items = (Array.isArray(p.items) ? p.items : []).slice(0, 4);\r\n  const icons = Array.isArray(p.icons) ? p.icons : [];\r\n  if (!items.length) return null;\r\n\r\n  const width = item.width;\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 60px',\r\n    boxSizing: 'border-box',\r\n    gap: 46,\r\n  };\r\n  const rowStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? (\r\n        <div style={{ fontFamily: p.bodyFont, fontSize: 32, letterSpacing: '0.14em', color: p.muted }}>\r\n          {p.title}\r\n        </div>\r\n      ) : null}\r\n      <div style={rowStyle}>\r\n        {items.map((label, index) => {\r\n          const enter = spring({\r\n            frame: frame - Math.round(index * fps * 0.14),\r\n            fps,\r\n            config: { damping: 18, mass: 0.6, stiffness: 150 },\r\n          });\r\n          const path = PATHS[icons[index]] ?? null;\r\n          return (\r\n            <div\r\n              key={index}\r\n              style={{\r\n                width: (width - 120) / items.length - 18,\r\n                display: 'flex',\r\n                flexDirection: 'column',\r\n                alignItems: 'center',\r\n                gap: 22,\r\n                opacity: Math.min(1, enter * 1.4),\r\n                transform: 'translateY(' + ((1 - enter) * 26) + 'px)',\r\n              }}\r\n            >\r\n              <svg width={92} height={92} viewBox=\"0 0 24 24\" fill=\"none\"\r\n                stroke={p.accent} strokeWidth={1.6} strokeLinecap=\"round\" strokeLinejoin=\"round\">\r\n                {path\r\n                  ? <path d={path} />\r\n                  : <circle cx=\"12\" cy=\"12\" r=\"6\" fill={p.accent} stroke=\"none\" />}\r\n              </svg>\r\n              <div\r\n                style={{\r\n                  fontFamily: p.displayFont,\r\n                  fontSize: p.fontSize,\r\n                  color: p.ink,\r\n                  textAlign: 'center',\r\n                  lineHeight: 1.25,\r\n                }}\r\n              >\r\n                {label}\r\n              </div>\r\n            </div>\r\n          );\r\n        })}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
+    "code": "const Component = ({ item }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const p = item.props;\r\n\r\n  // A small inline set, drawn as paths so the recipe stays one file and needs no\r\n  // asset lookup. `icons` picks from these by name; an unknown name falls back to\r\n  // a dot, which still reads as \"an item\" rather than as a hole.\r\n  const PATHS = {\r\n    clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 4v5l3.5 2',\r\n    growth: 'M3 17l5-5 4 3 6-8M14 7h5v5',\r\n    people: 'M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 6 2 6 5',\r\n    coin: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z',\r\n    check: 'M4 12l5 5L20 6',\r\n    arrow: 'M4 12h15M13 6l6 6-6 6',\r\n    star: 'M12 3l2.7 5.6 6.3.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.3-.9z',\r\n    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',\r\n  };\r\n\r\n  const items = (Array.isArray(p.items) ? p.items : []).slice(0, 4);\r\n  const icons = Array.isArray(p.icons) ? p.icons : [];\r\n  if (!items.length) return null;\r\n\r\n  const width = item.width;\r\n  // On a wide card the three icons are the whole story: stretched item boxes push\r\n  // the last icon to 80% and leave a dead strip on the right, which reads as a\r\n  // layout that ran out rather than one that ended. Wide mode centres a fixed\r\n  // row instead, so the gaps are the spacing rather than leftover width.\r\n  const wide = p.landscape === true;\r\n  const rootStyle = {\r\n    position: 'absolute',\r\n    inset: 0,\r\n    backgroundColor: p.bg || 'transparent',\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    justifyContent: 'center',\r\n    padding: '0 60px',\r\n    boxSizing: 'border-box',\r\n    gap: 46,\r\n  };\r\n  const rowStyle = wide\r\n    ? { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 132 }\r\n    : { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' };\r\n\r\n  return (\r\n    <div style={rootStyle}>\r\n      {p.title ? (\r\n        <div style={{ fontFamily: p.bodyFont, fontSize: 32, letterSpacing: '0.14em', color: p.muted }}>\r\n          {p.title}\r\n        </div>\r\n      ) : null}\r\n      <div style={rowStyle}>\r\n        {items.map((label, index) => {\r\n          const enter = spring({\r\n            frame: frame - Math.round(index * fps * 0.14),\r\n            fps,\r\n            config: { damping: 18, mass: 0.6, stiffness: 150 },\r\n          });\r\n          const path = PATHS[icons[index]] ?? null;\r\n          return (\r\n            <div\r\n              key={index}\r\n              style={{\r\n                width: wide ? 220 : (width - 120) / items.length - 18,\r\n                display: 'flex',\r\n                flexDirection: 'column',\r\n                alignItems: 'center',\r\n                gap: 22,\r\n                opacity: Math.min(1, enter * 1.4),\r\n                transform: 'translateY(' + ((1 - enter) * 26) + 'px)',\r\n              }}\r\n            >\r\n              <svg width={92} height={92} viewBox=\"0 0 24 24\" fill=\"none\"\r\n                stroke={p.accent} strokeWidth={1.6} strokeLinecap=\"round\" strokeLinejoin=\"round\">\r\n                {path\r\n                  ? <path d={path} />\r\n                  : <circle cx=\"12\" cy=\"12\" r=\"6\" fill={p.accent} stroke=\"none\" />}\r\n              </svg>\r\n              <div\r\n                style={{\r\n                  fontFamily: p.displayFont,\r\n                  fontSize: p.fontSize,\r\n                  color: p.ink,\r\n                  textAlign: 'center',\r\n                  lineHeight: 1.25,\r\n                }}\r\n              >\r\n                {label}\r\n              </div>\r\n            </div>\r\n          );\r\n        })}\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n"
   },
   {
     "id": "keyword-punch",
@@ -1047,6 +1062,7 @@
       "卡片",
       "Line chart",
       "叠加",
+      "横屏适配",
       "process",
       "number"
     ],
@@ -1058,6 +1074,10 @@
     "box": {
       "width": 900,
       "height": 560
+    },
+    "landscapeBox": {
+      "width": 1560,
+      "height": 620
     },
     "jobs": [
       "process",
@@ -1465,6 +1485,7 @@
       "卡片",
       "Progress Bar",
       "叠加",
+      "横屏适配",
       "number",
       "process"
     ],
@@ -1475,6 +1496,10 @@
     "kind": "card",
     "box": {
       "width": 900,
+      "height": 420
+    },
+    "landscapeBox": {
+      "width": 1560,
       "height": 420
     },
     "jobs": [
@@ -1721,6 +1746,7 @@
       "卡片",
       "Stacked share",
       "叠加",
+      "横屏适配",
       "relation",
       "number"
     ],
@@ -1731,6 +1757,10 @@
     "kind": "card",
     "box": {
       "width": 900,
+      "height": 380
+    },
+    "landscapeBox": {
+      "width": 1560,
       "height": 380
     },
     "jobs": [
@@ -1836,6 +1866,7 @@
       "卡片",
       "Timeline Dots",
       "叠加",
+      "横屏适配",
       "process"
     ],
     "width": 960,
@@ -1845,6 +1876,10 @@
     "kind": "card",
     "box": {
       "width": 960,
+      "height": 420
+    },
+    "landscapeBox": {
+      "width": 1600,
       "height": 420
     },
     "jobs": [

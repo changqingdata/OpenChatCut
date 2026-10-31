@@ -3,8 +3,18 @@
   "name": "构成条",
   "nameEn": "Stacked share",
   "intent": "把总量拆成几块，看每块占多少，用来讲「钱花在哪」「时间用在哪」",
-  "box": { "width": 900, "height": 380 },
-  "jobs": ["relation","number"],
+  "box": {
+    "width": 900,
+    "height": 380
+  },
+  "landscapeBox": {
+    "width": 1560,
+    "height": 380
+  },
+  "jobs": [
+    "relation",
+    "number"
+  ],
   "params": {
     "parts": {
       "type": "array",
@@ -20,13 +30,38 @@
       "itemMaxChars": 6,
       "description": "与 parts 一一对应的数值，只写数字；不必加起来等于 100"
     },
-    "title": { "type": "string", "maxChars": 14 },
-    "unit": { "type": "string", "maxChars": 2, "default": "%" },
-    "bg": { "type": "color", "default": "" },
-    "ink": { "type": "color", "default": "#F2EFE9" },
-    "accent": { "type": "color", "default": "#E8B04B" },
-    "muted": { "type": "color", "default": "#8A857C" },
-    "displayFont": { "type": "font", "default": "Smiley Sans" },
-    "bodyFont": { "type": "font", "default": "Noto Sans SC" }
+    "title": {
+      "type": "string",
+      "maxChars": 14
+    },
+    "unit": {
+      "type": "string",
+      "maxChars": 2,
+      "default": "%"
+    },
+    "bg": {
+      "type": "color",
+      "default": ""
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "Smiley Sans"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "Noto Sans SC"
+    }
   }
 }

@@ -3,8 +3,17 @@
   "name": "阶段轴",
   "nameEn": "Timeline Dots",
   "intent": "把一条过程摊成几个阶段并指出当前在哪一步，用于「第一步/第二步」「早期/中期/后期」这类结构。",
-  "box": { "width": 960, "height": 420 },
-  "jobs": ["process"],
+  "box": {
+    "width": 960,
+    "height": 420
+  },
+  "landscapeBox": {
+    "width": 1600,
+    "height": 420
+  },
+  "jobs": [
+    "process"
+  ],
   "params": {
     "items": {
       "type": "array",
@@ -20,14 +29,44 @@
       "max": 3,
       "description": "当前阶段的下标，0 起"
     },
-    "title": { "type": "string", "maxChars": 12, "default": "" },
-    "fontSize": { "type": "number", "default": 40, "min": 26, "max": 56 },
-    "ink": { "type": "color", "default": "#F2EFE9" },
-    "accent": { "type": "color", "default": "#E8B04B" },
-    "muted": { "type": "color", "default": "#8A857C" },
-    "trackColor": { "type": "color", "default": "#2A2A2D" },
-    "bg": { "type": "color", "default": "" },
-    "displayFont": { "type": "font", "default": "'Smiley Sans', 'Noto Sans SC', sans-serif" },
-    "bodyFont": { "type": "font", "default": "'Noto Sans SC', sans-serif" }
+    "title": {
+      "type": "string",
+      "maxChars": 12,
+      "default": ""
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 40,
+      "min": 26,
+      "max": 56
+    },
+    "ink": {
+      "type": "color",
+      "default": "#F2EFE9"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#E8B04B"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8A857C"
+    },
+    "trackColor": {
+      "type": "color",
+      "default": "#2A2A2D"
+    },
+    "bg": {
+      "type": "color",
+      "default": ""
+    },
+    "displayFont": {
+      "type": "font",
+      "default": "'Smiley Sans', 'Noto Sans SC', sans-serif"
+    },
+    "bodyFont": {
+      "type": "font",
+      "default": "'Noto Sans SC', sans-serif"
+    }
   }
 }
