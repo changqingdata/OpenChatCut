@@ -9,7 +9,14 @@ const Component = ({ item }) => {
   const width = item.width;
   // Designed at 1080 wide and handed the whole canvas (see fullFrame in
   // compile.ts). Fixed pixel sizes would stay small on a 1920-wide frame.
-  const k = item.width / 1080;
+  //
+  // Scaling by WIDTH is right on a portrait frame and wrong on a landscape one:
+  // 1920/1080 = 1.78 grows the title to twice its design size while the right
+  // half of the frame stays empty. A wide frame scales by height instead, and
+  // centres the block, so it reads as a title card rather than a column that
+  // ran out of room.
+  const wide = item.width > item.height;
+  const k = wide ? Math.max(0.8, item.height / 1920) : item.width / 1080;
   const rootStyle = {
     position: 'absolute',
     inset: 0,
@@ -17,6 +24,8 @@ const Component = ({ item }) => {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
+    alignItems: wide ? 'center' : 'flex-start',
+    textAlign: wide ? 'center' : 'left',
     padding: '0 ' + (96 * k) + 'px',
     boxSizing: 'border-box',
   };
