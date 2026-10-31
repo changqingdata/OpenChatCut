@@ -4,6 +4,7 @@ import { UsageError } from '../errors.ts';
 import { formatTimestamp, printJson, renderTable, writeStdout } from '../output.ts';
 import { createProject, listProjects, readProjectDoc, resolveProject } from '../store.ts';
 import { timelineRows } from '../summary.ts';
+import { runProjectExport } from './project-export.ts';
 import {
   GLOBAL_FLAGS,
   parseSize,
@@ -22,6 +23,7 @@ const FLAGS = [
   'width',
   'height',
   'size',
+  'out',
 ] as const;
 
 export async function runProjectCommand(
@@ -39,8 +41,15 @@ export async function runProjectCommand(
       return showCommand(line, commandLine, json);
     case 'new':
       return newCommand(line, commandLine, json);
+    case 'export': {
+      // The app reads IndexedDB, the CLI reads the server store. This package
+      // is the only bridge, and until now only the app could produce one.
+      const name = requirePositional(line, 0, 'project export needs a project');
+      const out = flagText(commandLine, 'out') ?? `${name}.ccproj`;
+      return runProjectExport(name, out, json);
+    }
     case undefined:
-      throw new UsageError('project needs a subcommand: list | show | new');
+      throw new UsageError('project needs a subcommand: list | show | new | export');
     default:
       throw new UsageError(`unknown project subcommand "${subcommand}"`);
   }

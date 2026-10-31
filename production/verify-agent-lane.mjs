@@ -222,6 +222,24 @@ if (FULL) {
       return width > 0 && width <= 1080;
     }));
 
+    console.log('\nexport bridge');
+    // The app reads IndexedDB and the CLI reads the server store. This package
+    // is the only way a CLI-built cut reaches the editor, so it has to be a
+    // real package: a manifest line, then media the importer can restore.
+    const pkg = resolve(WORK, 'export.ccproj');
+    const exported = occ(['project', 'export', PROJECT, '--out', pkg, '--json']);
+    check('project export writes a package', exported.code === 0 && existsSync(pkg),
+      exported.json ? `${(exported.json.bytes / 1024 / 1024).toFixed(1)}MB` : '');
+    if (existsSync(pkg)) {
+      const head = readFileSync(pkg, 'utf8').split('\n', 1)[0];
+      const manifest = JSON.parse(head);
+      check('and it is the format the app imports',
+        manifest.format === 'openchatcut-project@2' && manifest.type === 'manifest', manifest.format);
+      check('carrying the storyboard with the document',
+        Array.isArray(manifest.doc?.storyboard?.shots) && manifest.doc.storyboard.shots.length > 0,
+        `${manifest.doc?.storyboard?.shots?.length ?? 0} shots`);
+    }
+
     console.log('\naudio');
     // Loudness and tempo used to need a browser. The maths was pure; only the
     // decoder was missing, so the voiceover landed at gain 1 no matter how

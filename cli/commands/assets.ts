@@ -18,13 +18,15 @@ import { runToolSession } from '../session.ts';
 import { createProviders, searchAll } from '../../production/assets/registry.ts';
 import { acquireToFile } from '../../production/assets/acquire.ts';
 import { pickMusic, pickMusicBed } from '../../production/assets/music.ts';
+import { chainedDuration } from '../../production/assets/music-chain.ts';
+import { analyzeAudioFile } from './audio.ts';
 import type { MaterialItem, MaterialRole } from '../../production/assets/types.ts';
 import { GLOBAL_FLAGS, projectReference, subLine } from './common.ts';
 
 const ROLES: readonly MaterialRole[] = ['music', 'sound_effect', 'image', 'video', 'gif', 'icon'];
 
 const FLAGS = [...GLOBAL_FLAGS, 'role', 'query', 'category', 'limit', 'json',
-  'min-duration', 'volume', 'track', 'from-frame', 'duration-frames', 'loop'] as const;
+  'min-duration', 'volume', 'track', 'from-frame', 'duration-frames', 'loop', 'beat-cut'] as const;
 
 function readRole(commandLine: CommandLine): MaterialRole {
   const value = flagText(commandLine, 'role');
@@ -154,6 +156,10 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
   const placements: Array<{ assetId: string; fromFrame: number; durationInFrames?: number }> = [];
   let cursor = fromFrame;
   let downloadedBytes = 0;
+  let alignedJunctions = 0;
+  // `--beat-cut none` restores the old behaviour for anyone who wants the
+  // full track and does not care where the seam lands.
+  const alignBeats = flagText(commandLine, 'beat-cut') !== 'none';
 
   for (const item of picks) {
     const file = await acquireToFile(item);
@@ -172,8 +178,21 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
 
     const remaining = limit - (cursor - fromFrame);
     if (remaining <= 0) break;
-    placements.push({ assetId, fromFrame: cursor, durationInFrames: Math.min(natural, remaining) });
-    cursor += Math.min(natural, remaining);
+
+    // A junction follows when this track runs out before the cut does. Ending
+    // it on one of its own downbeats puts the next track's beat one on a bar
+    // line; cutting wherever the file happens to stop puts it mid-phrase.
+    let duration = Math.min(natural, remaining);
+    if (role === 'music' && remaining > natural && alignBeats) {
+      const beats = analyzeAudioFile(file.path).downbeats;
+      const chained = chainedDuration(natural, beats, fps);
+      if (chained.aligned) {
+        duration = chained.frames;
+        alignedJunctions += 1;
+      }
+    }
+    placements.push({ assetId, fromFrame: cursor, durationInFrames: duration });
+    cursor += duration;
   }
 
   if (!placements.length) {
@@ -265,7 +284,10 @@ async function placeCommand(commandLine: CommandLine, json: boolean): Promise<vo
       if (index >= clips.length) break;
       writeStdout(`placed ${describe(item)} on ${track} (${clips[index]!.durationInFrames} frames)`);
     }
-    if (clips.length > 1) writeStdout(`  ${clips.length} tracks chained, ${summary.durationInFrames} frames total`);
+    if (clips.length > 1) {
+      writeStdout(`  ${clips.length} tracks chained, ${summary.durationInFrames} frames total`
+        + (alignedJunctions ? `, ${alignedJunctions} seam(s) on a downbeat` : ', seams not aligned'));
+    }
     if (note) writeStdout(`  note: ${note}`);
   }
 }
