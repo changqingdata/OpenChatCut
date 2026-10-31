@@ -5,6 +5,7 @@
 // Errors block compilation; warnings do not.
 
 import type { CompileWarning, Storyboard } from './types.ts';
+import { ANCHORS } from './layout.ts';
 
 export interface ValidationResult {
   ok: boolean;
@@ -123,6 +124,14 @@ export function validateStoryboard(storyboard: Storyboard): ValidationResult {
     const layout = 'layout' in visual ? visual.layout : undefined;
     if (layout && !(layout.widthRatio > 0 && layout.widthRatio <= 1)) {
       errors.push(`${label}: layout.widthRatio must be in (0, 1]`);
+    }
+    // An anchor outside the nine-point grid is not a layout, it is a typo. This
+    // has to be rejected here: the resolver would destructure undefined and the
+    // caller would see "undefined is not iterable" with no shot id attached.
+    if (layout && !ANCHORS.includes(layout.anchor)) {
+      const alias: Record<string, string> = { center: 'mc', middle: 'mc', top: 'tc', bottom: 'bc', left: 'ml', right: 'mr' };
+      const hint = alias[String(layout.anchor)] ? ` (did you mean "${alias[String(layout.anchor)]}"?)` : '';
+      errors.push(`${label}: layout.anchor "${String(layout.anchor)}" is not one of ${ANCHORS.join(', ')}${hint}`);
     }
 
     if (rhythm?.maxShotSec > 0) {

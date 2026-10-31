@@ -65,6 +65,19 @@ const orphanBeat = board();
 orphanBeat.shots[0]!.beatId = 'nope';
 assert.equal(validateStoryboard(orphanBeat).ok, false, 'unknown beatId is rejected');
 
+// An anchor outside the nine-point grid is a typo, not a layout. It used to pass
+// validation and reach the resolver, which destructured undefined — the caller
+// saw "undefined is not iterable" with no shot id, and in the app that surfaced
+// as an out-of-memory crash rather than a rejected storyboard.
+const badAnchor = board();
+badAnchor.shots[0]!.visual = { kind: 'mg', recipe: 'stat-impact', params: {}, layout: { anchor: 'center' as never, widthRatio: 0.85 } };
+const anchorResult = validateStoryboard(badAnchor);
+assert.equal(anchorResult.ok, false, 'an unknown anchor is rejected');
+assert.ok(
+  anchorResult.errors.some((error) => error.includes('layout.anchor') && error.includes('mc')),
+  'and the message names the grid and suggests the real id',
+);
+
 const tooLong = board();
 tooLong.shots[0]!.endFrame = 400; // 13.3s at 30fps
 const longResult = validateStoryboard(tooLong);
@@ -211,6 +224,13 @@ tallBoxBoard.shots[0]!.visual = {
 const portraitItem = compile(tallBoxBoard, { recipes }).timeline.items[0]!;
 assert.equal(portraitItem.width, 960, 'a portrait canvas keeps the authored box');
 assert.equal(portraitItem.props?.landscape, undefined, 'and no wide flag is set');
+
+// The resolver is the last line of defence: a bad anchor must not become NaN geometry.
+assert.throws(
+  () => compile(badAnchor, { recipes }),
+  /layout\.anchor/,
+  'a direct compiler call refuses an unknown anchor in its own words',
+);
 
 const missingRecipe = compile(withRecipe);assert.equal(missingRecipe.timeline.items.length, 0, 'unknown recipe produces no item');
 assert.ok(

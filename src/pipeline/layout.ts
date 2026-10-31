@@ -23,6 +23,16 @@ export interface Transform {
   y: number;
 }
 
+/**
+ * Every anchor the resolver understands.
+ *
+ * Exported because the validator has to reject anything else *before* the
+ * compiler runs: an unknown anchor used to reach the maths, where destructuring
+ * `undefined` produced "undefined is not iterable" three layers down. A director
+ * writing `center` deserves to be told it is called `mc`.
+ */
+export const ANCHORS: readonly Anchor[] = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br', 'full'];
+
 const ANCHOR_FRACTION: Record<Anchor, readonly [number, number]> = {
   tl: [0, 0], tc: [0.5, 0], tr: [1, 0],
   ml: [0, 0.5], mc: [0.5, 0.5], mr: [1, 0.5],
@@ -87,7 +97,13 @@ export function resolveRect(
       ? width * aspect
       : naturalHeight;
 
-  const [fx, fy] = ANCHOR_FRACTION[layout.anchor];
+  const fraction = ANCHOR_FRACTION[layout.anchor];
+  // Defence in depth: validation should have caught this, but a direct caller of
+  // the compiler can still hand us a typo, and a stack trace beats a NaN canvas.
+  if (!fraction) {
+    throw new Error(`layout.anchor "${String(layout.anchor)}" is not one of ${ANCHORS.join(', ')}`);
+  }
+  const [fx, fy] = fraction;
 
   // `full` always fills the frame; edge anchors are clamped inward by the inset.
   let x = fx * canvasWidth - fx * width;
