@@ -6,6 +6,17 @@
 // sample rate — so the only missing piece was a decoder. ffmpeg is already a
 // hard dependency of the render path, so this uses it rather than shipping one.
 import { execFileSync } from 'node:child_process';
+import ffmpegStatic from 'ffmpeg-static';
+
+/**
+ * The binary to decode with.
+ *
+ * `ffmpeg` on PATH is the developer's machine, not the user's: the repo already
+ * ships `ffmpeg-static` for the export path, so use that and let an explicit
+ * FFMPEG_PATH override it. A missing binary is then a bug we control, not an
+ * install step we forgot to document.
+ */
+const FFMPEG = process.env.FFMPEG_PATH || (ffmpegStatic as string | null) || 'ffmpeg';
 
 export interface DecodedAudio {
   samples: Float32Array;
@@ -20,7 +31,7 @@ export function decodeMono(path: string): DecodedAudio {
   let raw: Buffer;
   try {
     raw = execFileSync(
-      'ffmpeg',
+      FFMPEG,
       ['-v', 'error', '-i', path, '-ac', '1', '-ar', String(SAMPLE_RATE), '-f', 'f32le', '-'],
       { maxBuffer: 512 * 1024 * 1024 },
     );
